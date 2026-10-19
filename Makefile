@@ -24,7 +24,7 @@ WII_OBJECTS := $(patsubst source/%.c,build/wii/%.o,$(CORE) $(wildcard source/wii
 .PHONY: all pc test render clean package
 all: dist/apps/$(APP)/boot.dol
 
-build/gen/font_faces.c: tools/gen_font.py $(wildcard vendor/fonts/*.otf)
+build/gen/font_faces.c: tools/gen_font.py $(wildcard vendor/fonts/terminus/*.bdf)
 	@mkdir -p $(@D)
 	python3 tools/gen_font.py $@
 

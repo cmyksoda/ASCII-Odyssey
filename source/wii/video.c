@@ -158,7 +158,9 @@ static void draw_grid(const Grid *g, float gain, float flash, float shake_x, flo
     Mtx m;
     guMtxScale(m, 1.0f / (float)f->atlas_w, 1.0f / (float)f->atlas_h, 1);
     GX_LoadTexMtxImm(m, GX_TEXMTX0, GX_MTX2x4);
-    guMtxTrans(m, shake_x, shake_y, 0);
+    // Whole pixels only, as on the PC: a pixel font on fractional rows smears.
+    guMtxTrans(m, (float)(int)(shake_x >= 0 ? shake_x + 0.5f : shake_x - 0.5f),
+               (float)(int)(shake_y >= 0 ? shake_y + 0.5f : shake_y - 0.5f), 0);
     GX_LoadPosMtxImm(m, GX_PNMTX0);
     GX_SetCurrentMtx(GX_PNMTX0);
     int count = 0;
