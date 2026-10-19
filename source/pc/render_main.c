@@ -388,6 +388,8 @@ int main(int argc, char **argv) {
             snprintf(config.last_seed, sizeof config.last_seed, "%s", argv[++i]);
         else if (!strcmp(argv[i], "--press") && i + 1 < argc)
             presses = argv[++i];
+        else if (!strcmp(argv[i], "--first-boot"))
+            config.first_boot = 1;
         else
             usage();
     }

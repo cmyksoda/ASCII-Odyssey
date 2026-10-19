@@ -12,10 +12,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef enum { STATE_TITLE, STATE_SETTINGS, STATE_KEYS, STATE_COMPOSING, STATE_PLAYING, STATE_PAUSED, STATE_ENDED } State;
+typedef enum {
+    STATE_NOTICE,
+    STATE_TITLE,
+    STATE_SETTINGS,
+    STATE_KEYS,
+    STATE_COMPOSING,
+    STATE_PLAYING,
+    STATE_PAUSED,
+    STATE_ENDED
+} State;
 
-typedef enum { MENU_TITLE, MENU_PAUSE, MENU_END } MenuKind;
+typedef enum { MENU_NOTICE, MENU_TITLE, MENU_PAUSE, MENU_END } MenuKind;
 
+static const char *const NOTICE_ITEMS[] = {"SAIL AS IT IS", "CALMER: LESS FLASHING AND MOTION"};
+static const char *const NOTICE_LINES[] = {"a gentle note before you sail", "", "voyages pulse and move with their music,",
+                                           "and some flash a little on the beat.", "",
+                                           "you can change this any time in settings."};
 static const char *const TITLE_ITEMS[] = {"START", "SETTINGS", "EXIT"};
 static const char *const PAUSE_ITEMS[] = {"RESUME", "RESTART", "NEW VOYAGE", "TITLE"};
 static const char *const END_ITEMS[] = {"PLAY AGAIN", "NEW VOYAGE", "TITLE"};
@@ -93,6 +106,11 @@ static void open_menu(App *a, MenuKind kind) {
     a->menu.kind = kind;
     a->menu.selected = 0;
     switch (kind) {
+    case MENU_NOTICE:
+        a->menu.items = NOTICE_ITEMS;
+        a->menu.count = 2;
+        a->menu.top = a->ui.rows / 2 + 3;
+        break;
     case MENU_TITLE:
         a->menu.items = TITLE_ITEMS;
         a->menu.count = 3;
@@ -118,6 +136,11 @@ App *app_create(const AppConfig *config) {
     if (layout(a) != 0) {
         app_destroy(a);
         return NULL;
+    }
+    if (config->first_boot) {
+        a->state = STATE_NOTICE;
+        open_menu(a, MENU_NOTICE);
+        return a;
     }
     snprintf(a->seed, sizeof a->seed, "%s", config->last_seed);
     open_menu(a, MENU_TITLE);
@@ -384,10 +407,31 @@ static void keys_frame(App *a, const AppClock *clock, const Input *in, AppReques
     keyboard_draw(&a->keys, &a->ui, clock->wall);
 }
 
+// The first boot's note: either answer is saved, so it never comes back.
+static void notice_frame(App *a, const AppClock *clock, const Input *in, AppRequest *req) {
+    int lines = (int)(sizeof NOTICE_LINES / sizeof NOTICE_LINES[0]);
+    for (int i = 0; i < lines; i++) {
+        int row = a->menu.top - lines - 2 + i;
+        clear_behind(a, &a->scene, a->ui.cols / 2 - 24, row, 48, 1);
+        if (NOTICE_LINES[i][0]) text_center(a, &a->scene, row, NOTICE_LINES[i], i ? NOTE : ACCENT);
+    }
+    int chosen = menu_input(a, in);
+    menu_draw(a, &a->scene, (float)clock->wall);
+    if (chosen < 0) return;
+    a->config.settings.calm = a->config.settings.still = chosen == 1;
+    req->save_settings = 1;
+    a->state = STATE_TITLE;
+    open_menu(a, MENU_TITLE);
+}
+
 static void title_frame(App *a, const AppClock *clock, const Input *in, Screen *out, AppRequest *req) {
     out->scene = &a->scene;
     title_draw(&a->title, clock->wall, out, a->state == STATE_TITLE || a->state == STATE_COMPOSING);
     out->fx.glow *= GLOW_SCALE[a->config.settings.glow];
+    if (a->state == STATE_NOTICE) {
+        notice_frame(a, clock, in, req);
+        return;
+    }
     if (a->state == STATE_SETTINGS) {
         settings_frame(a, clock, in, req);
         return;
@@ -554,8 +598,8 @@ void app_frame(App *a, const AppClock *clock, const Input *in, Screen *out, AppR
         a->state = STATE_PLAYING;
         req->start_music = 1;
     }
-    if (a->state == STATE_TITLE || a->state == STATE_SETTINGS || a->state == STATE_KEYS || a->state == STATE_COMPOSING ||
-        !a->piece)
+    if (a->state == STATE_NOTICE || a->state == STATE_TITLE || a->state == STATE_SETTINGS || a->state == STATE_KEYS ||
+        a->state == STATE_COMPOSING || !a->piece)
         title_frame(a, clock, in, out, req);
     else
         piece_frame(a, clock, in, out, req);

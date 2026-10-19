@@ -14,6 +14,8 @@ typedef struct {
     // When set, Start sails to this seed instead of rolling a new one.
     char fixed_seed[SEED_MAX + 1];
     Settings settings;
+    // No settings were saved yet, so the app opens with its note about flashing and motion.
+    int first_boot;
 } AppConfig;
 
 // What the app needs the platform to do: it owns the threads, the audio and the files.

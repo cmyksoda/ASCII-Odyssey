@@ -192,7 +192,10 @@ int main(int argc, char **argv) {
     const char *last_file = tour ? "last-seed-tour.txt" : "last_seed.txt";
     settings_defaults(&config.settings);
     char text[1024];
-    if (storage_read(settings_file, text, sizeof text) > 0) settings_parse(&config.settings, text);
+    if (storage_read(settings_file, text, sizeof text) > 0)
+        settings_parse(&config.settings, text);
+    else
+        config.first_boot = !tour;
     read_seed_file(last_file, config.last_seed, sizeof config.last_seed);
     for (int i = 0; i < argc; i++) {
         if (argv[i] && !strncmp(argv[i], "seed=", 5)) seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
