@@ -84,6 +84,8 @@ static const Tour TOURS[] = {
     {"keys", 16.0, {1.7, 3.7, 4.5, 12.0}, 4, 0,
      "1.0:down,1.4:confirm,2.2:confirm,2.6:confirm,2.8:right,3.0:confirm,3.2:right,3.4:confirm,3.9:pause,4.2:back,"
      "4.7:up,5.0:confirm"},
+    // Start on the first press, then the tracker view, then the info view.
+    {"overlays", 20.0, {1.6, 9.0, 15.0}, 3, 0, "1.0:confirm,6.0:one,12.0:two"},
 };
 
 // Presses a tour's scripted buttons as their moments come, one per frame, the way a person with a remote would.
@@ -92,7 +94,8 @@ static unsigned scripted(const char **cursor, double wall) {
         const char *name;
         unsigned bit;
     } names[] = {{"up", INPUT_UP},           {"down", INPUT_DOWN}, {"left", INPUT_LEFT},   {"right", INPUT_RIGHT},
-                 {"confirm", INPUT_CONFIRM}, {"back", INPUT_BACK}, {"pause", INPUT_PAUSE}};
+                 {"confirm", INPUT_CONFIRM}, {"back", INPUT_BACK}, {"pause", INPUT_PAUSE}, {"one", INPUT_ALT1},
+                 {"two", INPUT_ALT2}};
     if (!*cursor || !**cursor) return 0;
     char *end;
     double at = strtod(*cursor, &end);

@@ -391,6 +391,8 @@ int main(int argc, char **argv) {
             presses = argv[++i];
         else if (!strcmp(argv[i], "--first-boot"))
             config.first_boot = 1;
+        else if (!strcmp(argv[i], "--sail") && i + 1 < argc)
+            snprintf(config.fixed_seed, sizeof config.fixed_seed, "%s", argv[++i]);
         else
             usage();
     }
