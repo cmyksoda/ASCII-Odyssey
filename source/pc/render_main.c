@@ -116,7 +116,7 @@ static void dump_song(FILE *f, const Song *s) {
 }
 
 static int song_main(int argc, char **argv) {
-    const char *out = NULL, *spectro = NULL, *seed = "lunar ribbon", *dump = NULL;
+    const char *out = NULL, *spectro = NULL, *seed = "lunar ribbon", *dump = NULL, *info_path = NULL;
     Mood mood = MOOD_ANY;
     LengthPref length = LENGTH_MEDIUM;
     for (int i = 2; i < argc; i++) {
@@ -128,6 +128,8 @@ static int song_main(int argc, char **argv) {
             seed = argv[++i];
         else if (!strcmp(argv[i], "--dump") && i + 1 < argc)
             dump = argv[++i];
+        else if (!strcmp(argv[i], "--info") && i + 1 < argc)
+            info_path = argv[++i];
         else if (!strcmp(argv[i], "--short"))
             length = LENGTH_SHORT;
         else if (!strcmp(argv[i], "--long"))
@@ -155,6 +157,19 @@ static int song_main(int argc, char **argv) {
     printf("\n  instruments:");
     for (int i = 0; i < comp.song->instrument_count; i++) printf(" %s;", comp.song->instruments[i].name);
     printf("\n");
+    if (info_path) {
+        FILE *f = fopen(info_path, "w");
+        if (f) {
+            fprintf(f, "{\"title\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, \"sections\": [",
+                    info->title, mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale], info->bpm,
+                    info->length);
+            for (int s = 0; s < info->section_count; s++)
+                fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f}", s ? ", " : "",
+                        section_names[info->sections[s].kind], info->sections[s].start, info->sections[s].end);
+            fprintf(f, "]}\n");
+            fclose(f);
+        }
+    }
     if (dump) {
         FILE *f = fopen(dump, "w");
         if (f) {
