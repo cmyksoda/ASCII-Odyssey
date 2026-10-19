@@ -35,5 +35,7 @@ void piece_free(Piece *p);
 // The picture at t seconds into the piece.
 void piece_draw(Piece *p, double t, Screen *out, int calm, int still, const float *scope, int scope_frames);
 double piece_length(const Piece *p);
+// Recasts every shot as the named scene, for looking at one scene against real music; -1 when there's no such scene.
+int piece_force_scene(Piece *p, const char *name);
 
 #endif

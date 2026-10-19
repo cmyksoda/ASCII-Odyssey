@@ -66,6 +66,25 @@ static void dust_stars(const Frame *f, uint32_t salt, float drift, float level) 
     }
 }
 
+// Walks back through a role's notes from t toward t - span, newest first.
+static int recent_notes(const Score *s, Role role, float t, float span, const ScoreEvent **out, int max) {
+    const int *index = s->by_role[role];
+    int lo = 0, hi = s->role_count[role], count = 0;
+    while (lo < hi) {
+        int mid = (lo + hi) / 2;
+        if (s->events[index[mid]].time <= t)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    for (int k = lo - 1; k >= 0 && count < max; k--) {
+        const ScoreEvent *e = &s->events[index[k]];
+        if (e->time < t - span) break;
+        out[count++] = e;
+    }
+    return count;
+}
+
 /* ---------- Starfield warp ---------- */
 
 typedef struct {
@@ -822,6 +841,208 @@ enum { M_KEYGEN = 1u << MOOD_KEYGEN, M_AMBIENT = 1u << MOOD_AMBIENT, M_SYNTHWAVE
        M_LOFI = 1u << MOOD_LOFI, M_TRANCE = 1u << MOOD_TRANCE, M_JUNGLE = 1u << MOOD_JUNGLE,
        M_MUSICBOX = 1u << MOOD_MUSICBOX, M_DUB = 1u << MOOD_DUB };
 
+/* ---------- Rain on a night window ---------- */
+
+typedef struct {
+    float x[16], y[16], radius[16], hue[16], twinkle[16];
+    int lights, pane;
+    float pane_x, pane_y, pour;
+    uint32_t salt;
+} Rain;
+
+static void rain_setup(void *state, Rng *r, const Frame *f) {
+    Rain *w = state;
+    w->lights = rng_range(r, 9, 17);
+    for (int i = 0; i < w->lights; i++) {
+        w->x[i] = rng_between(r, -1, 1) * f->grid->aspect;
+        w->y[i] = rng_between(r, -0.95f, 0.55f);
+        w->radius[i] = rng_between(r, 0.05f, 0.2f);
+        w->hue[i] = rng_float(r);
+        w->twinkle[i] = rng_float(r) * TAU_F;
+    }
+    w->pane = rng_chance(r, 60);
+    w->pane_x = rng_between(r, -0.4f, 0.4f) * f->grid->aspect;
+    w->pane_y = rng_between(r, -0.25f, 0.35f);
+    w->pour = rng_between(r, 0.7f, 1.3f);
+    w->salt = rng_u32(r);
+}
+
+// An out-of-focus light: brightest in the middle and fading to nothing at its rim, with no edge for the matcher to trace.
+static void bokeh(Canvas *c, float x, float y, float radius, float level, Rgbf color) {
+    int i0 = (int)((x - radius + c->aspect) / c->sx), i1 = (int)((x + radius + c->aspect) / c->sx) + 1;
+    int j0 = (int)((1 - (y + radius)) / c->sy), j1 = (int)((1 - (y - radius)) / c->sy) + 1;
+    for (int j = j0 < 0 ? 0 : j0; j <= j1 && j < c->h; j++)
+        for (int i = i0 < 0 ? 0 : i0; i <= i1 && i < c->w; i++) {
+            float d = mhypot(canvas_x(c, i) - x, canvas_y(c, j) - y) / radius;
+            if (d < 1) canvas_max(c, i, j, level * (1 - d * d), color);
+        }
+}
+
+// One drop on the glass: a bead with its wet trail above it.
+static void rain_drop(Grid *g, float x, float y, float trail, Rgbf color) {
+    int col = cell_col(g, x), row = cell_row(g, y), length = (int)(trail * (float)g->rows * 0.5f);
+    put_cell(g, col, row, 'o', color);
+    for (int k = 1; k <= length; k++) {
+        float fade = 1 - (float)k / (float)(length + 1);
+        put_cell(g, col, row - k, k == 1 ? '|' : k < length ? ':' : '.', rgbf_scale(color, 0.25f + 0.6f * fade));
+    }
+}
+
+static void rain_draw(void *state, const Frame *f) {
+    Rain *w = state;
+    Grid *g = f->grid;
+    Canvas *c = f->canvas;
+    canvas_clear(c);
+    // City lights out of focus behind the glass: they bloom on the kick and turn color with each chord.
+    const ChordMark *chord = score_chord(f->score, f->t);
+    float turn = chord ? (float)chord->chord.root_pc / 12.0f : 0, bloom = frame_pulse(f, ROLE_KICK, 0.25f, 0.35f);
+    for (int i = 0; i < w->lights; i++) {
+        float hue = mfract(w->hue[i] + turn * 0.5f);
+        Rgbf color = hue < 0.5f ? palette_accent(f->palette, (int)(hue * 6)) : palette_ramp(f->palette, 0.45f + hue * 0.5f);
+        float level = 0.35f + 0.15f * msin(f->t * 0.4f + w->twinkle[i]) + bloom;
+        bokeh(c, w->x[i], w->y[i], w->radius[i] * (1.4f + bloom * 0.3f), level, color);
+    }
+    frame_resolve(f);
+    // Drops bead and slide in a steady rain, and every hi-hat adds one more. Each drop keeps its own moment; the
+    // music's energy only decides how many of them fall.
+    float spacing = 0.12f / w->pour, life = 6.0f;
+    Rgbf wet = palette_ramp(f->palette, 0.95f);
+    for (int k = (int)((f->t - life) / spacing); k <= (int)(f->t / spacing); k++) {
+        if (k < 0) continue;
+        uint32_t id = w->salt + (uint32_t)k * 2654435761u;
+        if (hash01(id + 5) > 0.25f + 0.6f * f->energy) continue;
+        float age = f->t - (float)k * spacing, speed = 0.12f + 0.3f * hash01(id + 2);
+        float x = (hash01(id) * 2 - 1) * g->aspect, y = 1.05f - hash01(id + 1) * 0.5f - speed * age;
+        if (y > -1.1f) rain_drop(g, x, y, mmin(age * speed, 0.35f), wet);
+    }
+    const ScoreEvent *hats[32];
+    int n = recent_notes(f->score, ROLE_HAT, f->t, 4.0f, hats, 32);
+    for (int i = 0; i < n; i++) {
+        uint32_t id = (uint32_t)(hats[i]->time * 1000.0f) * 2246822519u + w->salt;
+        float age = f->t - hats[i]->time, speed = 0.25f + 0.25f * hash01(id + 1);
+        float x = (hash01(id) * 2 - 1) * g->aspect, y = 0.95f - hash01(id + 2) * 0.4f - speed * age;
+        rain_drop(g, x, y, mmin(age * speed, 0.3f), rgbf_mix(wet, palette_accent(f->palette, 1), 0.3f));
+    }
+    // The window's cross bars stand in front of everything.
+    if (w->pane) {
+        Rgbf frame = palette_ramp(f->palette, 0.3f);
+        int col = cell_col(g, w->pane_x), row = cell_row(g, w->pane_y);
+        for (int y = 0; y < g->rows; y++) put_cell(g, col, y, '|', frame);
+        for (int x = 0; x < g->cols; x++) put_cell(g, x, row, '=', frame);
+        put_cell(g, col, row, '+', frame);
+    }
+    f->fx->glow = 0.55f;
+}
+
+/* ---------- Snowfall over a little village ---------- */
+
+typedef struct {
+    int houses, x[8], w[8], h[8], ground;
+    float wind, moon_x, moon_y, hills;
+    uint32_t salt;
+} Snow;
+
+static void snow_setup(void *state, Rng *r, const Frame *f) {
+    Snow *s = state;
+    Grid *g = f->grid;
+    s->ground = g->rows - rng_range(r, 4, 8);
+    s->houses = 0;
+    for (int x = rng_range(r, 1, 8); x < g->cols - 13 && s->houses < 8; x += rng_range(r, 14, 26)) {
+        s->x[s->houses] = x;
+        s->w[s->houses] = rng_range(r, 8, 13);
+        s->h[s->houses] = rng_range(r, 3, 5);
+        s->houses++;
+    }
+    s->wind = rng_between(r, -0.05f, 0.05f);
+    s->moon_x = rng_between(r, -0.7f, 0.7f) * f->grid->aspect;
+    s->moon_y = rng_between(r, 0.45f, 0.75f);
+    s->hills = rng_between(r, 0, 50);
+    s->salt = rng_u32(r);
+}
+
+// A cottage: a snow-capped roof of slashes over plain walls, with two windows the caller lights.
+static void cottage(Grid *g, int x, int w, int h, int ground, const float lit[2], Rgbf wall, Rgbf warm, Rgbf snow) {
+    int top = ground - h;
+    for (int k = 0;; k++) {
+        int y = top - 1 - k, l = x + k, r = x + w - 1 - k;
+        if (l >= r) {
+            if (l == r) put_cell(g, l, y, '^', snow);
+            break;
+        }
+        put_cell(g, l, y, '/', snow);
+        put_cell(g, r, y, '\\', snow);
+        for (int i = l + 1; i < r; i++) put_cell(g, i, y, k ? ' ' : '_', wall);
+    }
+    for (int y = top; y < ground; y++) {
+        put_cell(g, x, y, '|', wall);
+        put_cell(g, x + w - 1, y, '|', wall);
+        for (int i = x + 1; i < x + w - 1; i++) put_cell(g, i, y, ' ', wall);
+    }
+    int row = top + (h - 1) / 2;
+    for (int k = 0; k < 2; k++)
+        put_cell(g, k ? x + w - 3 : x + 2, row, '#', rgbf_mix(rgbf_scale(wall, 0.5f), warm, lit[k]));
+}
+
+static void snow_draw(void *state, const Frame *f) {
+    Snow *s = state;
+    Grid *g = f->grid;
+    Canvas *c = f->canvas;
+    canvas_clear(c);
+    // A soft winter moon, and a line of hills behind the village.
+    bokeh(c, s->moon_x, s->moon_y, 0.2f, 0.8f, palette_ramp(f->palette, 0.9f));
+    bokeh(c, s->moon_x, s->moon_y, 0.42f, 0.14f, palette_ramp(f->palette, 0.5f));
+    frame_resolve(f);
+    dust_stars(f, 0x5a0f, 0.0f, 0.6f);
+    StrokePoint ridge[64];
+    float ground_y = 1 - ((float)s->ground + 0.5f) / (float)g->rows * 2;
+    for (int i = 0; i < 64; i++) {
+        float x = -g->aspect + (float)i / 63.0f * 2 * g->aspect;
+        float rise = smoothstep(0.3f, 0.7f, noise_fbm(x * 0.5f + s->hills, 3));
+        ridge[i] = (StrokePoint){x, ground_y + 0.1f + 0.4f * rise, palette_ramp(f->palette, 0.35f)};
+    }
+    stroke_draw(f->stroker, ridge, 64, 0);
+    // The melody lights the village window by window: each note warms a window, which cools again.
+    float lit[16] = {0};
+    int windows = s->houses * 2;
+    static const Role singers[3] = {ROLE_LEAD, ROLE_BELL, ROLE_PLUCK};
+    for (int v = 0; v < 3 && windows; v++) {
+        const ScoreEvent *notes[24];
+        int n = recent_notes(f->score, singers[v], f->t, 3.0f, notes, 24);
+        for (int i = 0; i < n; i++) {
+            float glow = notes[i]->velocity * mexp(-(f->t - notes[i]->time) / 1.2f);
+            int w = notes[i]->note % windows;
+            if (glow > lit[w]) lit[w] = glow;
+        }
+    }
+    Rgbf wall = palette_ramp(f->palette, 0.6f), warm = palette_accent(f->palette, 1), snow = palette_ramp(f->palette, 0.95f);
+    for (int i = 0; i < s->houses; i++) cottage(g, s->x[i], s->w[i], s->h[i], s->ground, lit + 2 * i, wall, warm, snow);
+    for (int x = 0; x < g->cols; x++) {
+        put_cell(g, x, s->ground, hash01((uint32_t)x * 977u + s->salt) < 0.3f ? '~' : '_', snow);
+        for (int y = s->ground + 1; y < g->rows; y++)
+            if (hash01((uint32_t)(y * 131 + x) ^ s->salt) < 0.08f) put_cell(g, x, y, '.', rgbf_scale(snow, 0.6f));
+    }
+    // Three depths of flakes drift down and sway; a kick sends a little gust through them.
+    float travel = frame_travel(f, 0.6f, 0.6f), gust = frame_pulse(f, ROLE_KICK, 0.4f, 0.04f);
+    for (int layer = 0; layer < 3; layer++) {
+        int count = g->cols * g->rows / (60 - layer * 15);
+        float speed = 0.05f + 0.07f * (float)layer;
+        Rgbf flake = rgbf_scale(snow, 0.45f + 0.25f * (float)layer);
+        for (int k = 0; k < count; k++) {
+            uint32_t id = s->salt + (uint32_t)(layer * 100003 + k) * 2654435761u;
+            float y = 1.05f - mfract(hash01(id + 1) + travel * speed / 2.2f) * 2.2f;
+            float x = (hash01(id) * 2 - 1) * g->aspect + s->wind * f->t + gust * (float)(layer + 1) +
+                      0.03f * (float)(layer + 1) * msin(f->t * (0.5f + hash01(id + 2)) + hash01(id + 3) * TAU_F);
+            x -= mfloor((x + g->aspect) / (2 * g->aspect)) * 2 * g->aspect;
+            int glyph = layer == 0 ? '.' : layer == 1 ? (hash01(id + 4) < 0.5f ? '*' : '+') : '*';
+            if (layer == 2)
+                put_cell(g, cell_col(g, x), cell_row(g, y), glyph, flake);
+            else
+                put_cell_under(g, cell_col(g, x), cell_row(g, y), glyph, flake);
+        }
+    }
+    f->fx->glow = 0.5f;
+}
+
 const SceneKind scene_kinds[] = {
     {"warp", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_AMBIENT, 0.0f, 1.0f, warp_setup, warp_draw},
     {"tunnel", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_DUB, 0.5f, 1.0f, tunnel_setup, tunnel_draw},
@@ -833,5 +1054,7 @@ const SceneKind scene_kinds[] = {
     {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_JUNGLE, 0.0f, 0.8f, nebula_setup, nebula_draw},
     {"constellations", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.0f, 0.7f, constellation_setup, constellation_draw},
     {"cracktro", M_KEYGEN, 0.4f, 1.0f, cracktro_setup, cracktro_draw},
+    {"rain", M_LOFI | M_DUB | M_AMBIENT | M_JUNGLE, 0.0f, 0.85f, rain_setup, rain_draw},
+    {"snow", M_MUSICBOX | M_AMBIENT | M_LOFI, 0.0f, 0.75f, snow_setup, snow_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);

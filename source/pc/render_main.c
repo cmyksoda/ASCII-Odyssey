@@ -282,7 +282,7 @@ static void scripted_press(const char *list, int index, Input *in) {
 }
 
 static int piece_main(int argc, char **argv) {
-    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL;
+    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL, *scene = NULL;
     Mood mood = MOOD_ANY;
     LengthPref length = LENGTH_MEDIUM;
     int wide = 0, fps = 30, scale = 2, count = 0;
@@ -298,6 +298,8 @@ static int piece_main(int argc, char **argv) {
             video = argv[++i];
         else if (!strcmp(argv[i], "--info") && i + 1 < argc)
             info_path = argv[++i];
+        else if (!strcmp(argv[i], "--scene") && i + 1 < argc)
+            scene = argv[++i];
         else if (!strcmp(argv[i], "--times") && i + 1 < argc)
             count = parse_times(argv[++i], times, 64);
         else if (!strcmp(argv[i], "--fps") && i + 1 < argc)
@@ -316,6 +318,10 @@ static int piece_main(int argc, char **argv) {
     viewport_init(&vp, wide, 0);
     Piece p;
     if (piece_create(&p, seed, mood, length, &vp) != 0) return 1;
+    if (scene && piece_force_scene(&p, scene) != 0) {
+        fprintf(stderr, "no scene called %s\n", scene);
+        return 1;
+    }
     if (info_path) piece_info(&p, info_path);
     const SongInfo *info = &p.comp.info;
     printf("\"%s\": %s, %s %s, %d bpm, %.0f s, palette %s, grid %dx%d\n", info->title, mood_names[info->mood],

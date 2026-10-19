@@ -99,6 +99,22 @@ void piece_free(Piece *p) {
     stroker_free(&p->stroker);
 }
 
+int piece_force_scene(Piece *p, const char *name) {
+    int kind = -1;
+    for (int k = 0; k < scene_kind_count; k++)
+        if (!strcmp(scene_kinds[k].name, name)) kind = k;
+    if (kind < 0) return -1;
+    Rng r;
+    rng_init(&r, seed_hash(p->comp.info.title), "forced");
+    Frame proto = {.score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid,
+                   .stroker = &p->stroker, .matcher = &p->matcher, .fx = &p->fx};
+    for (int i = 0; i < p->direction.count; i++) {
+        p->direction.shots[i].kind = kind;
+        scene_kinds[kind].setup(p->direction.shots[i].state, &r, &proto);
+    }
+    return 0;
+}
+
 double piece_length(const Piece *p) {
     return p->score.length;
 }
