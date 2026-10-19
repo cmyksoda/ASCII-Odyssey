@@ -6,7 +6,7 @@
 #include <string.h>
 
 const AsciiStyle ascii_default = {
-    .ramp = " .:-=+*#%@",
+    .ramp = " .:-=+*#",
     .alphabet = " .,:;'`\"^~-_=+*<>/\\|()[]{}!#%&@$0Oo8",
     .flat = 0.09f,
     .contrast = 1.6f,
@@ -113,7 +113,8 @@ void ascii_resolve(const AsciiMatcher *m, const Canvas *c, Grid *g) {
             if (spread >= st->flat) glyph = st->correlate ? match_shape(m, v, avg) : match_coverage(m, v, peak);
             if (glyph < 0) glyph = ramp_glyph(m, avg);
             float k = (1 - st->shade) + st->shade * avg;
-            Rgb fg = {(uint8_t)(r / sum * k), (uint8_t)(gr / sum * k), (uint8_t)(b / sum * k)};
+            float scale = k / sum;
+            Rgb fg = rgb_from_f((Rgbf){r * scale, gr * scale, b * scale});
             *cell = (Cell){(uint8_t)glyph, fg};
         }
 }

@@ -34,10 +34,11 @@ static int pick(float tx, float ty, float bend_x, float fy) {
     float steep = mabs(ty) / (mabs(tx) + 1e-6f);
     // Cells are twice as tall as wide, so '/' already stands for a 63 degree line.
     if (steep < GENTLE) {
-        if (fy < 0.22f) return '`';
-        if (fy < 0.42f) return '\'';
-        if (fy < 0.62f) return '-';
-        if (fy < 0.8f) return '.';
+        // The middle band is widest: long level lines should read as solid dashes, not dots.
+        if (fy < 0.2f) return '`';
+        if (fy < 0.36f) return '\'';
+        if (fy < 0.68f) return '-';
+        if (fy < 0.82f) return '.';
         return '_';
     }
     if (steep < STEEP) return (tx > 0) == (ty > 0) ? '/' : '\\';
@@ -45,14 +46,14 @@ static int pick(float tx, float ty, float bend_x, float fy) {
     return bend_x > 0 ? '(' : ')';
 }
 
-static void plot(Stroker *s, int col, int row, float off, float tx, float ty, float bend_x, float fy, Rgb color) {
+static void plot(Stroker *s, int col, int row, float off, float tx, float ty, float bend_x, float fy, Rgbf color) {
     Grid *g = s->grid;
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
     int k = row * g->cols + col;
     if (owners[k] == owner_id && off >= s->best[k]) return;
     owners[k] = owner_id;
     s->best[k] = off;
-    g->cells[k] = (Cell){(uint8_t)pick(tx, ty, bend_x, fy), color};
+    g->cells[k] = (Cell){(uint8_t)pick(tx, ty, bend_x, fy), rgb_from_f(color)};
 }
 
 // Walks one segment like a pen: one glyph per column while it is gentle, one per row once it is steep.
@@ -68,7 +69,7 @@ static void segment(Stroker *s, const StrokePoint *a, const StrokePoint *b, floa
             float t = ((float)col + 0.5f - ax) / dx, y = ay + dy * t;
             int row = mfloor_i(y);
             float fy = y - (float)row;
-            plot(s, col, row, mabs(fy - 0.5f), tx, ty, bend_x, fy, rgb_mix(a->color, b->color, t));
+            plot(s, col, row, mabs(fy - 0.5f), tx, ty, bend_x, fy, rgbf_mix(a->color, b->color, t));
         }
     } else {
         float lo = mmin(ay, by), hi = mmax(ay, by);
@@ -76,7 +77,7 @@ static void segment(Stroker *s, const StrokePoint *a, const StrokePoint *b, floa
             float t = ((float)row + 0.5f - ay) / dy, x = ax + dx * t;
             int col = mfloor_i(x);
             float fx = x - (float)col;
-            plot(s, col, row, mabs(fx - 0.5f), tx, ty, bend_x, 0.5f, rgb_mix(a->color, b->color, t));
+            plot(s, col, row, mabs(fx - 0.5f), tx, ty, bend_x, 0.5f, rgbf_mix(a->color, b->color, t));
         }
     }
 }

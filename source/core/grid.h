@@ -13,6 +13,11 @@ typedef struct {
     uint8_t r, g, b;
 } Rgb;
 
+// Working colors stay in float, 0..255 per channel: the Wii's PowerPC pays dearly for every int-float conversion.
+typedef struct {
+    float r, g, b;
+} Rgbf;
+
 typedef struct {
     uint8_t glyph;
     Rgb fg;
@@ -61,6 +66,23 @@ static inline Rgb rgb(int r, int g, int b) {
     return (Rgb){(uint8_t)r, (uint8_t)g, (uint8_t)b};
 }
 
+static inline Rgbf rgbf(Rgb c) {
+    return (Rgbf){(float)c.r, (float)c.g, (float)c.b};
+}
+
+static inline Rgbf rgbf_mix(Rgbf a, Rgbf b, float t) {
+    return (Rgbf){a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t};
+}
+
+static inline Rgbf rgbf_scale(Rgbf c, float k) {
+    return (Rgbf){c.r * k, c.g * k, c.b * k};
+}
+
+static inline Rgbf rgbf_add(Rgbf a, Rgbf b) {
+    return (Rgbf){a.r + b.r, a.g + b.g, a.b + b.b};
+}
+
+Rgb rgb_from_f(Rgbf c);
 Rgb rgb_mix(Rgb a, Rgb b, float t);
 Rgb rgb_scale(Rgb c, float k);
 Rgb rgb_add(Rgb a, Rgb b);

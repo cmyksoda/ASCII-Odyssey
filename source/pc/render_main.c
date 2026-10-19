@@ -2,6 +2,7 @@
 // odyssey-render: the Wii app's core, run on the PC to look at frames and (later) render whole pieces.
 #include "../core/app.h"
 #include "../core/compose.h"
+#include "../core/piece.h"
 #include "../core/player.h"
 #include "../core/testsong.h"
 #include "audio_tools.h"
@@ -195,7 +196,117 @@ static int song_main(int argc, char **argv) {
     return 0;
 }
 
+static Mood mood_named(const char *name) {
+    for (int m = 0; m < MOOD_COUNT; m++)
+        if (!strcmp(mood_names[m], name)) return (Mood)m;
+    return MOOD_ANY;
+}
+
+// Renders a whole piece to video: frames go to ffmpeg raw over a pipe, the audio from a WAV beside it.
+static int piece_video(Piece *p, const char *path, int fps, int scale, int wide) {
+    long frames;
+    float *audio = render_song(p->comp.song, &frames);
+    if (!audio) return -1;
+    char wav[1024];
+    snprintf(wav, sizeof wav, "%s.wav", path);
+    wav_write(wav, audio, frames);
+    Image fb, shown = {0};
+    image_init(&fb, FB_W, FB_H);
+    int w = (wide ? FB_W * 4 / 3 : FB_W) * scale, h = FB_H * scale;
+    char cmd[2048];
+    snprintf(cmd, sizeof cmd,
+             "ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s %dx%d -r %d -i - -i '%s' -c:v libx264 -preset medium "
+             "-crf 18 -tune animation -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart '%s'",
+             w, h, fps, wav, path);
+    FILE *pipe = popen(cmd, "w");
+    if (!pipe) return -1;
+    long total = (long)((double)frames / AUDIO_RATE * fps);
+    for (long i = 0; i < total; i++) {
+        double t = (double)i / fps;
+        long at = (long)(t * AUDIO_RATE) - 512;
+        const float *scope = at >= 0 && at + 1024 < frames ? audio + at * 2 : NULL;
+        Screen screen = {0};
+        piece_draw(p, t, &screen, 0, 0, scope, 1024);
+        soft_render(&screen, &fb);
+        soft_present(&fb, wide, scale, &shown);
+        fwrite(shown.rgb, 1, (size_t)shown.w * shown.h * 3, pipe);
+    }
+    int rc = pclose(pipe);
+    remove(wav);
+    image_free(&fb);
+    image_free(&shown);
+    free(audio);
+    return rc;
+}
+
+static int piece_main(int argc, char **argv) {
+    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL;
+    Mood mood = MOOD_ANY;
+    LengthPref length = LENGTH_MEDIUM;
+    int wide = 0, fps = 30, scale = 2, count = 0;
+    double times[64];
+    for (int i = 2; i < argc; i++) {
+        if (!strcmp(argv[i], "--seed") && i + 1 < argc)
+            seed = argv[++i];
+        else if (!strcmp(argv[i], "--mood") && i + 1 < argc)
+            mood = mood_named(argv[++i]);
+        else if (!strcmp(argv[i], "--sheet") && i + 1 < argc)
+            sheet = argv[++i];
+        else if (!strcmp(argv[i], "--video") && i + 1 < argc)
+            video = argv[++i];
+        else if (!strcmp(argv[i], "--times") && i + 1 < argc)
+            count = parse_times(argv[++i], times, 64);
+        else if (!strcmp(argv[i], "--fps") && i + 1 < argc)
+            fps = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--scale") && i + 1 < argc)
+            scale = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--wide"))
+            wide = 1;
+        else if (!strcmp(argv[i], "--short"))
+            length = LENGTH_SHORT;
+        else if (!strcmp(argv[i], "--long"))
+            length = LENGTH_LONG;
+    }
+    app_boot();
+    Viewport vp;
+    viewport_init(&vp, wide, 0);
+    Piece p;
+    if (piece_create(&p, seed, mood, length, &vp) != 0) return 1;
+    const SongInfo *info = &p.comp.info;
+    printf("\"%s\": %s, %s %s, %d bpm, %.0f s, palette %s, grid %dx%d\n", info->title, mood_names[info->mood],
+           note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length, p.palette->name, p.grid.cols,
+           p.grid.rows);
+    for (int i = 0; i < p.direction.count; i++)
+        printf("  shot %2d %6.1f-%6.1f s  %-8s enters by %d\n", i, p.direction.shots[i].start, p.direction.shots[i].end,
+               scene_kinds[p.direction.shots[i].kind].name, p.direction.shots[i].entrance);
+    if (sheet) {
+        if (!count) {
+            for (int i = 0; i < p.direction.count && count < 12; i++)
+                times[count++] = p.direction.shots[i].start + (p.direction.shots[i].end - p.direction.shots[i].start) * 0.4;
+        }
+        Image fb, shown = {0}, out = {0};
+        image_init(&fb, FB_W, FB_H);
+        int cols = count < 3 ? count : 3;
+        for (int i = 0; i < count; i++) {
+            Screen screen = {0};
+            piece_draw(&p, times[i], &screen, 0, 0, NULL, 0);
+            soft_render(&screen, &fb);
+            soft_present(&fb, wide, 1, &shown);
+            if (!out.rgb) image_init(&out, shown.w * cols, shown.h * ((count + cols - 1) / cols));
+            paste(&out, &shown, (i % cols) * shown.w, (i / cols) * shown.h);
+        }
+        png_write(sheet, &out);
+        image_free(&fb);
+        image_free(&shown);
+        image_free(&out);
+    }
+    if (video && piece_video(&p, video, fps, scale, wide) != 0) fprintf(stderr, "video failed\n");
+    piece_free(&p);
+    return 0;
+}
+
 int main(int argc, char **argv) {
+    if (argc >= 2 && !strcmp(argv[1], "piece")) return piece_main(argc, argv);
     if (argc >= 2 && !strcmp(argv[1], "wav")) return wav_main(argc, argv);
     if (argc >= 2 && !strcmp(argv[1], "song")) return song_main(argc, argv);
     if (argc == 3 && !strcmp(argv[1], "lab")) {

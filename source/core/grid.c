@@ -69,6 +69,10 @@ static uint8_t channel(float v) {
     return v <= 0 ? 0 : v >= 255 ? 255 : (uint8_t)(v + 0.5f);
 }
 
+Rgb rgb_from_f(Rgbf c) {
+    return (Rgb){channel(c.r), channel(c.g), channel(c.b)};
+}
+
 Rgb rgb_mix(Rgb a, Rgb b, float t) {
     return (Rgb){channel(a.r + (b.r - a.r) * t), channel(a.g + (b.g - a.g) * t), channel(a.b + (b.b - a.b) * t)};
 }

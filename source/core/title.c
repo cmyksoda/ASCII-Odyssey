@@ -92,9 +92,9 @@ static void planet_body(Canvas *c, const Planet *p, float time) {
             float limb = smoothstep(0.55f, 1.0f, 1 - nz);
             // A dim floor keeps the night side's edge crisp against space; the lit limb glows.
             float ink = 0.26f + 0.46f * mpow(lambert, 0.8f) + 0.3f * limb * lambert + 0.06f * band;
-            Rgb surface = rgb_mix(PLANET_MID, PLANET_LIGHT, band * 0.7f);
-            Rgb color = rgb_mix(PLANET_DARK, surface, smoothstep(0.0f, 0.65f, lambert));
-            color = rgb_mix(color, (Rgb){255, 236, 214}, limb * lambert * 0.6f);
+            Rgbf surface = rgbf_mix(rgbf(PLANET_MID), rgbf(PLANET_LIGHT), band * 0.7f);
+            Rgbf color = rgbf_mix(rgbf(PLANET_DARK), surface, smoothstep(0.0f, 0.65f, lambert));
+            color = rgbf_mix(color, (Rgbf){255, 236, 214}, limb * lambert * 0.6f);
             canvas_max(c, i, j, saturate(ink), color);
         }
     }
@@ -107,7 +107,7 @@ static void planet_rings(Stroker *st, const Planet *p) {
     for (int k = 0; k < 2; k++) {
         StrokePoint run[200];
         int n = 0;
-        Rgb color = rgb_scale(RING, levels[k]);
+        Rgbf color = rgbf_scale(rgbf(RING), levels[k]);
         for (int s = 0; s <= 180; s++) {
             float a = (float)s / 180.0f * TAU_F, radius = p->r * radii[k];
             float u = mcos(a) * radius, v = msin(a) * radius * p->flat;

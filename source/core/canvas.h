@@ -12,7 +12,7 @@ typedef struct {
     // Scene units per sample.
     float sx, sy;
     float *ink;
-    Rgb *color;
+    Rgbf *color;
 } Canvas;
 
 int canvas_init(Canvas *c, const Grid *g);
@@ -28,10 +28,10 @@ static inline float canvas_y(const Canvas *c, int j) {
 }
 
 // Paints ink over what is there, the way a translucent layer would.
-void canvas_over(Canvas *c, int i, int j, float ink, Rgb color);
+void canvas_over(Canvas *c, int i, int j, float ink, Rgbf color);
 // Keeps the stronger of the two inks.
-void canvas_max(Canvas *c, int i, int j, float ink, Rgb color);
-void canvas_disc(Canvas *c, float x, float y, float radius, float ink, Rgb color);
-void canvas_line(Canvas *c, float x0, float y0, float x1, float y1, float width, float ink, Rgb color);
+void canvas_max(Canvas *c, int i, int j, float ink, Rgbf color);
+void canvas_disc(Canvas *c, float x, float y, float radius, float ink, Rgbf color);
+void canvas_line(Canvas *c, float x0, float y0, float x1, float y1, float width, float ink, Rgbf color);
 
 #endif

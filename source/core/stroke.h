@@ -16,7 +16,7 @@ typedef struct {
 
 typedef struct {
     float x, y;
-    Rgb color;
+    Rgbf color;
 } StrokePoint;
 
 int stroker_init(Stroker *s, Grid *g);
