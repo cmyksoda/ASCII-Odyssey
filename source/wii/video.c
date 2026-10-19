@@ -22,7 +22,16 @@ static int front, shown, wide;
 static void *fifo;
 static FaceTexture faces[MAX_FACES];
 static int face_count;
+static void *glow_texels;
+static GXTexObj glow_tex;
 static unsigned build_time, gpu_time;
+static int interval = 1;
+static u32 last_retrace;
+static volatile u32 retraces;
+
+static void on_retrace(u32 count) {
+    retraces = count;
+}
 
 // A PAL console follows its own 50/60 Hz setting, as licensed games do; 50 Hz scales the 480-line EFB onto 576.
 static GXRModeObj *pick_mode(void) {
@@ -56,6 +65,7 @@ int video_init(void) {
         VIDEO_ClearFrameBuffer(mode, xfb[i], COLOR_BLACK);
     }
     VIDEO_Configure(mode);
+    VIDEO_SetPostRetraceCallback(on_retrace);
     VIDEO_SetNextFramebuffer(xfb[0]);
     VIDEO_SetBlack(TRUE);
     VIDEO_Flush();
@@ -67,6 +77,11 @@ int video_init(void) {
     GX_Init(fifo, FIFO_SIZE);
     copy_setup();
     GX_SetPixelFmt(GX_PF_RGB8_Z24, GX_ZC_LINEAR);
+    glow_texels = memalign(32, GX_GetTexBufferSize(FB_W / 2, FB_H / 2, GX_TF_RGB565, GX_FALSE, 0));
+    if (glow_texels) {
+        GX_InitTexObj(&glow_tex, glow_texels, FB_W / 2, FB_H / 2, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE);
+        GX_InitTexObjFilterMode(&glow_tex, GX_LINEAR, GX_LINEAR);
+    }
     return 0;
 }
 
@@ -176,11 +191,53 @@ static void draw_grid(const Grid *g, float gain, float flash, float shake_x, flo
     GX_End();
 }
 
+// Phosphor glow: the GPU box-filters the frame into a half-size copy, which goes back on top in soft
+// additive taps. The PC renderer's software glow imitates this.
+static void glow(float amount) {
+    if (!glow_texels || amount <= 0) return;
+    GX_SetTexCopySrc(0, 0, FB_W, FB_H);
+    GX_SetTexCopyDst(FB_W / 2, FB_H / 2, GX_TF_RGB565, GX_TRUE);
+    GX_CopyTex(glow_texels, GX_FALSE);
+    GX_PixModeSync();
+    GX_InvalidateTexAll();
+    GX_LoadTexObj(&glow_tex, GX_TEXMAP0);
+    Mtx m;
+    guMtxScale(m, 2.0f / FB_W, 2.0f / FB_H, 1);
+    GX_LoadTexMtxImm(m, GX_TEXMTX0, GX_MTX2x4);
+    guMtxIdentity(m);
+    GX_LoadPosMtxImm(m, GX_PNMTX0);
+    GX_SetTevOp(GX_TEVSTAGE0, GX_MODULATE);
+    GX_SetBlendMode(GX_BM_BLEND, GX_BL_ONE, GX_BL_ONE, GX_LO_CLEAR);
+    static const s16 taps[4][2] = {{-3, -2}, {3, 2}, {-2, 3}, {2, -3}};
+    u8 level = (u8)(amount * 255 / 4 > 255 ? 255 : amount * 255 / 4);
+    u32 color = (u32)level << 24 | (u32)level << 16 | (u32)level << 8 | 0xff;
+    GX_Begin(GX_QUADS, GX_VTXFMT0, 16);
+    for (int k = 0; k < 4; k++) {
+        s16 dx = taps[k][0], dy = taps[k][1];
+        GX_Position2s16(dx, dy);
+        GX_Color1u32(color);
+        GX_TexCoord2u16(0, 0);
+        GX_Position2s16((s16)(FB_W + dx), dy);
+        GX_Color1u32(color);
+        GX_TexCoord2u16(FB_W / 2, 0);
+        GX_Position2s16((s16)(FB_W + dx), (s16)(FB_H + dy));
+        GX_Color1u32(color);
+        GX_TexCoord2u16(FB_W / 2, FB_H / 2);
+        GX_Position2s16(dx, (s16)(FB_H + dy));
+        GX_Color1u32(color);
+        GX_TexCoord2u16(0, FB_H / 2);
+    }
+    GX_End();
+    // Back to drawing glyphs for whatever comes next.
+    glyph_state();
+}
+
 void video_draw(const Screen *s) {
     u64 t0 = gettime();
     GX_SetCopyClear((GXColor){s->fx.bg.r, s->fx.bg.g, s->fx.bg.b, 0xff}, 0x00ffffff);
     glyph_state();
     if (s->scene) draw_grid(s->scene, s->fx.gain, s->fx.flash, s->fx.shake_x, s->fx.shake_y);
+    glow(s->fx.glow * s->fx.gain);
     if (s->ui) draw_grid(s->ui, 1, 0, 0, 0);
     u64 t1 = gettime();
     GX_DrawDone();
@@ -196,7 +253,14 @@ void video_draw(const Screen *s) {
         shown = 1;
     }
     VIDEO_Flush();
-    VIDEO_WaitVSync();
+    // Hold to the frame rhythm: a late frame shows once, then the rhythm picks up again.
+    do VIDEO_WaitVSync();
+    while (retraces - last_retrace < (u32)interval);
+    last_retrace = retraces;
+}
+
+void video_set_interval(int count) {
+    interval = count < 1 ? 1 : count;
 }
 
 void video_times(unsigned *build_us, unsigned *gpu_us) {

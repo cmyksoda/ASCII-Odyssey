@@ -7,6 +7,8 @@
 int video_init(void);
 int video_wide(void);
 void video_draw(const Screen *s);
+// Show each frame for this many retraces: 2 holds pieces at a steady 30 frames a second.
+void video_set_interval(int count);
 // Microseconds the last frame spent building GX commands, and waiting for the GPU to finish them.
 void video_times(unsigned *build_us, unsigned *gpu_us);
 // The framebuffer most recently shown, as YUYV.

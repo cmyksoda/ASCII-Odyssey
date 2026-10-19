@@ -139,15 +139,19 @@ static void kick(Instrument *ins, Rng *r, int soft) {
     Wave w = wave_new(body * 2.4f + 0.05f);
     uint32_t seed = rng_u32(r) | 1;
     float phase = 0, amp = 1, k = decay_factor(body), click = 0, lp = 0;
+    float sweep = punch, snap = soft ? 0 : 70, tick = 0.6f;
+    float k_sweep = decay_factor(0.032f), k_snap = decay_factor(0.004f), k_tick = decay_factor(0.0025f);
     for (int i = 0; i < w.n; i++) {
         float t = (float)i / RATE;
-        float hz = end + punch * mexp(-t / 0.032f) + (soft ? 0 : 70 * mexp(-t / 0.004f));
-        phase += hz / RATE;
+        phase += (end + sweep + snap) / RATE;
         if (phase >= 1) phase -= 1;
+        sweep *= k_sweep;
+        snap *= k_snap;
         float v = msin(phase * TAU_F) * amp;
         if (!soft) {
             lp += 0.3f * (white(&seed) - lp);
-            click = lp * mexp(-t / 0.0025f) * 0.6f;
+            click = lp * tick;
+            tick *= k_tick;
         }
         float attack = t < 0.0015f ? t / 0.0015f : 1;
         w.s[i] = mtanh((v + click) * (soft ? 1.1f : 1.8f)) * attack;
@@ -160,15 +164,16 @@ static void kick_chip(Instrument *ins, Rng *r) {
     base(ins, "chip kick", ROLE_KICK, 0.9f);
     float sweep = rng_between(r, 0.04f, 0.08f);
     Wave w = wave_new(0.22f);
-    float phase = 0;
+    float phase = 0, bend = 260, env = 1, k_bend = decay_factor(sweep), k_env = decay_factor(0.09f);
     for (int i = 0; i < w.n; i++) {
-        float t = (float)i / RATE;
-        phase += (45 + 260 * mexp(-t / sweep)) / RATE;
+        phase += (45 + bend) / RATE;
         if (phase >= 1) phase -= 1;
         // A 16-step triangle, like the NES's.
         float tri = phase < 0.5f ? phase * 4 - 1 : 3 - phase * 4;
         tri = (float)mfloor_i(tri * 7.5f) / 7.5f;
-        w.s[i] = tri * mexp(-t / 0.09f);
+        w.s[i] = tri * env;
+        bend *= k_bend;
+        env *= k_env;
     }
     keep(ins, &w, 49, 0, 0, 120);
 }
@@ -185,20 +190,27 @@ static void snare(Instrument *ins, Rng *r, int gated, int brush) {
     svf_reset(&high);
     svf_set(&band, noise_hz, 0.7f);
     svf_set(&high, 900, 0.7f);
-    float p1 = 0, p2 = 0;
+    float p1 = 0, p2 = 0, chirp = 60, body = 1, env = 1, fast = 1, gate = 1;
+    float k_chirp = decay_factor(0.02f), k_body = decay_factor(0.045f), k_env = decay_factor(decay);
+    float k_fast = decay_factor(0.05f), k_gate = decay_factor(0.012f);
     for (int i = 0; i < w.n; i++) {
         float t = (float)i / RATE;
-        p1 += (tone_hz + 60 * mexp(-t / 0.02f)) / RATE;
+        p1 += (tone_hz + chirp) / RATE;
         p2 += (tone_hz * 1.78f) / RATE;
         if (p1 >= 1) p1 -= 1;
         if (p2 >= 1) p2 -= 1;
-        float tone = (msin(p1 * TAU_F) + 0.4f * msin(p2 * TAU_F)) * mexp(-t / 0.045f) * (brush ? 0.15f : 0.7f);
+        float tone = (msin(p1 * TAU_F) + 0.4f * msin(p2 * TAU_F)) * body * (brush ? 0.15f : 0.7f);
         float n = white(&seed);
         float hiss = svf_high(&high, svf_band(&band, n) * 1.6f + n * 0.25f);
-        float env = mexp(-t / decay);
-        if (gated) env = t < 0.26f ? 0.55f + 0.45f * mexp(-t / 0.05f) : 0.55f * mexp(-(t - 0.26f) / 0.012f);
-        if (brush) env *= t < 0.012f ? t / 0.012f : 1;
-        w.s[i] = (tone + hiss * env) * (t < 0.001f ? t / 0.001f : 1);
+        float level = env;
+        if (gated) level = t < 0.26f ? 0.55f + 0.45f * fast : 0.55f * gate;
+        if (gated && t >= 0.26f) gate *= k_gate;
+        if (brush) level *= t < 0.012f ? t / 0.012f : 1;
+        w.s[i] = (tone + hiss * level) * (t < 0.001f ? t / 0.001f : 1);
+        chirp *= k_chirp;
+        body *= k_body;
+        env *= k_env;
+        fast *= k_fast;
     }
     keep(ins, &w, 49, 0, 0, 120);
     if (gated) ins->send_reverb = 0.3f;
@@ -208,9 +220,8 @@ static void snare_chip(Instrument *ins, Rng *r) {
     base(ins, "chip snare", ROLE_SNARE, 0.7f);
     Wave w = wave_new(0.2f);
     uint32_t lfsr = 0x4000 | (rng_u32(r) & 0x3fff);
-    float hold = 0, out = 0;
+    float hold = 0, out = 0, env = 1, k_env = decay_factor(0.07f);
     for (int i = 0; i < w.n; i++) {
-        float t = (float)i / RATE;
         // A 15-bit LFSR clocked like an 8-bit sound chip's noise channel.
         hold += 9000 / RATE;
         if (hold >= 1) {
@@ -219,7 +230,8 @@ static void snare_chip(Instrument *ins, Rng *r) {
             lfsr = (lfsr >> 1) | (bit << 14);
             out = lfsr & 1 ? 1.0f : -1.0f;
         }
-        w.s[i] = out * mexp(-t / 0.07f);
+        w.s[i] = out * env;
+        env *= k_env;
     }
     keep(ins, &w, 49, 0, 0, 120);
 }
@@ -232,14 +244,18 @@ static void clap(Instrument *ins, Rng *r) {
     svf_reset(&band);
     svf_set(&band, rng_between(r, 1000, 1500), 1.1f);
     float spread = rng_between(r, 0.008f, 0.013f);
+    float bursts[3] = {0, 0, 0}, tail = 0, k_burst = decay_factor(0.004f), k_tail = decay_factor(0.13f);
+    int starts[4] = {0, (int)(spread * RATE), (int)(2 * spread * RATE), (int)(3 * spread * RATE)};
     for (int i = 0; i < w.n; i++) {
-        float t = (float)i / RATE, env = 0;
+        float env = 0;
         for (int b = 0; b < 3; b++) {
-            float tb = t - spread * (float)b;
-            if (tb >= 0) env += mexp(-tb / 0.004f);
+            if (i == starts[b]) bursts[b] = 1;
+            env += bursts[b];
+            bursts[b] *= k_burst;
         }
-        float tail = t - spread * 3;
-        if (tail >= 0) env += 0.85f * mexp(-tail / 0.13f);
+        if (i == starts[3]) tail = 0.85f;
+        env += tail;
+        tail *= k_tail;
         w.s[i] = svf_band(&band, white(&seed)) * env;
     }
     keep(ins, &w, 49, 0, 0, 120);
@@ -255,15 +271,19 @@ static void metal(Wave *w, uint32_t *seed, float scale, float noise, float decay
     svf_reset(&high);
     svf_set(&band, band_hz, 0.8f);
     svf_set(&high, hp_hz, 0.7f);
+    float env = 1, k_env = decay_factor(decay), step[6];
+    for (int k = 0; k < 6; k++) step[k] = HAT_RATIOS[k] * scale / RATE;
+    int attack = (int)(0.0008f * RATE);
     for (int i = 0; i < w->n; i++) {
-        float t = (float)i / RATE, v = 0;
+        float v = 0;
         for (int k = 0; k < 6; k++) {
-            phase[k] += HAT_RATIOS[k] * scale / RATE;
+            phase[k] += step[k];
             if (phase[k] >= 1) phase[k] -= 1;
             v += phase[k] < 0.5f ? 1.0f : -1.0f;
         }
         v = v / 6 * 0.7f + white(seed) * noise;
-        w->s[i] = svf_high(&high, svf_band(&band, v)) * mexp(-t / decay) * (t < 0.0008f ? t / 0.0008f : 1);
+        w->s[i] = svf_high(&high, svf_band(&band, v)) * env * (i < attack ? (float)i / (float)attack : 1);
+        env *= k_env;
     }
 }
 
@@ -283,9 +303,8 @@ static void hat_chip(Instrument *ins, Rng *r) {
     Wave w = wave_new(0.08f);
     // The short-period noise mode: a 93-step loop that rings metallic.
     uint32_t lfsr = 1 + (rng_u32(r) & 0x7f);
-    float hold = 0, out = 0;
+    float hold = 0, out = 0, env = 1, k_env = decay_factor(0.018f);
     for (int i = 0; i < w.n; i++) {
-        float t = (float)i / RATE;
         hold += 22000 / RATE;
         if (hold >= 1) {
             hold -= 1;
@@ -293,7 +312,8 @@ static void hat_chip(Instrument *ins, Rng *r) {
             lfsr = ((lfsr >> 1) | (bit << 14)) & 0x7fff;
             out = lfsr & 1 ? 1.0f : -1.0f;
         }
-        w.s[i] = out * mexp(-t / 0.018f);
+        w.s[i] = out * env;
+        env *= k_env;
     }
     keep(ins, &w, 49, 0, 0, 120);
 }
@@ -317,10 +337,11 @@ static void shaker(Instrument *ins, Rng *r) {
 static void rim(Instrument *ins, Rng *r) {
     base(ins, "rim", ROLE_PERC, 0.35f);
     Wave w = wave_new(0.1f);
-    float hz = rng_between(r, 1500, 1900);
+    float hz = rng_between(r, 1500, 1900), env = 1, k_env = decay_factor(0.012f);
     for (int i = 0; i < w.n; i++) {
         float t = (float)i / RATE;
-        w.s[i] = (0.6f * msin(TAU_F * hz * t) + 0.4f * msin(TAU_F * hz * 0.49f * t)) * mexp(-t / 0.012f);
+        w.s[i] = (0.6f * msin(TAU_F * hz * t) + 0.4f * msin(TAU_F * hz * 0.49f * t)) * env;
+        env *= k_env;
     }
     keep(ins, &w, 49, 0, 0, 120);
     ins->send_reverb = 0.15f;
@@ -331,12 +352,15 @@ static void tom(Instrument *ins, Rng *r) {
     base(ins, "tom", ROLE_PERC, 0.6f);
     Wave w = wave_new(0.6f);
     uint32_t seed = rng_u32(r) | 1;
-    float hz = rng_between(r, 95, 140), phase = 0;
+    float hz = rng_between(r, 95, 140), phase = 0, bend = 0.6f, hit = 0.12f, env = 1;
+    float k_bend = decay_factor(0.05f), k_hit = decay_factor(0.01f), k_env = decay_factor(0.22f);
     for (int i = 0; i < w.n; i++) {
-        float t = (float)i / RATE;
-        phase += (hz * (1 + 0.6f * mexp(-t / 0.05f))) / RATE;
+        phase += hz * (1 + bend) / RATE;
         if (phase >= 1) phase -= 1;
-        w.s[i] = (msin(phase * TAU_F) + white(&seed) * 0.12f * mexp(-t / 0.01f)) * mexp(-t / 0.22f);
+        w.s[i] = (msin(phase * TAU_F) + white(&seed) * hit) * env;
+        bend *= k_bend;
+        hit *= k_hit;
+        env *= k_env;
     }
     keep(ins, &w, 49, 0, 0, 120);
     ins->send_reverb = 0.2f;
@@ -346,12 +370,12 @@ static void cymbal(Instrument *ins, Rng *r, int ride) {
     base(ins, ride ? "ride" : "crash", ride ? ROLE_HAT : ROLE_CRASH, ride ? 0.3f : 0.42f);
     uint32_t seed = rng_u32(r) | 1;
     float decay = ride ? rng_between(r, 0.6f, 1.0f) : rng_between(r, 1.2f, 2.2f);
-    Wave w = wave_new(decay * 3.5f);
+    Wave w = wave_new(decay * 2.6f);
     metal(&w, &seed, rng_between(r, 1.1f, 1.6f), ride ? 0.35f : 0.8f, decay, 3800, ride ? 7000 : 9000);
     if (ride)
         for (int i = 0; i < w.n; i++) {
             float t = (float)i / RATE;
-            w.s[i] += 0.25f * msin(TAU_F * 3100 * t) * mexp(-t / 0.4f);
+            w.s[i] += 0.25f * msin(TAU_F * 3100 * t) * mexp2(-t * 3.607f);
         }
     keep(ins, &w, 49, 0, 0, 120);
     ins->send_reverb = 0.2f;
@@ -425,9 +449,10 @@ static void bass_chip(Instrument *ins, Rng *r, float bpm) {
 static void saw_stack(Instrument *ins, Rng *r, int voices, float spread_cents, float seconds, float lowpass_hz,
                       float root_lo, float pulse_mix) {
     float roots[3] = {root_lo, root_lo + 24, root_lo + 48};
+    int count = seconds > 1.5f ? 2 : 3;
     float phases[9];
     for (int v = 0; v < voices; v++) phases[v] = rng_float(r);
-    for (int k = 0; k < 3; k++) {
+    for (int k = 0; k < count; k++) {
         Wave w = wave_new(seconds);
         float hz = note_hz(roots[k]);
         Svf lp;
@@ -453,7 +478,7 @@ static void saw_stack(Instrument *ins, Rng *r, int voices, float spread_cents, f
         }
         int loop_start = w.n / 3, fade = w.n / 6;
         crossfade_loop(w.s, loop_start, w.n, fade);
-        keep(ins, &w, roots[k], loop_start, w.n - loop_start, k == 2 ? 120 : (int)roots[k] + 18);
+        keep(ins, &w, roots[k], loop_start, w.n - loop_start, k == count - 1 ? 120 : (int)roots[k] + 18);
     }
 }
 
@@ -470,7 +495,7 @@ static void bass_saw(Instrument *ins, Rng *r, float bpm) {
 
 static void bass_reese(Instrument *ins, Rng *r, float bpm) {
     base(ins, "reese bass", ROLE_BASS, 0.55f);
-    saw_stack(ins, r, 3, rng_between(r, 14, 24), 2.4f, 2500, 25, 0);
+    saw_stack(ins, r, 3, rng_between(r, 14, 24), 1.8f, 2500, 25, 0);
     envelope(&ins->volume_env, bpm, 0.01f, 0.2f, 0.9f, 0.15f);
     ins->cutoff = 0.62f;
     ins->resonance = 0.9f;
@@ -515,7 +540,7 @@ static void bass_fm(Instrument *ins, Rng *r, float bpm) {
 
 static void pad_supersaw(Instrument *ins, Rng *r, float bpm) {
     base(ins, "supersaw pad", ROLE_PAD, 0.32f);
-    saw_stack(ins, r, 7, rng_between(r, 14, 30), 3.0f, 12000, 37, 0);
+    saw_stack(ins, r, 5, rng_between(r, 14, 30), 2.0f, 12000, 37, 0);
     envelope(&ins->volume_env, bpm, rng_between(r, 0.3f, 0.9f), 0.5f, 0.85f, rng_between(r, 0.8f, 1.6f));
     ins->cutoff = rng_between(r, 0.62f, 0.78f);
     ins->resonance = 0.8f;
@@ -526,7 +551,7 @@ static void pad_supersaw(Instrument *ins, Rng *r, float bpm) {
 
 static void pad_warm(Instrument *ins, Rng *r, float bpm) {
     base(ins, "warm pad", ROLE_PAD, 0.36f);
-    saw_stack(ins, r, 3, rng_between(r, 6, 12), 3.0f, 2400, 37, 0.3f);
+    saw_stack(ins, r, 3, rng_between(r, 6, 12), 2.0f, 2400, 37, 0.3f);
     envelope(&ins->volume_env, bpm, rng_between(r, 0.6f, 1.4f), 0.5f, 0.9f, rng_between(r, 1.0f, 2.0f));
     ins->cutoff = 0.7f;
     ins->send_reverb = 0.45f;
@@ -541,7 +566,7 @@ static void pad_choir(Instrument *ins, Rng *r, float bpm) {
     const float *f = vowels[rng_range(r, 0, 3)];
     for (int k = 0; k < 2; k++) {
         float root = 37.0f + 24.0f * (float)k;
-        Wave w = wave_new(3.0f);
+        Wave w = wave_new(2.0f);
         float hz = note_hz(root), phase = 0, vib = 0;
         Svf bands[3];
         for (int b = 0; b < 3; b++) {
@@ -570,8 +595,8 @@ static void pad_glass(Instrument *ins, Rng *r, float bpm) {
     float ratio = rng_chance(r, 50) ? 2.0f : 3.0f;
     for (int k = 0; k < 2; k++) {
         float root = 37.0f + 24.0f * (float)k;
-        Wave w = wave_new(3.0f);
-        Wave w2 = wave_new(3.0f);
+        Wave w = wave_new(2.0f);
+        Wave w2 = wave_new(2.0f);
         fm_tone(&w, note_hz(root), ratio, 1.2f, 4.0f, 1000, 0, 0);
         fm_tone(&w2, note_hz(root) * 1.004f, ratio, 1.0f, 4.0f, 1000, 0, 0);
         for (int i = 0; i < w.n && w2.s; i++) w.s[i] = (w.s[i] + w2.s[i]) * 0.5f;
@@ -726,10 +751,10 @@ static void arp_chip(Instrument *ins, Rng *r, float bpm) {
 // Karplus-Strong with an allpass fractional delay, so every note is in tune; one sample per octave.
 static void karplus(Instrument *ins, Rng *r, float sustain, float brightness, float pick, int harp) {
     uint32_t seed = rng_u32(r) | 1;
-    for (int k = 0; k < 5; k++) {
-        float root = 25.0f + 12.0f * (float)k;
+    for (int k = 0; k < 4; k++) {
+        float root = 31.0f + 12.0f * (float)k;
         float hz = note_hz(root);
-        Wave w = wave_new(mmin(sustain * 1.4f, 4.5f));
+        Wave w = wave_new(mmin(sustain * 1.1f, 3.0f));
         float period = RATE / hz - 0.5f;
         int length = mfloor_i(period);
         float frac = period - (float)length;
@@ -767,7 +792,7 @@ static void karplus(Instrument *ins, Rng *r, float sustain, float brightness, fl
             w.s[i] = dc_y * (harp && i < 96 ? (float)i / 96 : 1);
         }
         free(line);
-        keep(ins, &w, root, 0, 0, k == 4 ? 120 : (int)root + 6);
+        keep(ins, &w, root, 0, 0, k == 3 ? 120 : (int)root + 6);
     }
 }
 
@@ -792,15 +817,15 @@ static void bell_fm(Instrument *ins, Rng *r, float bpm) {
     (void)bpm;
     base(ins, "bell", ROLE_BELL, 0.34f);
     static const float ratios[4] = {3.5f, 2.76f, 1.4f, 4.0f};
-    float ratio = ratios[rng_range(r, 0, 4)], decay = rng_between(r, 1.6f, 3.2f);
-    for (int k = 0; k < 3; k++) {
-        float root = 49.0f + 18.0f * (float)k;
-        Wave w = wave_new(decay * 1.5f), shimmer = wave_new(decay * 1.5f);
+    float ratio = ratios[rng_range(r, 0, 4)], decay = rng_between(r, 1.4f, 2.6f);
+    for (int k = 0; k < 2; k++) {
+        float root = 52.0f + 24.0f * (float)k;
+        Wave w = wave_new(decay * 1.2f), shimmer = wave_new(decay * 1.2f);
         fm_tone(&w, note_hz(root), ratio, 3.0f, 0.12f, decay, 0.0015f, 0);
         fm_tone(&shimmer, note_hz(root) * 2.001f, 1.001f, 0.15f, 0.2f, decay * 0.4f, 0.0015f, 0);
         for (int i = 0; i < w.n && shimmer.s; i++) w.s[i] = 0.8f * w.s[i] + 0.3f * shimmer.s[i];
         free(shimmer.s);
-        keep(ins, &w, root, 0, 0, k == 2 ? 120 : (int)root + 9);
+        keep(ins, &w, root, 0, 0, k == 1 ? 120 : (int)root + 12);
     }
     ins->send_reverb = 0.45f;
     ins->send_delay = 0.28f;
@@ -810,15 +835,15 @@ static void bell_fm(Instrument *ins, Rng *r, float bpm) {
 static void celesta(Instrument *ins, Rng *r, float bpm, int musicbox) {
     (void)bpm;
     base(ins, musicbox ? "music box" : "celesta", ROLE_BELL, 0.38f);
-    float ratio = musicbox ? rng_between(r, 5.2f, 5.6f) : 4.0f, decay = musicbox ? 2.2f : 1.4f;
-    for (int k = 0; k < 3; k++) {
-        float root = 49.0f + 18.0f * (float)k;
-        Wave w = wave_new(decay * 1.6f), tine = wave_new(decay * 1.6f);
+    float ratio = musicbox ? rng_between(r, 5.2f, 5.6f) : 4.0f, decay = musicbox ? 2.0f : 1.3f;
+    for (int k = 0; k < 2; k++) {
+        float root = 52.0f + 24.0f * (float)k;
+        Wave w = wave_new(decay * 1.3f), tine = wave_new(decay * 1.3f);
         fm_tone(&w, note_hz(root), 1.0f, 0.3f, 0.3f, decay, 0.001f, 0);
         fm_tone(&tine, note_hz(root) * ratio, 1.0f, 0.2f, 0.1f, decay * 0.15f, 0.0005f, 0);
         for (int i = 0; i < w.n && tine.s; i++) w.s[i] += tine.s[i] * 0.35f;
         free(tine.s);
-        keep(ins, &w, root, 0, 0, k == 2 ? 120 : (int)root + 9);
+        keep(ins, &w, root, 0, 0, k == 1 ? 120 : (int)root + 12);
     }
     ins->send_reverb = 0.42f;
     ins->send_delay = 0.2f;
@@ -833,11 +858,14 @@ static void riser(Instrument *ins, Rng *r, float bpm, int down) {
     uint32_t seed = rng_u32(r) | 1;
     Svf band;
     svf_reset(&band);
-    float phase = 0;
+    float phase = 0, saw_hz = 55;
     for (int i = 0; i < w.n; i++) {
         float x = (float)i / (float)w.n, u = down ? 1 - x : x;
-        if ((i & 31) == 0) svf_set(&band, 200 * mpow(40.0f, u * 0.75f + u * u * 0.25f), 2.0f);
-        phase += 55 * mpow(4.0f, u) / RATE;
+        if ((i & 31) == 0) {
+            svf_set(&band, 200 * mpow(40.0f, u * 0.75f + u * u * 0.25f), 2.0f);
+            saw_hz = 55 * mpow(4.0f, u);
+        }
+        phase += saw_hz / RATE;
         if (phase >= 1) phase -= 1;
         float level = down ? (1 - x) * (1 - x) : x * x;
         w.s[i] = (svf_band(&band, white(&seed)) + 0.08f * saw(phase, 0.001f) * u) * level;
@@ -852,14 +880,18 @@ static void impact(Instrument *ins, Rng *r) {
     uint32_t seed = rng_u32(r) | 1;
     Svf lp;
     svf_reset(&lp);
-    float phase = 0;
+    float phase = 0, open = 2400, drop = 58, boom_env = 1, noise_env = 1;
+    float k_open = decay_factor(0.12f), k_drop = decay_factor(0.35f), k_boom = decay_factor(0.9f);
     for (int i = 0; i < w.n; i++) {
-        float t = (float)i / RATE;
-        if ((i & 31) == 0) svf_set(&lp, 90 + 2400 * mexp(-t / 0.12f), 0.7f);
-        phase += (28 + 58 * mexp(-t / 0.35f)) / RATE;
+        if ((i & 31) == 0) svf_set(&lp, 90 + open, 0.7f);
+        phase += (28 + drop) / RATE;
         if (phase >= 1) phase -= 1;
-        float boom = msin(phase * TAU_F) * mexp(-t / 0.9f);
-        w.s[i] = mtanh(1.3f * (boom + svf_low(&lp, white(&seed)) * mexp(-t / 0.35f)));
+        float boom = msin(phase * TAU_F) * boom_env;
+        w.s[i] = soft_clip(1.3f * (boom + svf_low(&lp, white(&seed)) * noise_env));
+        open *= k_open;
+        drop *= k_drop;
+        boom_env *= k_boom;
+        noise_env *= k_drop;
     }
     keep(ins, &w, 49, 0, 0, 120);
     ins->send_reverb = 0.35f;

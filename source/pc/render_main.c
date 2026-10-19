@@ -345,7 +345,9 @@ int main(int argc, char **argv) {
     for (int i = 0; i < count; i++) {
         Input in = {0};
         Screen screen = {0};
-        app_frame(app, times[i], &in, &screen);
+        AppClock clock = {.wall = times[i], .music = -1};
+        AppRequest req;
+        app_frame(app, &clock, &in, &screen, &req);
         soft_render(&screen, &fb);
         soft_present(&fb, config.wide, sheet_path ? 1 : scale, &shown);
         if (sheet_path) {
