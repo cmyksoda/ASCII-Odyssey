@@ -1,0 +1,8 @@
+/build/
+/dist/
+/project-notes/
+CLAUDE.md
+AGENTS.md
+README.md
+*.pyc
+__pycache__/
