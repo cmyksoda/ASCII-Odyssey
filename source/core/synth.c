@@ -650,6 +650,33 @@ static void keys_organ(Instrument *ins, Rng *r, float bpm) {
     ins->vibrato_rate = 6.0f;
 }
 
+// Chord stabs that speak at once and die away on their own: bright supersaw for trance, dark and filtered for dub echoes.
+static void stab(Instrument *ins, Rng *r, float bpm, int dub) {
+    base(ins, dub ? "dub stab" : "saw stab", ROLE_CHORD, dub ? 0.42f : 0.3f);
+    if (dub) {
+        saw_stack(ins, r, 3, rng_between(r, 6, 12), 1.0f, 3200, 37, 0.25f);
+        envelope(&ins->volume_env, bpm, 0.002f, rng_between(r, 0.14f, 0.24f), 0, 0.05f);
+        ins->cutoff = rng_between(r, 0.4f, 0.5f);
+        ins->resonance = rng_between(r, 1.0f, 1.8f);
+        ins->cutoff_env = rng_between(r, 0.15f, 0.28f);
+        ins->cutoff_decay = 0.1f;
+        ins->send_reverb = 0.35f;
+        ins->send_delay = rng_between(r, 0.55f, 0.75f);
+    } else {
+        saw_stack(ins, r, 5, rng_between(r, 16, 28), 1.0f, 11000, 37, 0);
+        envelope(&ins->volume_env, bpm, 0.002f, rng_between(r, 0.06f, 0.12f), 0.55f, rng_between(r, 0.06f, 0.14f));
+        ins->cutoff = rng_between(r, 0.66f, 0.8f);
+        ins->resonance = 0.7f;
+        ins->cutoff_env = 0.12f;
+        ins->cutoff_decay = 0.08f;
+        ins->send_reverb = 0.3f;
+        ins->send_delay = 0.18f;
+        ins->ducked = 1;
+    }
+    // No hold: the envelope runs straight through its release, so each stab frees its voice.
+    ins->volume_env.sustain = -1;
+}
+
 /* ---------- Leads, arps and plucks ---------- */
 
 static void lead_saw(Instrument *ins, Rng *r, float bpm) {
@@ -991,6 +1018,8 @@ int synth_instrument(Instrument *ins, VoiceKind kind, Rng *r, float bpm) {
     case VOICE_PAD_GLASS: pad_glass(ins, r, bpm); break;
     case VOICE_KEYS_EPIANO: keys_epiano(ins, r, bpm); break;
     case VOICE_KEYS_ORGAN: keys_organ(ins, r, bpm); break;
+    case VOICE_STAB_SAW: stab(ins, r, bpm, 0); break;
+    case VOICE_STAB_DUB: stab(ins, r, bpm, 1); break;
     case VOICE_LEAD_SAW: lead_saw(ins, r, bpm); break;
     case VOICE_LEAD_SQUARE: lead_square(ins, r, bpm); break;
     case VOICE_LEAD_SINE: lead_sine(ins, r, bpm); break;

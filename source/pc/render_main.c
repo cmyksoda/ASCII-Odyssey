@@ -36,7 +36,7 @@ static void paste(Image *sheet, const Image *im, int x0, int y0) {
         memcpy(&sheet->rgb[((y0 + y) * sheet->w + x0) * 3], &im->rgb[y * im->w * 3], (size_t)im->w * 3);
 }
 
-static float *render_song(const Song *song, long *frames_out) {
+static float *render_song(const Song *song, long *frames_out, int *peak_voices) {
     Player p;
     if (player_init(&p, song, 0) != 0) return NULL;
     long cap = AUDIO_RATE * 60, n = 0;
@@ -52,6 +52,7 @@ static float *render_song(const Song *song, long *frames_out) {
     }
     player_free(&p);
     *frames_out = n;
+    if (peak_voices) *peak_voices = p.peak_voices;
     return buf;
 }
 
@@ -69,7 +70,7 @@ static int wav_main(int argc, char **argv) {
     Song *song = testsong_create();
     clock_t t1 = clock();
     long frames;
-    float *audio = render_song(song, &frames);
+    float *audio = render_song(song, &frames, NULL);
     clock_t t2 = clock();
     if (!audio) return 1;
     AudioStats st;
@@ -180,12 +181,13 @@ static int song_main(int argc, char **argv) {
     }
     if (out) {
         long frames;
-        float *audio = render_song(comp.song, &frames);
+        int peak = 0;
+        float *audio = render_song(comp.song, &frames, &peak);
         clock_t t2 = clock();
         AudioStats st;
         audio_measure(audio, frames, &st);
-        printf("compose %.2fs  render %.2fs (%.0fx realtime)\n", (double)(t1 - t0) / CLOCKS_PER_SEC,
-               (double)(t2 - t1) / CLOCKS_PER_SEC, st.seconds / ((double)(t2 - t1) / CLOCKS_PER_SEC));
+        printf("compose %.2fs  render %.2fs (%.0fx realtime)  peak voices %d\n", (double)(t1 - t0) / CLOCKS_PER_SEC,
+               (double)(t2 - t1) / CLOCKS_PER_SEC, st.seconds / ((double)(t2 - t1) / CLOCKS_PER_SEC), peak);
         printf("peak %.2f dBFS  integrated %.1f LUFS  loudest 400ms %.1f LUFS  clipped %ld  nonfinite %ld\n", st.peak_db,
                st.lufs, st.loudest_short_lufs, st.clipped, st.nonfinite);
         wav_write(out, audio, frames);
@@ -205,7 +207,7 @@ static Mood mood_named(const char *name) {
 // Renders a whole piece to video: frames go to ffmpeg raw over a pipe, the audio from a WAV beside it.
 static int piece_video(Piece *p, const char *path, int fps, int scale, int wide) {
     long frames;
-    float *audio = render_song(p->comp.song, &frames);
+    float *audio = render_song(p->comp.song, &frames, NULL);
     if (!audio) return -1;
     char wav[1024];
     snprintf(wav, sizeof wav, "%s.wav", path);

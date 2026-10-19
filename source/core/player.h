@@ -54,6 +54,8 @@ typedef struct {
     int tail_frames;
     // A dry run only walks the score: no mixing, just note events, a hundred times faster.
     int dry;
+    // The most voices ever mixed at once, to catch notes that never let go.
+    int peak_voices;
     NoteListener listener;
     void *listener_context;
 } Player;

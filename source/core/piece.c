@@ -7,11 +7,12 @@
 
 static void layout_title(Piece *p) {
     static const FigletId fonts[] = {FIGLET_BIG, FIGLET_STANDARD, FIGLET_SLANT, FIGLET_SMALL};
-    char upper[SEED_MAX + 1];
+    // FIGlet's own space is a sliver; three of them keep the words apart behind the decoding scramble.
+    char upper[SEED_MAX * 3 + 1];
     int n = 0;
-    for (; p->comp.info.title[n] && n < SEED_MAX; n++) {
-        char c = p->comp.info.title[n];
-        upper[n] = c >= 'a' && c <= 'z' ? (char)(c - 32) : c;
+    for (const char *s = p->comp.info.title; *s; s++) {
+        char c = *s >= 'a' && *s <= 'z' ? (char)(*s - 32) : *s;
+        for (int k = 0; k < (c == ' ' ? 3 : 1); k++) upper[n++] = c;
     }
     upper[n] = 0;
     for (unsigned i = 0; i < sizeof fonts / sizeof fonts[0]; i++) {

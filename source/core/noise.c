@@ -13,7 +13,7 @@ static float value_tex[NOISE_SIZE * NOISE_SIZE];
 static float lattice(int x, int y, int period, uint32_t salt) {
     x = ((x % period) + period) % period;
     y = ((y % period) + period) % period;
-    return hash01((uint32_t)(x * 73856093) ^ (uint32_t)(y * 19349663) ^ salt);
+    return hash01((uint32_t)x * 73856093u ^ (uint32_t)y * 19349663u ^ salt);
 }
 
 static float smooth_value(float x, float y, int period, uint32_t salt) {

@@ -415,8 +415,13 @@ int player_render(Player *p, float *out, int frames) {
         }
         if (!p->dry) {
             for (int b = 0; b < 6; b++) memset(p->bus[b], 0, sizeof(float) * (size_t)n);
+            int active = 0;
             for (int i = 0; i < PLAYER_VOICES; i++)
-                if (p->voices[i].active) mix_voice(p, &p->voices[i], n);
+                if (p->voices[i].active) {
+                    mix_voice(p, &p->voices[i], n);
+                    active++;
+                }
+            if (active > p->peak_voices) p->peak_voices = active;
             master(p, out + done * 2, n);
         }
         p->frames_left -= n;

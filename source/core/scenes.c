@@ -825,13 +825,13 @@ enum { M_KEYGEN = 1u << MOOD_KEYGEN, M_AMBIENT = 1u << MOOD_AMBIENT, M_SYNTHWAVE
 const SceneKind scene_kinds[] = {
     {"warp", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_AMBIENT, 0.0f, 1.0f, warp_setup, warp_draw},
     {"tunnel", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_DUB, 0.5f, 1.0f, tunnel_setup, tunnel_draw},
-    {"plasma", M_KEYGEN | M_DUB | M_TRANCE, 0.3f, 1.0f, plasma_setup, plasma_draw},
+    {"plasma", M_KEYGEN | M_DUB | M_TRANCE | M_JUNGLE | M_LOFI, 0.3f, 1.0f, plasma_setup, plasma_draw},
     {"sunset", M_SYNTHWAVE, 0.3f, 1.0f, sunset_setup, sunset_draw},
     {"solids", M_KEYGEN | M_SYNTHWAVE | M_DUB | M_TRANCE, 0.2f, 1.0f, solids_setup, solids_draw},
-    {"aurora", M_AMBIENT | M_MUSICBOX | M_LOFI, 0.0f, 0.8f, aurora_setup, aurora_draw},
-    {"sea", M_AMBIENT | M_LOFI | M_MUSICBOX | M_DUB | M_SYNTHWAVE, 0.0f, 0.75f, sea_setup, sea_draw},
-    {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX, 0.0f, 0.8f, nebula_setup, nebula_draw},
-    {"constellations", M_AMBIENT | M_MUSICBOX | M_LOFI, 0.0f, 0.7f, constellation_setup, constellation_draw},
+    {"aurora", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.0f, 0.8f, aurora_setup, aurora_draw},
+    {"sea", M_AMBIENT | M_LOFI | M_MUSICBOX | M_DUB | M_SYNTHWAVE | M_JUNGLE, 0.0f, 0.75f, sea_setup, sea_draw},
+    {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_JUNGLE, 0.0f, 0.8f, nebula_setup, nebula_draw},
+    {"constellations", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.0f, 0.7f, constellation_setup, constellation_draw},
     {"cracktro", M_KEYGEN, 0.4f, 1.0f, cracktro_setup, cracktro_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);

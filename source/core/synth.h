@@ -8,6 +8,7 @@
 // Instrument recipes. Each bakes its samples once, at compose time, with the seed choosing the details,
 // so playback is plain tracker sample mixing.
 typedef enum {
+    VOICE_NONE,
     VOICE_KICK,
     VOICE_KICK_SOFT,
     VOICE_KICK_CHIP,
@@ -37,6 +38,8 @@ typedef enum {
     VOICE_PAD_GLASS,
     VOICE_KEYS_EPIANO,
     VOICE_KEYS_ORGAN,
+    VOICE_STAB_SAW,
+    VOICE_STAB_DUB,
     VOICE_LEAD_SAW,
     VOICE_LEAD_SQUARE,
     VOICE_LEAD_SINE,
