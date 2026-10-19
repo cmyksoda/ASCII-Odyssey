@@ -232,7 +232,7 @@ static void glow(float amount) {
     glyph_state();
 }
 
-void video_draw(const Screen *s) {
+int video_draw(const Screen *s) {
     u64 t0 = gettime();
     GX_SetCopyClear((GXColor){s->fx.bg.r, s->fx.bg.g, s->fx.bg.b, 0xff}, 0x00ffffff);
     glyph_state();
@@ -256,11 +256,23 @@ void video_draw(const Screen *s) {
     // Hold to the frame rhythm: a late frame shows once, then the rhythm picks up again.
     do VIDEO_WaitVSync();
     while (retraces - last_retrace < (u32)interval);
+    int elapsed = (int)(retraces - last_retrace);
     last_retrace = retraces;
+    return elapsed;
 }
 
 void video_set_interval(int count) {
     interval = count < 1 ? 1 : count;
+}
+
+int video_interval(void) {
+    return interval;
+}
+
+double video_time(void) {
+    // 50 Hz PAL is the one mode that doesn't refresh at NTSC's 59.94.
+    double hz = (mode->viTVMode >> 2) == VI_PAL ? 50.0 : 60000.0 / 1001.0;
+    return retraces / hz;
 }
 
 void video_times(unsigned *build_us, unsigned *gpu_us) {

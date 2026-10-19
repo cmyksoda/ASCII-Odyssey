@@ -83,15 +83,21 @@ static const Tour TOURS[] = {
 typedef struct {
     unsigned frames, late;
     double app_us, build_us, gpu_us, worst_us;
+    double step_min, step_max;
 } Stats;
 
-static void stats_add(Stats *s, double app, double build, double gpu, double frame, double budget) {
+static void stats_add(Stats *s, double app, double build, double gpu, double frame, int late, double music_step) {
+    if (!s->frames) s->step_min = 1e9;
     s->frames++;
     s->app_us += app;
     s->build_us += build;
     s->gpu_us += gpu;
     if (frame > s->worst_us) s->worst_us = frame;
-    if (frame > budget) s->late++;
+    if (late) s->late++;
+    if (music_step > 0) {
+        if (music_step < s->step_min) s->step_min = music_step;
+        if (music_step > s->step_max) s->step_max = music_step;
+    }
 }
 
 static void stats_report(Stats *s) {
@@ -99,6 +105,7 @@ static void stats_report(Stats *s) {
     beacon_log("perf frames=%u app=%.2fms build=%.2fms gpu=%.2fms worst=%.2fms late=%u", s->frames,
                s->app_us / s->frames / 1000, s->build_us / s->frames / 1000, s->gpu_us / s->frames / 1000,
                s->worst_us / 1000, s->late);
+    if (s->step_max > 0) beacon_log("music steps %.1f..%.1fms", s->step_min * 1000, s->step_max * 1000);
     char zones[256];
     prof_report(zones, sizeof zones);
     if (zones[0]) beacon_log("zones %s", zones);
@@ -107,6 +114,26 @@ static void stats_report(Stats *s) {
     beacon_log("audio load=%.1f%% max=%.1f%% restarts=%u refusals=%u", a.load_avg * 100, a.load_max * 100, a.restarts,
                a.refusals);
     memset(s, 0, sizeof *s);
+}
+
+/* The DSP's play counter moves in 21 ms blocks; a refresh-clock estimate that leans gently toward it moves evenly. */
+
+typedef struct {
+    double music, wall;
+    int locked;
+} MusicClock;
+
+static double music_clock(MusicClock *m, double heard, double refresh, int running) {
+    if (!running || !m->locked) {
+        m->music = heard;
+        m->wall = refresh;
+        m->locked = running;
+        return heard;
+    }
+    double guess = m->music + (refresh - m->wall), error = heard - guess;
+    m->music = error > 0.1 || error < -0.1 ? heard : guess + error * 0.04;
+    m->wall = refresh;
+    return m->music;
 }
 
 static const Tour *find_tour(void) {
@@ -140,10 +167,13 @@ int main(int argc, char **argv) {
     if (!app) return 1;
     if (tour) beacon_log("video %s, last seed \"%s\"", video_wide() ? "16:9" : "4:3", config.last_seed);
     Player player;
-    int playing = 0;
+    int playing = 0, paused = 0;
+    MusicClock music = {0};
+    double last_music = -1;
     Piece *piece = NULL;
     u64 boot = gettime(), last = boot;
-    int shot = 0, started_tour = 0;
+    // A shot stalls the loop while it sends, so the frame after one stays out of the timing stats.
+    int shot = 0, started_tour = 0, after_shot = 0;
     Stats stats = {0};
     for (;;) {
         Input in;
@@ -163,7 +193,8 @@ int main(int argc, char **argv) {
             if (tour) beacon_log("composed \"%s\" in %.0f ms: %s", job.seed, job.millis,
                                  piece ? mood_names[piece->comp.info.mood] : "failed");
         }
-        AppClock clock = {.wall = wall, .music = playing ? (double)audio_played() / AUDIO_RATE : -1,
+        double heard = playing ? (double)audio_played() / AUDIO_RATE : -1;
+        AppClock clock = {.wall = wall, .music = playing ? music_clock(&music, heard, video_time(), !paused && heard > 0) : -1,
                           .entropy = (uint64_t)gettime() ^ ((uint64_t)in.held << 40)};
         Screen screen = {0};
         AppRequest req;
@@ -175,7 +206,7 @@ int main(int argc, char **argv) {
         if (req.stop_music && playing) {
             audio_stop();
             player_free(&player);
-            playing = 0;
+            playing = paused = 0;
         }
         Piece *retired = app_release_piece(app);
         if (retired) {
@@ -192,16 +223,21 @@ int main(int argc, char **argv) {
         if (req.start_music && piece && player_init(&player, piece->comp.song, 0) == 0) {
             audio_start(&player);
             playing = 1;
+            paused = 0;
         }
-        if (req.pause_music) audio_pause(1);
-        if (req.resume_music) audio_pause(0);
+        if (req.pause_music) audio_pause(paused = 1);
+        if (req.resume_music) audio_pause(paused = 0);
         video_set_interval(playing || worker_running ? 2 : 1);
-        video_draw(&screen);
+        int retraces = video_draw(&screen);
         if (tour) {
             unsigned build, gpu;
             video_times(&build, &gpu);
             u64 now = gettime();
-            stats_add(&stats, ticks_to_microsecs(t1 - t0), build, gpu, ticks_to_microsecs(now - last), playing ? 36000 : 18000);
+            double step = playing && last_music >= 0 && !after_shot ? clock.music - last_music : -1;
+            last_music = playing ? clock.music : -1;
+            stats_add(&stats, ticks_to_microsecs(t1 - t0), build, gpu, ticks_to_microsecs(now - last),
+                      !after_shot && retraces > video_interval(), step);
+            after_shot = 0;
             last = now;
             if (stats.frames == 120) stats_report(&stats);
             double mark = tour->music_shots ? clock.music : wall;
@@ -212,6 +248,7 @@ int main(int argc, char **argv) {
                 snprintf(name, sizeof name, "%s-%02d", tour->name, shot);
                 beacon_shot(name, xfb, w, h);
                 shot++;
+                after_shot = 1;
                 last = gettime();
             }
             if (wall >= tour->length || (tour->music_shots && clock.music >= tour->shots[tour->shot_count - 1] + 3)) break;

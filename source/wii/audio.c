@@ -106,7 +106,8 @@ int audio_start(Player *p) {
     memset(&status, 0, sizeof status);
     LWP_MutexUnlock(lock);
     running = 1;
-    if (LWP_CreateThread(&thread, producer, NULL, stack, sizeof stack, 80) != 0) {
+    // Below the main thread (64), so a mix never delays a frame; the three buffers hold 128 ms of slack.
+    if (LWP_CreateThread(&thread, producer, NULL, stack, sizeof stack, 60) != 0) {
         running = 0;
         return -1;
     }
