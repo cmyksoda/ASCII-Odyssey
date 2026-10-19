@@ -325,9 +325,11 @@ static void shaker(Instrument *ins, Rng *r) {
     Svf band;
     svf_reset(&band);
     svf_set(&band, rng_between(r, 5500, 8000), 1.2f);
+    int attack = (int)(0.012f * RATE);
+    float fall = 1, k_fall = decay_factor(0.05f);
     for (int i = 0; i < w.n; i++) {
-        float t = (float)i / RATE;
-        float env = t < 0.012f ? t / 0.012f : mexp(-(t - 0.012f) / 0.05f);
+        float env = i < attack ? (float)i / (float)attack : fall;
+        if (i >= attack) fall *= k_fall;
         w.s[i] = svf_band(&band, white(&seed)) * env;
     }
     keep(ins, &w, 49, 0, 0, 120);
@@ -372,11 +374,13 @@ static void cymbal(Instrument *ins, Rng *r, int ride) {
     float decay = ride ? rng_between(r, 0.6f, 1.0f) : rng_between(r, 1.2f, 2.2f);
     Wave w = wave_new(decay * 2.6f);
     metal(&w, &seed, rng_between(r, 1.1f, 1.6f), ride ? 0.35f : 0.8f, decay, 3800, ride ? 7000 : 9000);
-    if (ride)
+    if (ride) {
+        float ping = 0.25f, k_ping = decay_factor(0.4f);
         for (int i = 0; i < w.n; i++) {
-            float t = (float)i / RATE;
-            w.s[i] += 0.25f * msin(TAU_F * 3100 * t) * mexp2(-t * 3.607f);
+            w.s[i] += ping * msin(TAU_F * 3100 * (float)i / RATE);
+            ping *= k_ping;
         }
+    }
     keep(ins, &w, 49, 0, 0, 120);
     ins->send_reverb = 0.2f;
 }
@@ -721,17 +725,21 @@ static void arp_pluck(Instrument *ins, Rng *r, float bpm) {
     for (int k = 0; k < 3; k++) {
         float root = 37.0f + 24.0f * (float)k;
         Wave w = wave_new(0.8f);
-        float hz = note_hz(root), ph1 = 0, ph2 = rng_float(r);
+        float hz = note_hz(root), ph1 = 0, ph2 = rng_float(r), dt = hz / RATE;
+        float env = 1, k_env = decay_factor(decay), sweep = bright, k_sweep = decay_factor(decay * 0.5f / 32);
         Svf lp;
         svf_reset(&lp);
         for (int i = 0; i < w.n; i++) {
-            float t = (float)i / RATE, dt = hz / RATE;
-            if ((i & 31) == 0) svf_set(&lp, 200 + bright * mexp(-t / (decay * 0.5f)), 1.1f);
+            if ((i & 31) == 0) {
+                svf_set(&lp, 200 + sweep, 1.1f);
+                sweep *= k_sweep;
+            }
             ph1 += dt;
             ph2 += dt * 1.004f;
             if (ph1 >= 1) ph1 -= 1;
             if (ph2 >= 1) ph2 -= 1;
-            w.s[i] = svf_low(&lp, saw(ph1, dt) + 0.6f * saw(ph2, dt * 1.004f)) * mexp(-t / decay);
+            w.s[i] = svf_low(&lp, saw(ph1, dt) + 0.6f * saw(ph2, dt * 1.004f)) * env;
+            env *= k_env;
         }
         keep(ins, &w, root, 0, 0, k == 2 ? 120 : (int)root + 18);
     }
