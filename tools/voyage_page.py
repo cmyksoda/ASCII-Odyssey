@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Turn rendered voyages (MP4 + poster JPG + info JSON from `piece --info`) into a video page on Jaxi's artifact shelf.
 
-  voyage_page.py RENDER_DIR ROUND
+  voyage_page.py RENDER_DIR ROUND ZIP
 
 Writes ~/Documents/Artifacts/ascii-odyssey-voyages.html and its media folder, then refreshes the shelf index.
 Reactions and notes on the page sync back through the shelf to .shelf/state.json.
@@ -60,9 +60,12 @@ def card(p):
 
 
 def main():
-    render_dir, round_name = sys.argv[1], sys.argv[2]
+    render_dir, round_name, package = sys.argv[1], sys.argv[2], sys.argv[3]
     media = os.path.join(SHELF, PAGE)
     os.makedirs(media, exist_ok=True)
+    # The build the videos came from, for sailing the same seeds on the Wii.
+    os.makedirs(os.path.join(SHELF, 'downloads'), exist_ok=True)
+    shutil.copyfile(package, os.path.join(SHELF, 'downloads', os.path.basename(package)))
     pieces = []
     for name in sorted(os.listdir(render_dir)):
         if not name.endswith('.json'):
@@ -78,6 +81,7 @@ def main():
     pieces.sort(key=lambda p: MOOD_ORDER.index(p['mood']) if p['mood'] in MOOD_ORDER else 99)
     template = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voyage_page.html')).read()
     page = template.replace('{{ROUND}}', html.escape(round_name)).replace('{{TITLE_ART}}', html.escape(figlet('ASCII Odyssey', 'slant')))
+    page = page.replace('{{ZIP}}', html.escape(os.path.basename(package)))
     page = page.replace('{{PIECES}}', '\n'.join(card(p) for p in pieces))
     with open(os.path.join(SHELF, PAGE + '.html'), 'w') as f:
         f.write(page)

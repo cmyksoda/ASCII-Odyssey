@@ -25,6 +25,8 @@ typedef enum {
 
 typedef enum { MENU_NOTICE, MENU_TITLE, MENU_PAUSE, MENU_END } MenuKind;
 
+typedef enum { OVERLAY_NONE, OVERLAY_TRACKER, OVERLAY_INFO } Overlay;
+
 static const char *const NOTICE_ITEMS[] = {"SAIL AS IT IS", "CALMER: LESS FLASHING AND MOTION"};
 static const char *const NOTICE_LINES[] = {"a gentle note before you sail", "", "voyages pulse and move with their music,",
                                            "and some flash a little on the beat.", "",
@@ -77,6 +79,7 @@ struct App {
     double since, frozen, ended;
     float pointer_x, pointer_y;
     int setting, settings_changed, waiting;
+    Overlay overlay;
 };
 
 void app_boot(void) {
@@ -142,6 +145,7 @@ App *app_create(const AppConfig *config) {
         open_menu(a, MENU_NOTICE);
         return a;
     }
+    a->state = STATE_TITLE;
     snprintf(a->seed, sizeof a->seed, "%s", config->last_seed);
     open_menu(a, MENU_TITLE);
     return a;
@@ -501,6 +505,85 @@ static void end_card(App *a, Piece *p, float time) {
     (void)time;
 }
 
+/* ---------- Overlays: the tracker's view of the song, and what is playing ---------- */
+
+// How hard a channel is sounding: its last note's velocity, fading fast.
+static float channel_level(const Score *s, int channel, float t) {
+    int lo = 0, hi = s->count;
+    while (lo < hi) {
+        int mid = (lo + hi) / 2;
+        if (s->events[mid].time <= t)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    for (int k = lo - 1; k >= 0 && s->events[k].time > t - 0.5f; k--)
+        if (s->events[k].channel == channel) return s->events[k].velocity * mexp(-(t - s->events[k].time) / 0.12f);
+    return 0;
+}
+
+// FT2's view of the song: its pattern scrolling past the play line, with a meter over every channel it uses.
+static void tracker_overlay(App *a, Piece *p, double t) {
+    static const char *const notes[12] = {"C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-"};
+    Grid *g = &a->ui;
+    const Song *s = p->comp.song;
+    int total = s->order_length * s->pattern_rows, now = (int)(t / song_row_seconds(s));
+    now = now < 0 ? 0 : now >= total ? total - 1 : now;
+    int used[SONG_CHANNELS], n = 0, fit = (g->cols - 4) / 7;
+    for (int ch = 0; ch < s->channels && n < fit; ch++) {
+        int any = 0;
+        for (int o = 0; o < s->order_length && !any; o++)
+            for (int r = 0; r < s->pattern_rows && !any; r++) any = s->patterns[s->order[o]].cells[r][ch].note != 0;
+        if (any) used[n++] = ch;
+    }
+    int width = 3 + n * 7, left = (g->cols - width) / 2, rows = 11, top = g->rows - rows - 2;
+    for (int y = top - 1; y < top + rows; y++) clear_behind(a, &p->grid, left, y, width, 0);
+    for (int k = 0; k < n; k++) {
+        int lit = (int)(channel_level(&p->score, used[k], (float)t) * 6 + 0.5f);
+        for (int i = 0; i < 6; i++) grid_put(g, left + 3 + k * 7 + i, top - 1, i < lit ? '=' : '.', i < lit ? ACCENT : FOOTER);
+    }
+    for (int i = 0; i < rows; i++) {
+        int row = now - rows / 2 + i;
+        if (row < 0 || row >= total) continue;
+        int r = row % s->pattern_rows, playing = row == now;
+        const Pattern *pat = &s->patterns[s->order[row / s->pattern_rows]];
+        Rgb color = playing ? MENU_LIT : r % 4 == 0 ? NOTE : MENU_DIM;
+        char text[16];
+        snprintf(text, sizeof text, "%02X", r);
+        grid_text(g, left, top + i, text, playing ? ACCENT : FOOTER);
+        for (int k = 0; k < n; k++) {
+            const PatternCell *cell = &pat->cells[r][used[k]];
+            if (cell->note >= 1 && cell->note <= 120)
+                snprintf(text, sizeof text, "%s%d %02X", notes[(cell->note - 1) % 12], (cell->note - 1) / 12, cell->instrument);
+            else
+                snprintf(text, sizeof text, "%s ..", cell->note == NOTE_OFF ? "===" : cell->note == NOTE_CUT ? "^^^" : "...");
+            grid_text(g, left + 3 + k * 7, top + i, text, color);
+        }
+    }
+}
+
+static void info_overlay(App *a, Piece *p, double t) {
+    static const char *const shapes[4] = {"reacts all the way through", "reacts at the big moments", "reactions swell",
+                                          "reacts in pockets"};
+    const SongInfo *info = &p->comp.info;
+    const Section *sec = score_section(&p->score, (float)t);
+    const char *scene = "";
+    for (int i = 0; i < p->direction.count; i++)
+        if (t >= p->direction.shots[i].start && t < p->direction.shots[i].end) scene = scene_kinds[p->direction.shots[i].kind].name;
+    char lines[5][64];
+    snprintf(lines[0], sizeof lines[0], "%s", info->title);
+    snprintf(lines[1], sizeof lines[1], "%s  %s %s  %d bpm", mood_names[info->mood], note_names[info->key.tonic],
+             scale_names[info->key.scale], info->bpm);
+    snprintf(lines[2], sizeof lines[2], "%s  %d:%02d of %d:%02d", sec ? section_names[sec->kind] : "", (int)t / 60, (int)t % 60,
+             (int)info->length / 60, (int)info->length % 60);
+    snprintf(lines[3], sizeof lines[3], "%s on %s", scene, p->palette->name);
+    snprintf(lines[4], sizeof lines[4], "%s", shapes[p->react_shape]);
+    for (int i = 0; i < 5; i++) {
+        clear_behind(a, &p->grid, 2, 1 + i, (int)strlen(lines[i]), 0);
+        grid_text(&a->ui, 2, 1 + i, lines[i], i ? NOTE : MENU_LIT);
+    }
+}
+
 static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *out, AppRequest *req) {
     Piece *p = a->piece;
     double t = a->state == STATE_PLAYING ? clock->music : a->frozen;
@@ -509,6 +592,12 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
     piece_draw(p, t, out, s->calm, s->still, clock->scope, clock->scope_frames);
     out->fx.glow *= GLOW_SCALE[s->glow];
     out->ui = &a->ui;
+    if (a->state == STATE_PLAYING) {
+        if (in->pressed & INPUT_ALT1) a->overlay = a->overlay == OVERLAY_TRACKER ? OVERLAY_NONE : OVERLAY_TRACKER;
+        if (in->pressed & INPUT_ALT2) a->overlay = a->overlay == OVERLAY_INFO ? OVERLAY_NONE : OVERLAY_INFO;
+        if (a->overlay == OVERLAY_TRACKER) tracker_overlay(a, p, t);
+        if (a->overlay == OVERLAY_INFO) info_overlay(a, p, t);
+    }
     switch (a->state) {
     case STATE_PLAYING:
         if (in->pressed & (INPUT_CONFIRM | INPUT_PAUSE)) {

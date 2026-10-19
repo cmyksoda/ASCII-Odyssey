@@ -265,8 +265,9 @@ static void scripted_press(const char *list, int index, Input *in) {
     static const struct {
         const char *name;
         unsigned bit;
-    } names[] = {{"up", INPUT_UP},       {"down", INPUT_DOWN}, {"left", INPUT_LEFT}, {"right", INPUT_RIGHT},
-                 {"confirm", INPUT_CONFIRM}, {"back", INPUT_BACK}, {"pause", INPUT_PAUSE}};
+    } names[] = {{"up", INPUT_UP},       {"down", INPUT_DOWN}, {"left", INPUT_LEFT},   {"right", INPUT_RIGHT},
+                 {"confirm", INPUT_CONFIRM}, {"back", INPUT_BACK}, {"pause", INPUT_PAUSE}, {"one", INPUT_ALT1},
+                 {"two", INPUT_ALT2}};
     for (; list && index > 0; index--) {
         list = strchr(list, ',');
         if (list) list++;
@@ -400,13 +401,33 @@ int main(int argc, char **argv) {
     Image fb, shown = {0}, sheet = {0};
     image_init(&fb, FB_W, FB_H);
     int cols = count < 2 ? 1 : 2;
+    // Stands in for the Wii's main loop: composes when asked, and runs a music clock from when the music starts.
+    Piece *piece = NULL;
+    double music_start = -1;
     for (int i = 0; i < count; i++) {
         Input in = {0};
         Screen screen = {0};
         scripted_press(presses, i, &in);
-        AppClock clock = {.wall = times[i], .music = -1};
+        AppClock clock = {.wall = times[i], .music = music_start >= 0 ? times[i] - music_start : -1};
         AppRequest req;
         app_frame(app, &clock, &in, &screen, &req);
+        if (req.stop_music) music_start = -1;
+        Piece *retired = app_release_piece(app);
+        if (retired) {
+            piece_free(retired);
+            free(retired);
+            if (retired == piece) piece = NULL;
+        }
+        if (req.compose && (piece = malloc(sizeof *piece)) != NULL) {
+            if (piece_create(piece, req.seed, req.mood, req.length, app_viewport(app)) == 0) {
+                app_set_piece(app, piece);
+            } else {
+                piece_free(piece);
+                free(piece);
+                piece = NULL;
+            }
+        }
+        if (req.start_music) music_start = times[i];
         soft_render(&screen, &fb);
         soft_present(&fb, config.wide, sheet_path ? 1 : scale, &shown);
         if (sheet_path) {
@@ -422,6 +443,10 @@ int main(int argc, char **argv) {
     image_free(&fb);
     image_free(&shown);
     image_free(&sheet);
+    if (piece) {
+        piece_free(piece);
+        free(piece);
+    }
     app_destroy(app);
     return 0;
 }

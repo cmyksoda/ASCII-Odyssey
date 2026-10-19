@@ -77,6 +77,8 @@
   .react button[aria-pressed="true"] { background: var(--rose); border-color: var(--rose); color: var(--on-rose); }
   button:focus-visible, textarea:focus-visible, .arrangement:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
   .note-label { font-family: var(--mono); font-size: 12.5px; color: var(--soft); }
+  a { color: var(--gold); }
+  code { font-family: var(--mono); font-size: 0.92em; }
   textarea {
     width: 100%; font: 15px/1.5 var(--body); color: var(--ink); background: var(--surface);
     border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; resize: vertical; margin-top: -8px;
@@ -103,7 +105,8 @@
       <li><i class="intro"></i>intro</li><li><i class="verse"></i>verse</li><li><i class="build"></i>build</li>
       <li><i class="drop"></i>drop</li><li><i class="break"></i>break</li><li><i class="outro"></i>outro</li>
     </ul>
-    <p>Under each video, a taller section means the picture answers the music more there. Tap it to jump. Every seed here is a real one: type it on your Wii with Mood left on any, and you get this exact voyage. Reactions and notes save here and reach Mio through the shelf.</p>
+    <p>Under each video, a taller section means the picture answers the music more there. Tap it to jump. Reactions and notes save here and reach Mio through the shelf.</p>
+    <p>Every seed here is real. To sail one yourself, unzip <a href="downloads/{{ZIP}}">{{ZIP}}</a> onto your SD card so it lands in <code>apps/asciiodyssey</code>, start it from the Homebrew Channel, and type the seed in Settings with Mood on any and Length on medium, which are the defaults. You'll get this exact voyage.</p>
   </header>
 {{PIECES}}
   <footer>Rendered on the PC by the same engine that runs on the Wii, so a seed looks and sounds the same in both places.</footer>
