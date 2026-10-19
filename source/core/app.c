@@ -334,6 +334,8 @@ static void settings_frame(App *a, const AppClock *clock, const Input *in, AppRe
     float pulse = 0.5f + 0.5f * msin((float)clock->wall * 4.2f);
     Rgb arrow = rgb_mix(ACCENT, MENU_LIT, pulse * 0.35f);
     int label_col = g->cols / 2 - 22, value_col = g->cols / 2 + 2;
+    // The heading gets a wider patch of quiet sky, so no stray star reads as part of it.
+    clear_behind(a, &a->scene, g->cols / 2 - 8, setting_y(a, 0) - 3, 16, 1);
     text_center(a, &a->scene, setting_y(a, 0) - 3, "settings", ACCENT);
     for (int row = 0; row < ROW_COUNT; row++) {
         int y = setting_y(a, row), lit = row == a->setting;

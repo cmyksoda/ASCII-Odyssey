@@ -73,12 +73,38 @@ typedef struct {
     int shot_count;
     // Music seconds at which to take shots during a piece, instead of wall seconds.
     int music_shots;
+    // Buttons to press and when, in wall seconds: "1.0:down,1.4:confirm".
+    const char *script;
 } Tour;
 
 static const Tour TOURS[] = {
-    {"title", 6.0, {1.0, 4.0}, 2, 0},
-    {"piece", 95.0, {3.0, 9.0, 20.0, 35.0, 50.0, 65.0, 80.0}, 7, 1},
+    {"title", 6.0, {1.0, 4.0}, 2, 0, NULL},
+    {"piece", 95.0, {3.0, 9.0, 20.0, 35.0, 50.0, 65.0, 80.0}, 7, 1, "1.0:confirm"},
+    // Into settings, the keyboard types "qwe" with its chimes, then Start sails to that seed.
+    {"keys", 16.0, {1.7, 3.7, 4.5, 12.0}, 4, 0,
+     "1.0:down,1.4:confirm,2.2:confirm,2.6:confirm,2.8:right,3.0:confirm,3.2:right,3.4:confirm,3.9:pause,4.2:back,"
+     "4.7:up,5.0:confirm"},
 };
+
+// Presses a tour's scripted buttons as their moments come, one per frame, the way a person with a remote would.
+static unsigned scripted(const char **cursor, double wall) {
+    static const struct {
+        const char *name;
+        unsigned bit;
+    } names[] = {{"up", INPUT_UP},           {"down", INPUT_DOWN}, {"left", INPUT_LEFT},   {"right", INPUT_RIGHT},
+                 {"confirm", INPUT_CONFIRM}, {"back", INPUT_BACK}, {"pause", INPUT_PAUSE}};
+    if (!*cursor || !**cursor) return 0;
+    char *end;
+    double at = strtod(*cursor, &end);
+    if (at > wall || *end != ':') return 0;
+    const char *name = end + 1;
+    int n = (int)strcspn(name, ",");
+    unsigned pressed = 0;
+    for (unsigned k = 0; k < sizeof names / sizeof names[0]; k++)
+        if ((int)strlen(names[k].name) == n && !strncmp(name, names[k].name, (size_t)n)) pressed |= names[k].bit;
+    *cursor = name[n] ? name + n + 1 : name + n;
+    return pressed;
+}
 
 typedef struct {
     unsigned frames, late;
@@ -158,14 +184,21 @@ int main(int argc, char **argv) {
     const Tour *tour = beacon_start(argc, argv) == 0 ? find_tour() : NULL;
     if (tour) prof_clock(now_us);
     app_boot();
+    audio_chimes_prepare();
     AppConfig config = {0};
     config.wide = video_wide();
+    // Test tours keep their own files, so a hands-free run never changes the player's settings or last seed.
+    const char *settings_file = tour ? "settings-tour.txt" : "settings.txt";
+    const char *last_file = tour ? "last-seed-tour.txt" : "last_seed.txt";
     settings_defaults(&config.settings);
     char text[1024];
-    if (storage_read("settings.txt", text, sizeof text) > 0) settings_parse(&config.settings, text);
-    read_seed_file("last_seed.txt", config.last_seed, sizeof config.last_seed);
-    for (int i = 0; i < argc; i++)
+    if (storage_read(settings_file, text, sizeof text) > 0) settings_parse(&config.settings, text);
+    read_seed_file(last_file, config.last_seed, sizeof config.last_seed);
+    for (int i = 0; i < argc; i++) {
         if (argv[i] && !strncmp(argv[i], "seed=", 5)) seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
+        for (int m = 0; argv[i] && !strncmp(argv[i], "mood=", 5) && m < MOOD_COUNT; m++)
+            if (!strcmp(argv[i] + 5, mood_names[m])) config.settings.mood = m;
+    }
     App *app = app_create(&config);
     if (!app) return 1;
     if (tour) beacon_log("video %s, last seed \"%s\"", video_wide() ? "16:9" : "4:3", config.last_seed);
@@ -177,17 +210,16 @@ int main(int argc, char **argv) {
     Piece *piece = NULL;
     u64 boot = gettime(), last = boot;
     // A shot stalls the loop while it sends, so the frame after one stays out of the timing stats.
-    int shot = 0, started_tour = 0, after_shot = 0;
+    int shot = 0, after_shot = 0;
+    const char *script = tour ? tour->script : NULL;
+    // The tour's own clock stops while a shot is sending, so its script and shots keep their spacing.
+    double stalled = 0;
     Stats stats = {0};
     for (;;) {
         Input in;
         input_poll(&in);
         double wall = (double)ticks_to_microsecs(gettime() - boot) / 1e6;
-        // The piece tour presses Start once, a second after boot, like a person would.
-        if (tour && tour->music_shots && !started_tour && wall >= 1.0) {
-            in.pressed |= INPUT_CONFIRM;
-            started_tour = 1;
-        }
+        if (script) in.pressed |= scripted(&script, wall - stalled);
         if (job.done) {
             if (worker_running) LWP_JoinThread(worker, NULL);
             worker_running = 0;
@@ -222,14 +254,14 @@ int main(int argc, char **argv) {
         if (req.save_settings) {
             char settings[1024];
             settings_format(app_settings(app), settings, sizeof settings);
-            storage_write("settings.txt", settings);
+            storage_write(settings_file, settings);
         }
         if (req.volume != volume) audio_volume(volume = req.volume);
         if (req.chime >= 0) audio_chime(req.chime);
         if (req.save_last_seed) {
             char line[64];
             snprintf(line, sizeof line, "%s\n", req.seed);
-            storage_write("last_seed.txt", line);
+            storage_write(last_file, line);
         }
         if (req.start_music && piece && player_init(&player, piece->comp.song, 0) == 0) {
             audio_start(&player);
@@ -251,7 +283,7 @@ int main(int argc, char **argv) {
             after_shot = 0;
             last = now;
             if (stats.frames == 120) stats_report(&stats);
-            double mark = tour->music_shots ? clock.music : wall;
+            double mark = tour->music_shots ? clock.music : wall - stalled;
             if (shot < tour->shot_count && mark >= tour->shots[shot]) {
                 int w, h;
                 const void *xfb = video_xfb(&w, &h);
@@ -260,9 +292,12 @@ int main(int argc, char **argv) {
                 beacon_shot(name, xfb, w, h);
                 shot++;
                 after_shot = 1;
-                last = gettime();
+                u64 sent = gettime();
+                stalled += (double)ticks_to_microsecs(sent - now) / 1e6;
+                last = sent;
             }
-            if (wall >= tour->length || (tour->music_shots && clock.music >= tour->shots[tour->shot_count - 1] + 3)) break;
+            if (wall - stalled >= tour->length || (tour->music_shots && clock.music >= tour->shots[tour->shot_count - 1] + 3))
+                break;
         }
         if (req.quit) break;
     }

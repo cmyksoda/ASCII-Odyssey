@@ -149,31 +149,32 @@ void audio_pause(int on) {
     LWP_MutexUnlock(lock);
 }
 
-// Chimes are rendered on first use and play on their own voices, so they never wait for the music stream.
+// Chimes play on their own voices, so they never wait for the music stream.
 #define CHIME_FRAMES (AUDIO_RATE * 2 / 5)
 static int16_t *chimes;
 
-void audio_chime(int which) {
-    if (which < 0 || which >= CHIME_COUNT) return;
-    if (!chimes) {
-        float *temp = malloc(sizeof(float) * CHIME_FRAMES);
-        chimes = memalign(32, sizeof(int16_t) * CHIME_FRAMES * CHIME_COUNT);
-        if (!temp || !chimes) {
-            free(temp);
-            free(chimes);
-            chimes = NULL;
-            return;
-        }
-        for (int c = 0; c < CHIME_COUNT; c++) {
-            keyboard_chime(c, temp, CHIME_FRAMES);
-            for (int i = 0; i < CHIME_FRAMES; i++) {
-                float v = temp[i] < -1 ? -1 : temp[i] > 1 ? 1 : temp[i];
-                chimes[c * CHIME_FRAMES + i] = (int16_t)(v * 30000);
-            }
-        }
+void audio_chimes_prepare(void) {
+    float *temp = malloc(sizeof(float) * CHIME_FRAMES);
+    chimes = memalign(32, sizeof(int16_t) * CHIME_FRAMES * CHIME_COUNT);
+    if (!temp || !chimes) {
         free(temp);
-        DCFlushRange(chimes, sizeof(int16_t) * CHIME_FRAMES * CHIME_COUNT);
+        free(chimes);
+        chimes = NULL;
+        return;
     }
+    for (int c = 0; c < CHIME_COUNT; c++) {
+        keyboard_chime(c, temp, CHIME_FRAMES);
+        for (int i = 0; i < CHIME_FRAMES; i++) {
+            float v = temp[i] < -1 ? -1 : temp[i] > 1 ? 1 : temp[i];
+            chimes[c * CHIME_FRAMES + i] = (int16_t)(v * 30000);
+        }
+    }
+    free(temp);
+    DCFlushRange(chimes, sizeof(int16_t) * CHIME_FRAMES * CHIME_COUNT);
+}
+
+void audio_chime(int which) {
+    if (which < 0 || which >= CHIME_COUNT || !chimes) return;
     static int next;
     int voice = 1 + next++ % 3;
     ASND_StopVoice(voice);
