@@ -15,7 +15,7 @@ void frame_resolve(const Frame *f) {
 
 float frame_pulse(const Frame *f, Role role, float tau, float strength) {
     float p = score_pulse(f->score, role, f->t, f->calm ? tau * 2.5f : tau);
-    return p * strength * (f->calm ? 0.3f : 1.0f);
+    return p * strength * (0.35f + 1.3f * f->react) * (f->calm ? 0.3f : 1.0f);
 }
 
 float frame_travel(const Frame *f, float base, float with_energy) {

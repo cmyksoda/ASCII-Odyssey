@@ -132,15 +132,30 @@ static void base(Instrument *ins, const char *name, Role role, float volume) {
 
 /* ---------- Drums ---------- */
 
+// Kick flavors: a classic punch, a long 808 boom, a tight 909 thump, and a dusty one off an old sampler.
+typedef struct {
+    const char *name;
+    float end_lo, end_hi, punch_lo, punch_hi, body_lo, body_hi, sweep, tick, drive, dust;
+} KickFlavor;
+
+static const KickFlavor KICKS[] = {
+    {"kick", 42, 54, 90, 150, 0.18f, 0.42f, 0.032f, 0.6f, 1.8f, 0},
+    {"808 kick", 38, 46, 60, 95, 0.5f, 0.85f, 0.055f, 0.2f, 1.4f, 0},
+    {"909 kick", 48, 58, 150, 220, 0.14f, 0.24f, 0.02f, 0.9f, 2.3f, 0},
+    {"dusty kick", 44, 54, 80, 130, 0.16f, 0.3f, 0.035f, 0.4f, 1.6f, 1},
+};
+
 static void kick(Instrument *ins, Rng *r, int soft) {
-    base(ins, soft ? "soft kick" : "kick", ROLE_KICK, 0.95f);
-    float end = rng_between(r, 42, 54), punch = rng_between(r, 90, 150), body = rng_between(r, 0.18f, 0.42f);
+    const KickFlavor *f = &KICKS[soft ? 0 : rng_range(r, 0, 4)];
+    base(ins, soft ? "soft kick" : f->name, ROLE_KICK, 0.95f);
+    float end = rng_between(r, f->end_lo, f->end_hi), punch = rng_between(r, f->punch_lo, f->punch_hi);
+    float body = rng_between(r, f->body_lo, f->body_hi);
     if (soft) body *= 0.8f;
     Wave w = wave_new(body * 2.4f + 0.05f);
     uint32_t seed = rng_u32(r) | 1;
-    float phase = 0, amp = 1, k = decay_factor(body), click = 0, lp = 0;
-    float sweep = punch, snap = soft ? 0 : 70, tick = 0.6f;
-    float k_sweep = decay_factor(0.032f), k_snap = decay_factor(0.004f), k_tick = decay_factor(0.0025f);
+    float phase = 0, amp = 1, k = decay_factor(body), click = 0, lp = 0, dull = 0;
+    float sweep = punch, snap = soft ? 0 : 70, tick = f->tick;
+    float k_sweep = decay_factor(f->sweep), k_snap = decay_factor(0.004f), k_tick = decay_factor(0.0025f);
     for (int i = 0; i < w.n; i++) {
         float t = (float)i / RATE;
         phase += (end + sweep + snap) / RATE;
@@ -154,7 +169,13 @@ static void kick(Instrument *ins, Rng *r, int soft) {
             tick *= k_tick;
         }
         float attack = t < 0.0015f ? t / 0.0015f : 1;
-        w.s[i] = mtanh((v + click) * (soft ? 1.1f : 1.8f)) * attack;
+        float out = mtanh((v + click) * (soft ? 1.1f : f->drive)) * attack;
+        // The dusty one loses its top and its fine detail, like a sample played off a twelve-bit machine.
+        if (f->dust) {
+            dull += 0.25f * (out - dull);
+            out = (float)((int)(dull * 512.0f)) / 512.0f;
+        }
+        w.s[i] = out;
         amp *= k;
     }
     keep(ins, &w, 49, 0, 0, 120);
@@ -677,6 +698,186 @@ static void stab(Instrument *ins, Rng *r, float bpm, int dub) {
     ins->volume_env.sustain = -1;
 }
 
+// FM lead: a sustained operator pair, from hollow and reedy (ratio 2) to brassy (ratio 1, deep index).
+static void lead_fm(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "fm lead", ROLE_LEAD, 0.4f);
+    static const float ratios[3] = {1.0f, 2.0f, 3.0f};
+    float ratio = ratios[rng_range(r, 0, 3)], index = rng_between(r, 0.9f, 2.2f), feedback = rng_between(r, 0, 0.35f);
+    for (int k = 0; k < 2; k++) {
+        float root = 49.0f + 24.0f * (float)k;
+        Wave w = wave_new(1.2f);
+        fm_tone(&w, note_hz(root), ratio, index, 40, 40, 0.002f, feedback);
+        int loop_start = w.n / 3;
+        crossfade_loop(w.s, loop_start, w.n, w.n / 6);
+        keep(ins, &w, root, loop_start, w.n - loop_start, k ? 120 : (int)root + 12);
+    }
+    envelope(&ins->volume_env, bpm, 0.006f, 0.3f, 0.8f, 0.18f);
+    ins->send_reverb = 0.25f;
+    ins->send_delay = 0.28f;
+    ins->vibrato_depth = rng_between(r, 0.08f, 0.15f);
+    ins->vibrato_rate = rng_between(r, 4.8f, 6.0f);
+}
+
+// A sung "ah", "oh" or "ee": a buzzy saw shaped by two formant filters.
+static void lead_vox(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "vox lead", ROLE_LEAD, 0.55f);
+    static const float formants[3][2] = {{730, 1090}, {450, 800}, {300, 2250}};
+    const float *f = formants[rng_range(r, 0, 3)];
+    for (int k = 0; k < 2; k++) {
+        float root = 49.0f + 24.0f * (float)k, dt = note_hz(root) / RATE, phase = 0;
+        Wave w = wave_new(1.2f);
+        Svf low, high;
+        svf_reset(&low);
+        svf_reset(&high);
+        svf_set(&low, f[0], 4.0f);
+        svf_set(&high, f[1], 5.0f);
+        for (int i = 0; i < w.n; i++) {
+            phase += dt;
+            if (phase >= 1) phase -= 1;
+            float v = saw(phase, dt);
+            w.s[i] = svf_band(&low, v) + 0.6f * svf_band(&high, v);
+        }
+        int loop_start = w.n / 3;
+        crossfade_loop(w.s, loop_start, w.n, w.n / 6);
+        keep(ins, &w, root, loop_start, w.n - loop_start, k ? 120 : (int)root + 12);
+    }
+    envelope(&ins->volume_env, bpm, rng_between(r, 0.02f, 0.06f), 0.3f, 0.85f, 0.25f);
+    ins->send_reverb = 0.35f;
+    ins->send_delay = 0.25f;
+    ins->vibrato_depth = rng_between(r, 0.12f, 0.22f);
+    ins->vibrato_rate = rng_between(r, 4.5f, 5.5f);
+}
+
+// String ensemble: detuned pulses with drifting widths, softly filtered, slow to swell.
+static void pad_strings(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "strings", ROLE_PAD, 0.34f);
+    float spread = rng_between(r, 4, 9);
+    for (int k = 0; k < 2; k++) {
+        float hz = note_hz(37.0f + 24.0f * (float)k), ph[4], lfo[4], dt[4];
+        for (int v = 0; v < 4; v++) {
+            ph[v] = rng_float(r);
+            lfo[v] = rng_float(r);
+            dt[v] = hz * mexp2(((float)v - 1.5f) * spread / 1200.0f) / RATE;
+        }
+        Wave w = wave_new(2.0f);
+        Svf lp;
+        svf_reset(&lp);
+        svf_set(&lp, k ? 6500 : 4000, 0.6f);
+        for (int i = 0; i < w.n; i++) {
+            float s = 0;
+            for (int v = 0; v < 4; v++) {
+                ph[v] += dt[v];
+                if (ph[v] >= 1) ph[v] -= 1;
+                lfo[v] += (0.3f + 0.13f * (float)v) / RATE;
+                if (lfo[v] >= 1) lfo[v] -= 1;
+                s += pulse(ph[v], dt[v], 0.5f + 0.3f * msin(lfo[v] * TAU_F));
+            }
+            w.s[i] = svf_low(&lp, s * 0.25f);
+        }
+        int loop_start = w.n / 3;
+        crossfade_loop(w.s, loop_start, w.n, w.n / 6);
+        keep(ins, &w, 37.0f + 24.0f * (float)k, loop_start, w.n - loop_start, k ? 120 : 55);
+    }
+    envelope(&ins->volume_env, bpm, rng_between(r, 0.4f, 1.0f), 0.5f, 0.9f, rng_between(r, 0.8f, 1.6f));
+    ins->send_reverb = 0.4f;
+    ins->ducked = 1;
+    ins->fadeout = 0.01f;
+}
+
+// FM pad: two slightly detuned operator pairs beating gently against each other.
+static void pad_fm(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "fm pad", ROLE_PAD, 0.36f);
+    float ratio = rng_chance(r, 50) ? 1.0f : 2.0f, index = rng_between(r, 0.6f, 1.5f), detune = rng_between(r, 0.002f, 0.006f);
+    for (int k = 0; k < 2; k++) {
+        float hz = note_hz(37.0f + 24.0f * (float)k), pc[2] = {0, 0.3f}, pm[2] = {0, 0.6f};
+        Wave w = wave_new(2.0f);
+        for (int i = 0; i < w.n; i++) {
+            float s = 0;
+            for (int v = 0; v < 2; v++) {
+                float f = hz * (v ? 1 + detune : 1 - detune);
+                pm[v] += f * ratio / RATE;
+                pc[v] += f / RATE;
+                if (pm[v] >= 1) pm[v] -= 1;
+                if (pc[v] >= 1) pc[v] -= 1;
+                s += msin(pc[v] * TAU_F + index * msin(pm[v] * TAU_F));
+            }
+            w.s[i] = s * 0.5f;
+        }
+        int loop_start = w.n / 3;
+        crossfade_loop(w.s, loop_start, w.n, w.n / 4);
+        keep(ins, &w, 37.0f + 24.0f * (float)k, loop_start, w.n - loop_start, k ? 120 : 55);
+    }
+    envelope(&ins->volume_env, bpm, rng_between(r, 0.5f, 1.2f), 0.5f, 0.9f, rng_between(r, 1.0f, 2.0f));
+    ins->send_reverb = 0.45f;
+    ins->ducked = 1;
+    ins->fadeout = 0.01f;
+}
+
+// Acid: a lone saw or square through a screaming resonant filter that snaps shut after every note.
+static void bass_acid(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "acid bass", ROLE_BASS, 0.5f);
+    saw_stack(ins, r, 1, 0, 0.6f, 12000, 25, rng_chance(r, 40) ? 0.9f : 0);
+    envelope(&ins->volume_env, bpm, 0.002f, 0.2f, 0.7f, 0.05f);
+    ins->cutoff = rng_between(r, 0.28f, 0.4f);
+    ins->resonance = rng_between(r, 2.2f, 3.4f);
+    ins->cutoff_env = rng_between(r, 0.3f, 0.45f);
+    ins->cutoff_decay = rng_between(r, 0.1f, 0.22f);
+    ins->ducked = 1;
+}
+
+static float square_shape(float phase, void *ctx) {
+    return phase < *(const float *)ctx ? 1.0f : -1.0f;
+}
+
+static void bass_square(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "square bass", ROLE_BASS, 0.55f);
+    float width = rng_between(r, 0.25f, 0.5f);
+    single_cycle(ins, square_shape, &width, 1);
+    envelope(&ins->volume_env, bpm, 0.003f, 0.15f, 0.7f, 0.06f);
+    ins->cutoff = rng_between(r, 0.45f, 0.6f);
+    ins->resonance = 0.6f;
+    ins->cutoff_env = 0.15f;
+    ins->cutoff_decay = 0.12f;
+    ins->ducked = 1;
+}
+
+// Mallets: a woody FM strike whose overtone dies almost at once.
+static void mallet(Instrument *ins, Rng *r, float bpm) {
+    (void)bpm;
+    base(ins, "mallet", ROLE_PLUCK, 0.5f);
+    float ratio = rng_chance(r, 50) ? 4.0f : 3.0f, decay = rng_between(r, 0.35f, 0.7f), index = rng_between(r, 1.2f, 2.4f);
+    for (int k = 0; k < 2; k++) {
+        float root = 49.0f + 24.0f * (float)k;
+        Wave w = wave_new(decay * 2.2f);
+        fm_tone(&w, note_hz(root), ratio, index, 0.015f, decay, 0.001f, 0);
+        keep(ins, &w, root, 0, 0, k ? 120 : (int)root + 12);
+    }
+    ins->send_reverb = 0.3f;
+    ins->send_delay = 0.2f;
+}
+
+// Vibraphone: a pure bar tone with a fading fourth partial and the motor's slow tremolo.
+static void vibes(Instrument *ins, Rng *r, float bpm) {
+    (void)bpm;
+    base(ins, "vibraphone", ROLE_BELL, 0.4f);
+    float rate = rng_between(r, 3.5f, 6.0f), depth = rng_between(r, 0.15f, 0.4f);
+    for (int k = 0; k < 2; k++) {
+        float root = 52.0f + 24.0f * (float)k, lfo = 0;
+        Wave w = wave_new(2.2f), partial = wave_new(2.2f);
+        fm_tone(&w, note_hz(root), 1.0f, 0.15f, 0.3f, 1.4f, 0.002f, 0);
+        fm_tone(&partial, note_hz(root) * 4.0f, 1.0f, 0.05f, 0.1f, 0.25f, 0.001f, 0);
+        for (int i = 0; i < w.n && partial.s; i++) {
+            lfo += rate / RATE;
+            if (lfo >= 1) lfo -= 1;
+            w.s[i] = (w.s[i] + 0.3f * partial.s[i]) * (1 - depth * (0.5f + 0.5f * msin(lfo * TAU_F)));
+        }
+        free(partial.s);
+        keep(ins, &w, root, 0, 0, k ? 120 : (int)root + 12);
+    }
+    ins->send_reverb = 0.4f;
+    ins->send_delay = 0.2f;
+}
+
 /* ---------- Leads, arps and plucks ---------- */
 
 static void lead_saw(Instrument *ins, Rng *r, float bpm) {
@@ -1020,6 +1221,14 @@ int synth_instrument(Instrument *ins, VoiceKind kind, Rng *r, float bpm) {
     case VOICE_KEYS_ORGAN: keys_organ(ins, r, bpm); break;
     case VOICE_STAB_SAW: stab(ins, r, bpm, 0); break;
     case VOICE_STAB_DUB: stab(ins, r, bpm, 1); break;
+    case VOICE_LEAD_FM: lead_fm(ins, r, bpm); break;
+    case VOICE_LEAD_VOX: lead_vox(ins, r, bpm); break;
+    case VOICE_PAD_STRINGS: pad_strings(ins, r, bpm); break;
+    case VOICE_PAD_FM: pad_fm(ins, r, bpm); break;
+    case VOICE_BASS_ACID: bass_acid(ins, r, bpm); break;
+    case VOICE_BASS_SQUARE: bass_square(ins, r, bpm); break;
+    case VOICE_MALLET: mallet(ins, r, bpm); break;
+    case VOICE_VIBES: vibes(ins, r, bpm); break;
     case VOICE_LEAD_SAW: lead_saw(ins, r, bpm); break;
     case VOICE_LEAD_SQUARE: lead_square(ins, r, bpm); break;
     case VOICE_LEAD_SINE: lead_sine(ins, r, bpm); break;

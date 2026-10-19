@@ -35,6 +35,36 @@ static void layout_title(Piece *p) {
     p->art_font = NULL;
 }
 
+// Each seed decides how much of its piece answers the music, and where: all the way through, at the big moments,
+// swelling toward the end, or in pockets here and there.
+static void plan_reactivity(Piece *p, Rng *r) {
+    const SongInfo *info = &p->comp.info;
+    int shape = rng_range(r, 0, 4);
+    float amount = rng_between(r, 0.55f, 1.0f);
+    for (int s = 0; s < info->section_count; s++) {
+        const Section *sec = &info->sections[s];
+        int big = sec->kind == SECTION_DROP || sec->kind == SECTION_BUILD;
+        float level;
+        switch (shape) {
+        case 0: level = 0.6f + 0.4f * sec->energy; break;
+        case 1: level = big ? 1.0f : sec->kind == SECTION_VERSE ? 0.35f : 0.08f; break;
+        case 2: level = (float)(s + 1) / (float)info->section_count; break;
+        default: level = rng_chance(r, 55) ? rng_between(r, 0.6f, 1.0f) : rng_between(r, 0.0f, 0.25f); break;
+        }
+        p->react[s] = level * amount;
+    }
+}
+
+// Reactivity eases from one section's level to the next over a bar, so nothing lurches at a section line.
+static float reactivity_at(const Piece *p, float t) {
+    const SongInfo *info = &p->comp.info;
+    int s = 0;
+    while (s + 1 < info->section_count && t >= (float)info->sections[s + 1].start) s++;
+    float into = t - (float)info->sections[s].start, bar = (float)info->bar_seconds;
+    if (s == 0 || into >= bar) return p->react[s];
+    return mixf(p->react[s - 1], p->react[s], smoothstep(0, bar, into));
+}
+
 int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const Viewport *vp) {
     memset(p, 0, sizeof *p);
     uint64_t hash = seed_hash(seed);
@@ -54,6 +84,7 @@ int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const
     Frame proto = {.score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid,
                    .stroker = &p->stroker, .matcher = &p->matcher, .fx = &p->fx};
     direction_plan(&p->direction, &p->score, &r, &proto);
+    plan_reactivity(p, &r);
     layout_title(p);
     return 0;
 }
@@ -101,15 +132,22 @@ static void title_card(Piece *p, float t) {
 
 void piece_draw(Piece *p, double t, Screen *out, int calm, int still, const float *scope, int scope_frames) {
     fx_reset(&p->fx, p->palette->bg);
-    Frame f = {.t = (float)t, .energy = score_energy(&p->score, (float)t), .score = &p->score, .palette = p->palette,
-               .canvas = &p->canvas, .grid = &p->grid, .stroker = &p->stroker, .matcher = &p->matcher, .fx = &p->fx,
-               .calm = calm, .still = still, .scope = scope, .scope_frames = scope_frames};
+    Frame f = {.t = (float)t, .energy = score_energy(&p->score, (float)t), .react = reactivity_at(p, (float)t),
+               .score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid, .stroker = &p->stroker,
+               .matcher = &p->matcher, .fx = &p->fx, .calm = calm, .still = still, .scope = scope, .scope_frames = scope_frames};
     direction_draw(&p->direction, &f, &p->scratch);
     title_card(p, (float)t);
+    // The whole picture answers the beat as strongly as the moment allows: glow and brightness on the kick, a lift on
+    // the snare. The thump of motion and the lift go when the viewer has asked for stillness or calm.
+    float kick = score_pulse(&p->score, ROLE_KICK, (float)t, 0.16f), snare = score_pulse(&p->score, ROLE_SNARE, (float)t, 0.2f);
+    float answer = f.react * (calm ? 0.3f : 1.0f);
+    p->fx.glow += answer * (0.3f * kick + 0.12f * snare);
+    if (!still) p->fx.shake_y += answer * kick * 1.5f;
+    if (!calm) p->fx.flash += answer * snare * 0.035f;
     if (p->palette->light) p->fx.glow = 0;
     // Fade in from black at the start and out into the tail at the end.
     float end = (float)p->comp.info.length;
-    p->fx.gain = smoothstep(0.0f, 1.2f, (float)t) * (1 - smoothstep(end + 1.0f, end + 5.0f, (float)t));
+    p->fx.gain = smoothstep(0.0f, 1.2f, (float)t) * (1 - smoothstep(end + 1.0f, end + 5.0f, (float)t)) * (1 + answer * 0.16f * kick);
     out->scene = &p->grid;
     out->ui = NULL;
     out->fx = p->fx;

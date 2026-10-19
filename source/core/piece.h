@@ -22,6 +22,8 @@ typedef struct {
     const FigletFont *art_font;
     char art[FIGLET_MAX_HEIGHT * PIECE_ART_W];
     int art_w, art_h;
+    // How strongly each section's picture answers the music.
+    float react[MAX_SECTIONS];
 } Piece;
 
 int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const Viewport *vp);

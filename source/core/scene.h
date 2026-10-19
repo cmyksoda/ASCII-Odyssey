@@ -12,6 +12,8 @@ typedef struct {
     // Seconds into the piece, and into the current shot.
     float t, local, length;
     float energy;
+    // How strongly the picture answers the music right now, 0 to 1.
+    float react;
     const Score *score;
     const Palette *palette;
     Canvas *canvas;
@@ -46,7 +48,7 @@ extern const int scene_kind_count;
 
 // Resolves the canvas into the grid with the frame's matcher.
 void frame_resolve(const Frame *f);
-// Beat pulses scaled down for viewers who asked for calmer pictures.
+// Beat pulses, as strong as the moment's reactivity allows, and softer for viewers who asked for calmer pictures.
 float frame_pulse(const Frame *f, Role role, float tau, float strength);
 // Distance covered since the shot began at a base speed plus a share that follows the music's energy.
 float frame_travel(const Frame *f, float base, float with_energy);
