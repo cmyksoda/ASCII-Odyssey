@@ -1,8 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // odyssey-render: the Wii app's core, run on the PC to look at frames and (later) render whole pieces.
 #include "../core/app.h"
+#include "../core/compose.h"
+#include "../core/player.h"
+#include "../core/testsong.h"
+#include "audio_tools.h"
 #include "lab.h"
 #include "softgfx.h"
+
+#include <time.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +35,154 @@ static void paste(Image *sheet, const Image *im, int x0, int y0) {
         memcpy(&sheet->rgb[((y0 + y) * sheet->w + x0) * 3], &im->rgb[y * im->w * 3], (size_t)im->w * 3);
 }
 
+static float *render_song(const Song *song, long *frames_out) {
+    Player p;
+    if (player_init(&p, song, 0) != 0) return NULL;
+    long cap = AUDIO_RATE * 60, n = 0;
+    float *buf = malloc(sizeof(float) * 2 * cap);
+    for (;;) {
+        if (n + 4096 > cap) {
+            cap *= 2;
+            buf = realloc(buf, sizeof(float) * 2 * cap);
+        }
+        int got = player_render(&p, buf + n * 2, 4096);
+        n += got;
+        if (got < 4096) break;
+    }
+    player_free(&p);
+    *frames_out = n;
+    return buf;
+}
+
+static int wav_main(int argc, char **argv) {
+    const char *out = NULL, *spectro = NULL;
+    for (int i = 2; i < argc; i++) {
+        if (!strcmp(argv[i], "--out") && i + 1 < argc)
+            out = argv[++i];
+        else if (!strcmp(argv[i], "--spectrogram") && i + 1 < argc)
+            spectro = argv[++i];
+    }
+    if (!out) usage();
+    app_boot();
+    clock_t t0 = clock();
+    Song *song = testsong_create();
+    clock_t t1 = clock();
+    long frames;
+    float *audio = render_song(song, &frames);
+    clock_t t2 = clock();
+    if (!audio) return 1;
+    AudioStats st;
+    audio_measure(audio, frames, &st);
+    printf("synth %.2fs  render %.2fs for %.1fs of audio (%.0fx realtime)\n", (double)(t1 - t0) / CLOCKS_PER_SEC,
+           (double)(t2 - t1) / CLOCKS_PER_SEC, st.seconds, st.seconds / ((double)(t2 - t1) / CLOCKS_PER_SEC));
+    printf("peak %.2f dBFS  rms %.2f dBFS  integrated %.1f LUFS  loudest 400ms %.1f LUFS\n", st.peak_db, st.rms_db, st.lufs,
+           st.loudest_short_lufs);
+    printf("clipped %ld  nonfinite %ld  big jumps %ld\n", st.clipped, st.nonfinite, st.big_jumps);
+    wav_write(out, audio, frames);
+    if (spectro) spectrogram_png(spectro, audio, frames, 1600, 400);
+    free(audio);
+    song_free(song);
+    return 0;
+}
+
+static const char *NOTE_TEXT[12] = {"C-", "C#", "D-", "D#", "E-", "F-", "F#", "G-", "G#", "A-", "A#", "B-"};
+
+// The song as a tracker would show it, for reading the composer's work.
+static void dump_song(FILE *f, const Song *s) {
+    for (int o = 0; o < s->order_length; o++) {
+        const Pattern *p = &s->patterns[s->order[o]];
+        fprintf(f, "== pattern %d\n", o);
+        for (int r = 0; r < s->pattern_rows; r++) {
+            fprintf(f, "%02d|", r);
+            for (int c = 0; c < s->channels; c++) {
+                const PatternCell *cell = &p->cells[r][c];
+                if (cell->note >= 1 && cell->note <= 120)
+                    fprintf(f, "%s%d", NOTE_TEXT[(cell->note - 1) % 12], (cell->note - 1) / 12);
+                else if (cell->note == NOTE_OFF)
+                    fprintf(f, "===");
+                else if (cell->note == NOTE_CUT)
+                    fprintf(f, "^^^");
+                else
+                    fprintf(f, "...");
+                if (cell->instrument)
+                    fprintf(f, "%02d", cell->instrument);
+                else
+                    fprintf(f, "..");
+                fprintf(f, cell->effect ? "%X%02X|" : "...|", cell->effect, cell->param);
+            }
+            fprintf(f, "\n");
+        }
+    }
+}
+
+static int song_main(int argc, char **argv) {
+    const char *out = NULL, *spectro = NULL, *seed = "lunar ribbon", *dump = NULL;
+    Mood mood = MOOD_ANY;
+    LengthPref length = LENGTH_MEDIUM;
+    for (int i = 2; i < argc; i++) {
+        if (!strcmp(argv[i], "--out") && i + 1 < argc)
+            out = argv[++i];
+        else if (!strcmp(argv[i], "--spectrogram") && i + 1 < argc)
+            spectro = argv[++i];
+        else if (!strcmp(argv[i], "--seed") && i + 1 < argc)
+            seed = argv[++i];
+        else if (!strcmp(argv[i], "--dump") && i + 1 < argc)
+            dump = argv[++i];
+        else if (!strcmp(argv[i], "--short"))
+            length = LENGTH_SHORT;
+        else if (!strcmp(argv[i], "--long"))
+            length = LENGTH_LONG;
+        else if (!strcmp(argv[i], "--mood") && i + 1 < argc) {
+            const char *name = argv[++i];
+            for (int m = 0; m < MOOD_COUNT; m++)
+                if (!strcmp(mood_names[m], name)) mood = (Mood)m;
+        }
+    }
+    app_boot();
+    clock_t t0 = clock();
+    Composition comp;
+    if (compose(seed_hash(seed), seed, mood, length, &comp) != 0) return 1;
+    clock_t t1 = clock();
+    const SongInfo *info = &comp.info;
+    printf("\"%s\": %s, %s %s, %d bpm, %d bars, %.0f s%s\n", info->title, mood_names[info->mood],
+           note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->bars, info->length,
+           info->lift ? " (lifts for the last drop)" : "");
+    for (int s = 0; s < info->section_count; s++)
+        printf("  %-6s bars %3d-%3d  energy %.2f\n", section_names[info->sections[s].kind], info->sections[s].start_bar,
+               info->sections[s].start_bar + info->sections[s].bars - 1, info->sections[s].energy);
+    printf("  chords:");
+    for (int i = 0; i < info->chord_count && i < 16; i++) printf(" %s%s", note_names[info->chords[i].chord.root_pc], chord_minor(&info->chords[i].chord) ? "m" : "");
+    printf("\n  instruments:");
+    for (int i = 0; i < comp.song->instrument_count; i++) printf(" %s;", comp.song->instruments[i].name);
+    printf("\n");
+    if (dump) {
+        FILE *f = fopen(dump, "w");
+        if (f) {
+            dump_song(f, comp.song);
+            fclose(f);
+        }
+    }
+    if (out) {
+        long frames;
+        float *audio = render_song(comp.song, &frames);
+        clock_t t2 = clock();
+        AudioStats st;
+        audio_measure(audio, frames, &st);
+        printf("compose %.2fs  render %.2fs (%.0fx realtime)\n", (double)(t1 - t0) / CLOCKS_PER_SEC,
+               (double)(t2 - t1) / CLOCKS_PER_SEC, st.seconds / ((double)(t2 - t1) / CLOCKS_PER_SEC));
+        printf("peak %.2f dBFS  integrated %.1f LUFS  loudest 400ms %.1f LUFS  clipped %ld  nonfinite %ld\n", st.peak_db,
+               st.lufs, st.loudest_short_lufs, st.clipped, st.nonfinite);
+        wav_write(out, audio, frames);
+        if (spectro) spectrogram_png(spectro, audio, frames, 1600, 400);
+        free(audio);
+    }
+    composition_free(&comp);
+    return 0;
+}
+
 int main(int argc, char **argv) {
+    if (argc >= 2 && !strcmp(argv[1], "wav")) return wav_main(argc, argv);
+    if (argc >= 2 && !strcmp(argv[1], "song")) return song_main(argc, argv);
     if (argc == 3 && !strcmp(argv[1], "lab")) {
         app_boot();
         return lab_main(argv[2]);

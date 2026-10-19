@@ -42,8 +42,9 @@ typedef struct {
     PatternCell cells[PATTERN_ROWS][SONG_CHANNELS];
 } Pattern;
 
+// Float frames: converting 16-bit samples costs the Wii's PowerPC more than the whole mix does.
 typedef struct {
-    int16_t *frames;
+    float *frames;
     int length;
     // No loop when loop_length is 0.
     int loop_start, loop_length;
@@ -101,11 +102,14 @@ typedef struct {
     float delay_beats, delay_feedback, delay_mix;
     float duck_depth, duck_release;
     float drive;
-    float master_gain;
+    // Gain into the master chain (how hard it works), and after it (how loud the result is).
+    float pre_gain, master_gain;
 } MixSettings;
 
 typedef struct {
     int bpm, speed;
+    // Rows in every pattern: 64 for four bars of 4/4 in sixteenths, 48 for four bars of 3/4.
+    int pattern_rows;
     int channels;
     int order_length;
     uint8_t order[MAX_ORDER];

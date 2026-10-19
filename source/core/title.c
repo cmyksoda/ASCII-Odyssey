@@ -4,6 +4,7 @@
 #include "figlet.h"
 #include "mathx.h"
 #include "noise.h"
+#include "prof.h"
 #include "rng.h"
 #include "stroke.h"
 
@@ -248,17 +249,31 @@ void title_draw(Title *t, double time, Screen *s) {
     float tm = (float)time;
     Grid *g = s->scene;
     Canvas *c = &t->canvas;
+    prof_push("clear");
     canvas_clear(c);
+    prof_pop();
     Planet p = planet_place(c->aspect);
+    prof_push("planet");
     planet_body(c, &p, tm);
+    prof_pop();
+    prof_push("resolve");
     ascii_resolve(&t->matcher, c, g);
+    prof_pop();
     Box quiet[2] = {{t->title_col, t->title_row, t->title_w, t->title_rows},
                     {g->cols / 2 - 8, g->rows / 2 + 1, 16, 7}};
+    prof_push("nebula");
     nebula(g, c->aspect, tm, hush, quiet);
+    prof_pop();
+    prof_push("stars");
     stars(g, tm);
+    prof_pop();
+    prof_push("rings");
     planet_rings(&t->stroker, &p);
     comet(g, tm);
+    prof_pop();
+    prof_push("title");
     title_text(t, g, tm);
+    prof_pop();
     fx_reset(&s->fx, SPACE);
     s->fx.glow = 0.35f;
 }
