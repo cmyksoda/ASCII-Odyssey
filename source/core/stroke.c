@@ -53,7 +53,7 @@ static void plot(Stroker *s, int col, int row, float off, float tx, float ty, fl
     if (owners[k] == owner_id && off >= s->best[k]) return;
     owners[k] = owner_id;
     s->best[k] = off;
-    g->cells[k] = (Cell){(uint8_t)pick(tx, ty, bend_x, fy), rgb_from_f(color)};
+    g->cells[k] = (Cell){(uint8_t)pick(tx, ty, bend_x, fy), rgb_from_f(color), 0};
 }
 
 // Walks one segment like a pen: one glyph per column while it is gentle, one per row once it is steep.

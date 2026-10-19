@@ -38,18 +38,28 @@ void grid_free(Grid *g) {
 }
 
 void grid_clear(Grid *g) {
-    for (int i = 0; i < g->cols * g->rows; i++) g->cells[i] = (Cell){' ', {0, 0, 0}};
+    for (int i = 0; i < g->cols * g->rows; i++) g->cells[i] = (Cell){' ', {0, 0, 0}, 0};
 }
 
 void grid_put(Grid *g, int col, int row, int glyph, Rgb fg) {
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
     if (glyph < FONT_FIRST || glyph > FONT_LAST) glyph = ' ';
-    *grid_at(g, col, row) = (Cell){(uint8_t)glyph, fg};
+    *grid_at(g, col, row) = (Cell){(uint8_t)glyph, fg, 0};
 }
 
 void grid_put_under(Grid *g, int col, int row, int glyph, Rgb fg) {
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
     if (grid_at(g, col, row)->glyph == ' ') grid_put(g, col, row, glyph, fg);
+}
+
+int grid_center(const Grid *g, int w, int *nudge) {
+    *nudge = (g->cols - w) & 1;
+    return (g->cols - w) / 2;
+}
+
+void grid_nudge(Grid *g, int col, int row, int w) {
+    if (row < 0 || row >= g->rows) return;
+    for (int x = col < 0 ? 0 : col; x < col + w && x < g->cols; x++) grid_at(g, x, row)->nudge = 1;
 }
 
 int grid_text(Grid *g, int col, int row, const char *text, Rgb fg) {

@@ -22,6 +22,7 @@ extern const int palette_count;
 
 Rgbf palette_ramp(const Palette *p, float v);
 Rgbf palette_accent(const Palette *p, int i);
-const Palette *palette_pick(Rng *r, Mood mood);
+// Any palette can paint any mood, the mood only tipping the odds, and each seed drifts its hues a little.
+void palette_pick(Rng *r, Mood mood, Palette *out);
 
 #endif

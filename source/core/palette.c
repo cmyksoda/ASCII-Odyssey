@@ -57,7 +57,20 @@ Rgbf palette_accent(const Palette *p, int i) {
     return rgbf(p->accent[((i % 3) + 3) % 3]);
 }
 
-const Palette *palette_pick(Rng *r, Mood mood) {
-    int m = mood >= 0 && mood < MOOD_COUNT ? mood : MOOD_SYNTHWAVE;
-    return &palettes[rng_weighted(r, WEIGHTS[m], COUNT)];
+// Turns a color around the gray axis, which keeps a palette's colors in the same relation to each other.
+static Rgb drift(Rgb c, float c_a, float s_a) {
+    float k = (1 - c_a) / 3, s = s_a * 0.57735f, r = c.r, g = c.g, b = c.b;
+    Rgbf out = {(c_a + k) * r + (k - s) * g + (k + s) * b, (k + s) * r + (c_a + k) * g + (k - s) * b,
+                (k - s) * r + (k + s) * g + (c_a + k) * b};
+    return rgb_from_f(out);
+}
+
+void palette_pick(Rng *r, Mood mood, Palette *out) {
+    int m = mood >= 0 && mood < MOOD_COUNT ? mood : MOOD_SYNTHWAVE, weights[COUNT];
+    for (int i = 0; i < COUNT; i++) weights[i] = WEIGHTS[m][i] + 4;
+    *out = palettes[rng_weighted(r, weights, COUNT)];
+    float angle = rng_between(r, -25.0f, 25.0f) * PI_F / 180.0f, c_a = mcos(angle), s_a = msin(angle);
+    out->bg = drift(out->bg, c_a, s_a);
+    for (int i = 0; i < RAMP_STEPS; i++) out->ramp[i] = drift(out->ramp[i], c_a, s_a);
+    for (int i = 0; i < 3; i++) out->accent[i] = drift(out->accent[i], c_a, s_a);
 }

@@ -21,6 +21,8 @@ typedef struct {
 typedef struct {
     uint8_t glyph;
     Rgb fg;
+    // Drawn half a cell to the right, so text of odd width can sit exactly centered.
+    uint8_t nudge;
 } Cell;
 
 // The part of the 640x480 framebuffer that is safe to draw in, and how the TV stretches it.
@@ -56,6 +58,10 @@ void grid_put(Grid *g, int col, int row, int glyph, Rgb fg);
 // Writes only over blank cells, for stars and sparks that sit behind the picture.
 void grid_put_under(Grid *g, int col, int row, int glyph, Rgb fg);
 int grid_text(Grid *g, int col, int row, const char *text, Rgb fg);
+// Where text w cells wide starts so it sits centered; when the grid can only fit it half a cell off, the caller
+// nudges the cells it draws.
+int grid_center(const Grid *g, int w, int *nudge);
+void grid_nudge(Grid *g, int col, int row, int w);
 void fx_reset(FrameFx *fx, Rgb bg);
 
 static inline Cell *grid_at(Grid *g, int col, int row) {

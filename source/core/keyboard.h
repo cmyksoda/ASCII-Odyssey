@@ -24,7 +24,9 @@ void keyboard_open(Keyboard *k, const char *text, double now);
 // Returns the chime to play for this frame's key press, or CHIME_NONE.
 int keyboard_update(Keyboard *k, const Input *in, const Grid *ui, uint64_t entropy);
 void keyboard_draw(const Keyboard *k, Grid *ui, double now);
-// The rows the keyboard covers, so the caller can quiet the picture behind them.
-void keyboard_extent(const Grid *ui, int *top, int *bottom);
+// The cells the keyboard covers, so the caller can quiet the picture behind them.
+void keyboard_extent(const Grid *ui, int *col, int *row, int *w, int *h);
+// Renders one chime as mono audio at AUDIO_RATE: key notes climb a pentatonic scale.
+void keyboard_chime(int which, float *out, int frames);
 
 #endif

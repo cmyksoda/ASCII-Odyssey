@@ -34,7 +34,7 @@ static void draw_grid(const Grid *g, const FrameFx *fx, Image *fb) {
             int ax = (index % f->columns) * f->cell_w, ay = (index / f->columns) * f->cell_h;
             float r = c->fg.r * fx->gain + fx->flash * 255, gr = c->fg.g * fx->gain + fx->flash * 255;
             float b = c->fg.b * fx->gain + fx->flash * 255;
-            int x0 = g->x0 + col * g->cell_w + sx, y0 = g->y0 + row * g->cell_h + sy;
+            int x0 = g->x0 + col * g->cell_w + (c->nudge ? g->cell_w / 2 : 0) + sx, y0 = g->y0 + row * g->cell_h + sy;
             for (int y = 0; y < f->cell_h; y++) {
                 int py = y0 + y;
                 if (py < 0 || py >= fb->h) continue;

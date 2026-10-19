@@ -6,13 +6,14 @@
 #include "piece.h"
 #include "rng.h"
 #include "screen.h"
+#include "settings.h"
 
 typedef struct {
     int wide;
-    float margin;
     char last_seed[SEED_MAX + 1];
     // When set, Start sails to this seed instead of rolling a new one.
     char fixed_seed[SEED_MAX + 1];
+    Settings settings;
 } AppConfig;
 
 // What the app needs the platform to do: it owns the threads, the audio and the files.
@@ -22,7 +23,10 @@ typedef struct {
     Mood mood;
     LengthPref length;
     int start_music, stop_music, pause_music, resume_music;
-    int save_last_seed;
+    int save_last_seed, save_settings;
+    // Music volume from 0 to 1, and a keyboard chime to play (CHIME_NONE when quiet).
+    float volume;
+    int chime;
     int quit;
 } AppRequest;
 
@@ -47,5 +51,6 @@ void app_set_piece(App *a, Piece *p);
 // Lets go of the piece, so the platform can free it once its music has stopped.
 Piece *app_release_piece(App *a);
 const Viewport *app_viewport(const App *a);
+const Settings *app_settings(const App *a);
 
 #endif

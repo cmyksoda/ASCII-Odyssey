@@ -20,6 +20,8 @@ void audio_stop(void);
 uint64_t audio_played(void);
 void audio_pause(int paused);
 void audio_volume(float level);
+// Plays one of the keyboard's chimes over whatever else is sounding.
+void audio_chime(int which);
 void audio_status(AudioStatus *out);
 
 #endif

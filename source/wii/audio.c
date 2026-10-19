@@ -3,8 +3,12 @@
 // DSP mix cycles, never reused while the DSP may read them, refusals kept and retried, a dead voice restarted.
 #include "audio.h"
 
+#include "../core/keyboard.h"
+
 #include <asndlib.h>
 #include <gccore.h>
+#include <malloc.h>
+#include <stdlib.h>
 #include <ogc/lwp_watchdog.h>
 #include <string.h>
 #include <unistd.h>
@@ -145,8 +149,41 @@ void audio_pause(int on) {
     LWP_MutexUnlock(lock);
 }
 
+// Chimes are rendered on first use and play on their own voices, so they never wait for the music stream.
+#define CHIME_FRAMES (AUDIO_RATE * 2 / 5)
+static int16_t *chimes;
+
+void audio_chime(int which) {
+    if (which < 0 || which >= CHIME_COUNT) return;
+    if (!chimes) {
+        float *temp = malloc(sizeof(float) * CHIME_FRAMES);
+        chimes = memalign(32, sizeof(int16_t) * CHIME_FRAMES * CHIME_COUNT);
+        if (!temp || !chimes) {
+            free(temp);
+            free(chimes);
+            chimes = NULL;
+            return;
+        }
+        for (int c = 0; c < CHIME_COUNT; c++) {
+            keyboard_chime(c, temp, CHIME_FRAMES);
+            for (int i = 0; i < CHIME_FRAMES; i++) {
+                float v = temp[i] < -1 ? -1 : temp[i] > 1 ? 1 : temp[i];
+                chimes[c * CHIME_FRAMES + i] = (int16_t)(v * 30000);
+            }
+        }
+        free(temp);
+        DCFlushRange(chimes, sizeof(int16_t) * CHIME_FRAMES * CHIME_COUNT);
+    }
+    static int next;
+    int voice = 1 + next++ % 3;
+    ASND_StopVoice(voice);
+    ASND_SetVoice(voice, VOICE_MONO_16BIT, AUDIO_RATE, 0, chimes + which * CHIME_FRAMES, CHIME_FRAMES * 2, volume * 3 / 4,
+                  volume * 3 / 4, NULL);
+}
+
 void audio_volume(float level) {
-    volume = (int)(level * 255);
+    // Full volume leaves headroom on the DSP's mixer, where the old fixed level sat.
+    volume = (int)(level * 220);
     if (volume < 0) volume = 0;
     if (volume > 255) volume = 255;
     LWP_MutexLock(lock);

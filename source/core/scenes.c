@@ -33,13 +33,13 @@ float frame_surge(const Frame *f, Role role, float tau, float strength) {
 
 static void put_cell(Grid *g, int col, int row, int glyph, Rgbf color) {
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
-    *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color)};
+    *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
 }
 
 static void put_cell_under(Grid *g, int col, int row, int glyph, Rgbf color) {
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
     Cell *c = grid_at(g, col, row);
-    if (c->glyph == ' ') *c = (Cell){(uint8_t)glyph, rgb_from_f(color)};
+    if (c->glyph == ' ') *c = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
 }
 
 // Scene units to grid cells.
@@ -313,14 +313,14 @@ static void plasma_draw(void *state, const Frame *f) {
                 float along = matan2(gx, -gy), a = mabs(along) > PI_F / 2 ? PI_F - mabs(along) : mabs(along);
                 int glyph = a < 0.45f ? '|' : a < 1.12f ? ((gx > 0) == (gy > 0) ? '\\' : '/') : (band < 0.5f ? '-' : '~');
                 Rgbf color = flow_color(f->palette, level * 0.9f + f->local * p->cycle);
-                *cell = (Cell){(uint8_t)glyph, rgb_from_f(rgbf_scale(color, 0.75f + lift * 2))};
+                *cell = (Cell){(uint8_t)glyph, rgb_from_f(rgbf_scale(color, 0.75f + lift * 2)), 0};
                 continue;
             }
             float ink = (p->look == 2 ? smoothstep(0.55f, 0.97f, level) : smoothstep(0.3f, 0.95f, level)) + lift;
             if (ink < 0.08f) continue;
             int glyph = ramp[clampi((int)(ink * 8.0f), 1, 7)];
             Rgbf color = rgbf_scale(flow_color(f->palette, level * 0.8f + f->local * p->cycle), 0.55f + 0.45f * ink);
-            *cell = (Cell){(uint8_t)glyph, rgb_from_f(color)};
+            *cell = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
         }
     }
     f->fx->glow = 0.4f;
@@ -533,7 +533,7 @@ static void aurora_draw(void *state, const Frame *f) {
             if (glow < 0.1f) continue;
             Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.5f + 0.5f * glow), palette_accent(f->palette, 0),
                                   smoothstep(0.15f, 0.7f, above));
-            *grid_at(g, col, row) = (Cell){(uint8_t)rays[clampi((int)(glow * 7.5f), 1, 6)], rgb_from_f(color)};
+            *grid_at(g, col, row) = (Cell){(uint8_t)rays[clampi((int)(glow * 7.5f), 1, 6)], rgb_from_f(color), 0};
         }
         // The lake below the mountains repeats the sky upside down, broken into ripples.
         for (int row = ground_row + 1; row < g->rows; row++) {
@@ -543,7 +543,7 @@ static void aurora_draw(void *state, const Frame *f) {
             float ripple = msin(x * 18 + depth * 40 - t * 2.2f);
             if (glow < 0.08f || ripple < -0.2f) continue;
             Rgbf color = rgbf_scale(rgbf_mix(palette_ramp(f->palette, 0.5f), palette_accent(f->palette, 0), 0.3f), 0.5f + glow);
-            *grid_at(g, col, row) = (Cell){(uint8_t)(ripple > 0.6f ? '~' : '-'), rgb_from_f(color)};
+            *grid_at(g, col, row) = (Cell){(uint8_t)(ripple > 0.6f ? '~' : '-'), rgb_from_f(color), 0};
         }
     }
     StrokePoint ridge_line[96];
@@ -630,7 +630,7 @@ static void sea_draw(void *state, const Frame *f) {
                 glyph = '*';
                 color = glint;
             }
-            if (glyph) *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color)};
+            if (glyph) *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
         }
     }
     f->fx->glow = 0.5f;
@@ -672,7 +672,7 @@ static void nebula_draw(void *state, const Frame *f) {
             int level = clampi((int)(density * 8.5f + jitter * 1.2f), 1, 8);
             Rgbf color = rgbf_mix(palette_accent(f->palette, 0), palette_accent(f->palette, 2), b / (a + b + 0.001f));
             color = rgbf_mix(palette_ramp(f->palette, 0.3f), color, saturate(density * 1.3f));
-            *grid_at(g, col, row) = (Cell){(uint8_t)dust[level], rgb_from_f(color)};
+            *grid_at(g, col, row) = (Cell){(uint8_t)dust[level], rgb_from_f(color), 0};
         }
     }
     dust_stars(f, 0xe8b1, 0.01f, 1.0f);

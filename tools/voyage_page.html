@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ASCII Odyssey Voyages</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700;800&display=swap">
+<style>
+  /* One reading column. Each voyage: its name as FIGlet art, the facts, the video, the arrangement with each
+     section as tall as its picture's reactivity, and a reaction. */
+  :root {
+    --bg: #f1f0f8; --surface: #fbfaff; --ink: #1c1d36; --soft: #585b7e; --line: #d6d4ea;
+    --gold: #8f5d0e; --rose: #c23a62; --on-rose: #ffffff; --title-a: #94610f; --title-b: #6a4cc4;
+    --playhead: #1c1d36; --screen: #07081a;
+    --intro: #7b67d6; --verse: #2f9fb4; --build: #c98d1c; --drop: #d9476f; --break: #7380a8; --outro: #574aa0;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #07081a; --surface: #0e1027; --ink: #ece8f6; --soft: #a3a4ca; --line: #262a52;
+      --gold: #ffcc78; --rose: #ff6a8a; --on-rose: #1a0a12; --title-a: #fff0de; --title-b: #ffcc78;
+      --playhead: #fff0de; --screen: #000000;
+      --intro: #9a87ff; --verse: #4fd0e0; --build: #ffcc66; --drop: #ff6a8a; --break: #8c97c4; --outro: #7a6dd0;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #07081a; --surface: #0e1027; --ink: #ece8f6; --soft: #a3a4ca; --line: #262a52;
+    --gold: #ffcc78; --rose: #ff6a8a; --on-rose: #1a0a12; --title-a: #fff0de; --title-b: #ffcc78;
+    --playhead: #fff0de; --screen: #000000;
+    --intro: #9a87ff; --verse: #4fd0e0; --build: #ffcc66; --drop: #ff6a8a; --break: #8c97c4; --outro: #7a6dd0;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px 72px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+  pre { margin: 0; font-family: var(--mono); overflow-x: auto; overflow-y: hidden; }
+  .mast { display: flex; flex-direction: column; gap: 14px; }
+  .title {
+    font-size: clamp(7px, 1.75vw, 13px); line-height: 1.12; font-weight: 600;
+    background: linear-gradient(180deg, var(--title-a), var(--title-b)); -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  h1 { font-family: var(--mono); font-weight: 800; font-size: 20px; margin: 4px 0 0; text-wrap: balance; }
+  .mast p { margin: 0; max-width: 64ch; color: var(--soft); }
+  .mast ul { margin: 0; padding-left: 20px; max-width: 64ch; color: var(--soft); display: flex; flex-direction: column; gap: 4px; }
+  .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--mono); font-size: 13px; color: var(--soft); }
+  .legend li { display: flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 6px; border-radius: 1px; display: inline-block; }
+  .piece { display: flex; flex-direction: column; gap: 12px; padding-top: 28px; border-top: 1px dashed var(--line); min-width: 0; }
+  .fig { font-size: clamp(8px, 2.2vw, 14px); line-height: 1.15; color: var(--gold); font-weight: 500; }
+  .meta { margin: 0; font-family: var(--mono); font-size: 13.5px; color: var(--soft); }
+  .dot { color: var(--line); }
+  video { display: block; width: 100%; max-width: 100%; aspect-ratio: 4 / 3; height: auto; background: var(--screen); border-radius: 4px; }
+  /* The arrangement: each section as wide as its time and as tall as its picture's reactivity. */
+  .arrangement { position: relative; height: 28px; cursor: pointer; }
+  .seg { position: absolute; bottom: 0; border-radius: 1px 1px 0 0; min-height: 3px; }
+  .intro { background: var(--intro); } .verse { background: var(--verse); } .build { background: var(--build); }
+  .drop { background: var(--drop); } .break { background: var(--break); } .outro { background: var(--outro); }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--playhead); pointer-events: none; }
+  .react { display: flex; flex-wrap: wrap; gap: 8px; }
+  .react button {
+    font: 500 14px var(--body); padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink); cursor: pointer;
+  }
+  .react button[aria-pressed="true"] { background: var(--rose); border-color: var(--rose); color: var(--on-rose); }
+  button:focus-visible, textarea:focus-visible, .arrangement:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .note-label { font-family: var(--mono); font-size: 12.5px; color: var(--soft); }
+  textarea {
+    width: 100%; font: 15px/1.5 var(--body); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; resize: vertical; margin-top: -8px;
+  }
+  footer { font-size: 13.5px; color: var(--soft); max-width: 64ch; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="mast">
+    <pre class="title" aria-label="ASCII Odyssey">{{TITLE_ART}}</pre>
+    <h1>Voyages, {{ROUND}}</h1>
+    <p>One voyage for each of the eight moods, with picture and sound together, at 4:3 like your Wii's TV. What changed since the sound check:</p>
+    <ul>
+      <li>Pieces run about two minutes instead of two and a half.</li>
+      <li>Every piece picks its own drums, bass line, arp, chord rhythm and story shape, and its instruments come from wider palettes, with new FM leads, a sung vox lead, strings, acid bass, mallets and vibraphone.</li>
+      <li>The second drop grows: the hook's answers are re-sung, a harmony voice and a bell double come in, and the drums add a layer.</li>
+      <li>No more borrowed chords that fight the melody, and every hook lands its cadences.</li>
+      <li>The visuals answer the music. Each seed picks how: all the way through, at the big moments, swelling toward the end, or in pockets.</li>
+    </ul>
+    <ul class="legend" aria-label="Section colors">
+      <li><i class="intro"></i>intro</li><li><i class="verse"></i>verse</li><li><i class="build"></i>build</li>
+      <li><i class="drop"></i>drop</li><li><i class="break"></i>break</li><li><i class="outro"></i>outro</li>
+    </ul>
+    <p>Under each video, a taller section means the picture answers the music more there. Tap it to jump. Reactions and notes save here and reach Mio through the shelf.</p>
+  </header>
+{{PIECES}}
+  <footer>Rendered on the PC by the same engine that runs on the Wii, so a seed looks and sounds the same in both places.</footer>
+</main>
+<script>
+  const KEY = 'ascii-odyssey-voyages';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+  document.querySelectorAll('.piece').forEach((piece) => {
+    const slug = piece.dataset.slug;
+    const mine = state[slug] || (state[slug] = {});
+    const buttons = piece.querySelectorAll('.react button');
+    const paint = () => buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.reaction === mine.reaction)));
+    paint();
+    buttons.forEach((b) => b.addEventListener('click', () => {
+      mine.reaction = mine.reaction === b.dataset.reaction ? null : b.dataset.reaction;
+      mine.at = new Date().toISOString();
+      paint();
+      save();
+    }));
+    const note = piece.querySelector('textarea');
+    note.value = mine.note || '';
+    note.addEventListener('input', () => { mine.note = note.value; mine.at = new Date().toISOString(); save(); });
+    const video = piece.querySelector('video');
+    const head = piece.querySelector('.playhead');
+    const strip = piece.querySelector('.arrangement');
+    const total = Number(strip.dataset.total);
+    video.addEventListener('play', () => {
+      document.querySelectorAll('video').forEach((v) => { if (v !== video) v.pause(); });
+      head.hidden = false;
+      mine.played = true;
+      save();
+    });
+    video.addEventListener('timeupdate', () => { head.style.left = Math.min(100, video.currentTime / total * 100) + '%'; });
+    const seek = (fraction) => {
+      const jump = () => { video.currentTime = fraction * total; video.play(); };
+      if (video.readyState > 0) jump();
+      else { video.addEventListener('loadedmetadata', jump, { once: true }); video.load(); }
+    };
+    strip.addEventListener('click', (e) => {
+      const r = strip.getBoundingClientRect();
+      seek(Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)));
+    });
+    strip.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      seek(Math.min(1, Math.max(0, (video.currentTime + (e.key === 'ArrowRight' ? 10 : -10)) / total)));
+    });
+  });
+</script>
+</body>
+</html>

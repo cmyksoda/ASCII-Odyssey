@@ -160,6 +160,9 @@ int main(int argc, char **argv) {
     app_boot();
     AppConfig config = {0};
     config.wide = video_wide();
+    settings_defaults(&config.settings);
+    char text[1024];
+    if (storage_read("settings.txt", text, sizeof text) > 0) settings_parse(&config.settings, text);
     read_seed_file("last_seed.txt", config.last_seed, sizeof config.last_seed);
     for (int i = 0; i < argc; i++)
         if (argv[i] && !strncmp(argv[i], "seed=", 5)) seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
@@ -170,6 +173,7 @@ int main(int argc, char **argv) {
     int playing = 0, paused = 0;
     MusicClock music = {0};
     double last_music = -1;
+    float volume = -1;
     Piece *piece = NULL;
     u64 boot = gettime(), last = boot;
     // A shot stalls the loop while it sends, so the frame after one stays out of the timing stats.
@@ -215,6 +219,13 @@ int main(int argc, char **argv) {
             if (retired == piece) piece = NULL;
         }
         if (req.compose && !worker_running && !job.done) start_compose(&req, app_viewport(app));
+        if (req.save_settings) {
+            char settings[1024];
+            settings_format(app_settings(app), settings, sizeof settings);
+            storage_write("settings.txt", settings);
+        }
+        if (req.volume != volume) audio_volume(volume = req.volume);
+        if (req.chime >= 0) audio_chime(req.chime);
         if (req.save_last_seed) {
             char line[64];
             snprintf(line, sizeof line, "%s\n", req.seed);

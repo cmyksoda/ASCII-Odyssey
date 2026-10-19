@@ -39,7 +39,7 @@ static void layout_title(Piece *p) {
 // swelling toward the end, or in pockets here and there.
 static void plan_reactivity(Piece *p, Rng *r) {
     const SongInfo *info = &p->comp.info;
-    int shape = rng_range(r, 0, 4);
+    int shape = p->react_shape = rng_range(r, 0, 4);
     float amount = rng_between(r, 0.55f, 1.0f);
     for (int s = 0; s < info->section_count; s++) {
         const Section *sec = &info->sections[s];
@@ -72,7 +72,8 @@ int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const
     if (score_build(&p->score, &p->comp) != 0) return -1;
     Rng r;
     rng_init(&r, hash, "visuals");
-    p->palette = palette_pick(&r, p->comp.info.mood);
+    palette_pick(&r, p->comp.info.mood, &p->colors);
+    p->palette = &p->colors;
     int chunky = p->comp.info.mood == MOOD_KEYGEN && rng_chance(&r, 50);
     int design = chunky ? 8 : 6, height = chunky ? 16 : 12;
     if (grid_init(&p->grid, vp, design, height) != 0 || grid_init(&p->scratch, vp, design, height) != 0) return -1;
@@ -107,7 +108,7 @@ static void title_card(Piece *p, float t) {
     const float in = 0.8f, hold = 5.5f, out = 7.0f;
     if (!p->art_font || t < in || t > out) return;
     Grid *g = &p->grid;
-    int col0 = (g->cols - p->art_w) / 2, row0 = (g->rows - p->art_h) / 2;
+    int nudge, col0 = grid_center(g, p->art_w, &nudge), row0 = (g->rows - p->art_h) / 2;
     float reveal = smoothstep(in, in + 1.6f, t), vanish = smoothstep(hold, out, t);
     Rgbf pearl = palette_ramp(p->palette, 1.0f), gold = palette_accent(p->palette, 1);
     for (int y = -1; y <= p->art_h; y++)
@@ -126,7 +127,7 @@ static void title_card(Piece *p, float t) {
             Rgbf color = rgbf_mix(pearl, gold, (float)y / (float)(p->art_h > 1 ? p->art_h - 1 : 1));
             int settling = h > reveal - 0.1f;
             uint32_t roll = hash_u32((uint32_t)(row * 31 + col) ^ (uint32_t)(t * 20));
-            *cell = (Cell){(uint8_t)(settling ? "*+:.=#"[roll % 6] : ch), rgb_from_f(color)};
+            *cell = (Cell){(uint8_t)(settling ? "*+:.=#"[roll % 6] : ch), rgb_from_f(color), (uint8_t)nudge};
         }
 }
 

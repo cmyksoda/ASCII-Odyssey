@@ -63,7 +63,7 @@ static void nebula(Grid *g, float aspect, float time, float (*quiet)(const Grid 
             Rgb color = rgb_mix(NEBULA_A, NEBULA_B, smoothstep(0.3f, 0.7f, hue));
             color = rgb_scale(color, 0.35f + 0.65f * density);
             Cell *cell = grid_at(g, col, row);
-            if (cell->glyph == ' ') *cell = (Cell){(uint8_t)dust[level], color};
+            if (cell->glyph == ' ') *cell = (Cell){(uint8_t)dust[level], color, 0};
         }
 }
 
@@ -150,7 +150,7 @@ static void comet(Grid *g, float time) {
         Rgb color = rgb_scale(rgb_mix(COMET_TAIL, COMET_HEAD, k), fade * (0.25f + 0.75f * k * k));
         int ch = s == 0 ? '*' : glyph;
         Cell *cell = grid_at(g, clampi((int)mixf(x0, x1, u), 0, g->cols - 1), clampi((int)mixf(y0, y1, u), 0, g->rows - 1));
-        if (cell->glyph == ' ' || s == 0) *cell = (Cell){(uint8_t)ch, color};
+        if (cell->glyph == ' ' || s == 0) *cell = (Cell){(uint8_t)ch, color, 0};
     }
 }
 
@@ -174,7 +174,7 @@ static void stars(Grid *g, float time) {
             int glyph = layer == 0 ? '.' : layer == 1 ? (twinkle > 0.82f ? '+' : '.') : (twinkle > 0.8f ? '*' : '+');
             Rgb color = rgb_scale(rgb_mix(STAR_COOL, STAR_WARM, hash01(id + 3)), level);
             Cell *cell = grid_at(g, col, row);
-            if (faint(cell)) *cell = (Cell){(uint8_t)glyph, color};
+            if (faint(cell)) *cell = (Cell){(uint8_t)glyph, color, 0};
         }
     }
 }
@@ -223,7 +223,7 @@ static void title_layout(Title *t, const Grid *g) {
     }
     t->title_w = w;
     t->title_rows = h;
-    t->title_col = (g->cols - w) / 2;
+    t->title_col = grid_center(g, w, &t->title_nudge);
     t->title_row = (int)((float)g->rows * 0.13f);
 }
 
@@ -242,10 +242,11 @@ static void title_text(const Title *t, Grid *g, float time) {
             float shine = sweep < 2.6f ? mexp(-s * s) : 0;
             color = rgb_mix(color, (Rgb){255, 255, 255}, shine * 0.85f);
             grid_put(g, col + x, row + y, ch, color);
+            if (t->title_nudge) grid_nudge(g, col + x, row + y, 1);
         }
 }
 
-void title_draw(Title *t, double time, Screen *s) {
+void title_draw(Title *t, double time, Screen *s, int logo) {
     float tm = (float)time;
     Grid *g = s->scene;
     Canvas *c = &t->canvas;
@@ -272,7 +273,7 @@ void title_draw(Title *t, double time, Screen *s) {
     comet(g, tm);
     prof_pop();
     prof_push("title");
-    title_text(t, g, tm);
+    if (logo) title_text(t, g, tm);
     prof_pop();
     fx_reset(&s->fx, SPACE);
     s->fx.glow = 0.35f;

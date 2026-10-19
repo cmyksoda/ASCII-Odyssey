@@ -241,8 +241,48 @@ static int piece_video(Piece *p, const char *path, int fps, int scale, int wide)
     return rc;
 }
 
+// What the voyage page shows about a piece: its facts, sections with their reactivity, and its shots.
+static void piece_info(const Piece *p, const char *path) {
+    static const char *const shapes[4] = {"reacts all the way through", "reacts at the big moments", "reactions swell",
+                                          "reacts in pockets"};
+    FILE *f = fopen(path, "w");
+    if (!f) return;
+    const SongInfo *info = &p->comp.info;
+    fprintf(f, "{\"title\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, ", info->title,
+            mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length);
+    fprintf(f, "\"palette\": \"%s\", \"reactivity\": \"%s\", \"sections\": [", p->palette->name, shapes[p->react_shape]);
+    for (int s = 0; s < info->section_count; s++)
+        fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"react\": %.2f}", s ? ", " : "",
+                section_names[info->sections[s].kind], info->sections[s].start, info->sections[s].end, p->react[s]);
+    fprintf(f, "], \"shots\": [");
+    for (int i = 0; i < p->direction.count; i++)
+        fprintf(f, "%s\"%s\"", i ? ", " : "", scene_kinds[p->direction.shots[i].kind].name);
+    fprintf(f, "]}\n");
+    fclose(f);
+}
+
+static void scripted_press(const char *list, int index, Input *in) {
+    static const struct {
+        const char *name;
+        unsigned bit;
+    } names[] = {{"up", INPUT_UP},       {"down", INPUT_DOWN}, {"left", INPUT_LEFT}, {"right", INPUT_RIGHT},
+                 {"confirm", INPUT_CONFIRM}, {"back", INPUT_BACK}, {"pause", INPUT_PAUSE}};
+    for (; list && index > 0; index--) {
+        list = strchr(list, ',');
+        if (list) list++;
+    }
+    if (!list || !*list) return;
+    int n = (int)strcspn(list, ",");
+    if (!strncmp(list, "type:", 5)) {
+        for (int k = 5; k < n && in->typed_count < INPUT_TYPED_MAX; k++) in->typed[in->typed_count++] = list[k];
+        return;
+    }
+    for (unsigned k = 0; k < sizeof names / sizeof names[0]; k++)
+        if ((int)strlen(names[k].name) == n && !strncmp(list, names[k].name, (size_t)n)) in->pressed |= names[k].bit;
+}
+
 static int piece_main(int argc, char **argv) {
-    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL;
+    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL;
     Mood mood = MOOD_ANY;
     LengthPref length = LENGTH_MEDIUM;
     int wide = 0, fps = 30, scale = 2, count = 0;
@@ -256,6 +296,8 @@ static int piece_main(int argc, char **argv) {
             sheet = argv[++i];
         else if (!strcmp(argv[i], "--video") && i + 1 < argc)
             video = argv[++i];
+        else if (!strcmp(argv[i], "--info") && i + 1 < argc)
+            info_path = argv[++i];
         else if (!strcmp(argv[i], "--times") && i + 1 < argc)
             count = parse_times(argv[++i], times, 64);
         else if (!strcmp(argv[i], "--fps") && i + 1 < argc)
@@ -274,6 +316,7 @@ static int piece_main(int argc, char **argv) {
     viewport_init(&vp, wide, 0);
     Piece p;
     if (piece_create(&p, seed, mood, length, &vp) != 0) return 1;
+    if (info_path) piece_info(&p, info_path);
     const SongInfo *info = &p.comp.info;
     printf("\"%s\": %s, %s %s, %d bpm, %.0f s, palette %s, grid %dx%d\n", info->title, mood_names[info->mood],
            note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length, p.palette->name, p.grid.cols,
@@ -317,6 +360,9 @@ int main(int argc, char **argv) {
     }
     if (argc < 2 || strcmp(argv[1], "title") != 0) usage();
     AppConfig config = {0};
+    settings_defaults(&config.settings);
+    // Scripted presses, one per frame: up, down, left, right, confirm, back, pause, none, or type:text.
+    const char *presses = NULL;
     int scale = 2;
     double times[64] = {0, 1.5, 3, 4.5};
     int count = 4;
@@ -334,6 +380,8 @@ int main(int argc, char **argv) {
             out_dir = argv[++i];
         else if (!strcmp(argv[i], "--seed") && i + 1 < argc)
             snprintf(config.last_seed, sizeof config.last_seed, "%s", argv[++i]);
+        else if (!strcmp(argv[i], "--press") && i + 1 < argc)
+            presses = argv[++i];
         else
             usage();
     }
@@ -347,6 +395,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < count; i++) {
         Input in = {0};
         Screen screen = {0};
+        scripted_press(presses, i, &in);
         AppClock clock = {.wall = times[i], .music = -1};
         AppRequest req;
         app_frame(app, &clock, &in, &screen, &req);
@@ -362,6 +411,9 @@ int main(int argc, char **argv) {
         }
     }
     if (sheet_path) png_write(sheet_path, &sheet);
+    image_free(&fb);
+    image_free(&shown);
+    image_free(&sheet);
     app_destroy(app);
     return 0;
 }

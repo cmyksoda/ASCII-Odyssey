@@ -103,7 +103,7 @@ void ascii_resolve(const AsciiMatcher *m, const Canvas *c, Grid *g) {
                 }
             Cell *cell = grid_at(g, col, row);
             if (peak < st->threshold || sum <= 0) {
-                *cell = (Cell){' ', {0, 0, 0}};
+                *cell = (Cell){' ', {0, 0, 0}, 0};
                 continue;
             }
             float avg = sum / 8, spread = 0;
@@ -115,6 +115,6 @@ void ascii_resolve(const AsciiMatcher *m, const Canvas *c, Grid *g) {
             float k = (1 - st->shade) + st->shade * avg;
             float scale = k / sum;
             Rgb fg = rgb_from_f((Rgbf){r * scale, gr * scale, b * scale});
-            *cell = (Cell){(uint8_t)glyph, fg};
+            *cell = (Cell){(uint8_t)glyph, fg, 0};
         }
 }

@@ -3,6 +3,7 @@
 
 #include "figlet.h"
 #include "mathx.h"
+#include "song.h"
 #include "words.h"
 
 #include <stdio.h>
@@ -37,10 +38,43 @@ static Layout layout(const Grid *ui) {
     return l;
 }
 
-void keyboard_extent(const Grid *ui, int *top, int *bottom) {
+void keyboard_extent(const Grid *ui, int *col, int *row, int *w, int *h) {
     Layout l = layout(ui);
-    *top = l.top;
-    *bottom = l.hint_row;
+    *col = l.left;
+    *row = l.top;
+    *w = KEYS_W;
+    *h = l.hint_row - l.top + 1;
+}
+
+// A soft FM bell: a brief glassy overtone over a sine that rings away.
+static void bell(float *out, int frames, float hz, float at, float level) {
+    float pc = 0, pm = 0, env = level, index = 1.4f;
+    float k_env = mexp(-1.0f / (0.28f * AUDIO_RATE)), k_index = mexp(-1.0f / (0.06f * AUDIO_RATE));
+    for (int i = (int)(at * AUDIO_RATE), n = 0; i < frames; i++, n++) {
+        pm += hz * 3.5f / AUDIO_RATE;
+        pc += hz / AUDIO_RATE;
+        if (pm >= 1) pm -= 1;
+        if (pc >= 1) pc -= 1;
+        out[i] += msin(pc * TAU_F + index * msin(pm * TAU_F)) * env * (n < 96 ? (float)n / 96 : 1);
+        env *= k_env;
+        index *= k_index;
+    }
+}
+
+void keyboard_chime(int which, float *out, int frames) {
+    static const int steps[CHIME_KEYS] = {0, 2, 4, 7, 9, 12, 14, 16, 19, 21};
+    const float c5 = 523.25f;
+    memset(out, 0, sizeof(float) * (size_t)frames);
+    if (which >= 0 && which < CHIME_KEYS) {
+        bell(out, frames, c5 * mexp2((float)steps[which] / 12.0f), 0, 0.5f);
+    } else if (which == CHIME_DELETE) {
+        bell(out, frames, c5 * 0.75f, 0, 0.35f);
+    } else if (which == CHIME_DICE) {
+        for (int i = 0; i < 3; i++) bell(out, frames, c5 * mexp2((float)(16 + i * 5) / 12.0f), 0.05f * (float)i, 0.3f);
+    } else if (which == CHIME_DONE) {
+        static const int chord[4] = {0, 4, 7, 12};
+        for (int i = 0; i < 4; i++) bell(out, frames, c5 * mexp2((float)chord[i] / 12.0f), 0.06f * (float)i, 0.3f);
+    }
 }
 
 // The action keys share the keys' width, each as wide as its label plus padding.
@@ -269,6 +303,6 @@ void keyboard_draw(const Keyboard *k, Grid *ui, double now) {
         box(ui, x, l.actions_row, w, accent);
         grid_text(ui, x + 2, l.actions_row + 1, ACTIONS[k->col], LIT);
     }
-    static const char hint[] = "a  type      b  delete      +  done      or point and press a";
+    static const char hint[] = "a  type      b  delete      +  done";
     grid_text(ui, (ui->cols - (int)strlen(hint)) / 2, l.hint_row, hint, HINT);
 }

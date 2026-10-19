@@ -18,12 +18,16 @@ typedef struct {
     Stroker stroker;
     AsciiMatcher matcher;
     FrameFx fx;
+    // The piece's own copy of its palette, drifted for its seed.
+    Palette colors;
     const Palette *palette;
     const FigletFont *art_font;
     char art[FIGLET_MAX_HEIGHT * PIECE_ART_W];
     int art_w, art_h;
-    // How strongly each section's picture answers the music.
+    // How strongly each section's picture answers the music, and the seed's shape for it: all the way through,
+    // at the big moments, swelling, or in pockets.
     float react[MAX_SECTIONS];
+    int react_shape;
 } Piece;
 
 int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const Viewport *vp);

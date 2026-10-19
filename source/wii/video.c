@@ -172,7 +172,7 @@ static void draw_grid(const Grid *g, float gain, float flash, float shake_x, flo
             if (c->glyph <= ' ') continue;
             int index = c->glyph - FONT_FIRST;
             u16 u = (u16)((index % f->columns) * f->cell_w), v = (u16)((index / f->columns) * f->cell_h);
-            s16 x = (s16)(g->x0 + col * g->cell_w), y = (s16)(g->y0 + row * g->cell_h);
+            s16 x = (s16)(g->x0 + col * g->cell_w + (c->nudge ? g->cell_w / 2 : 0)), y = (s16)(g->y0 + row * g->cell_h);
             u32 color = (u32)channel(c->fg.r * gain + lift) << 24 | (u32)channel(c->fg.g * gain + lift) << 16 |
                         (u32)channel(c->fg.b * gain + lift) << 8 | 0xff;
             GX_Position2s16(x, y);
