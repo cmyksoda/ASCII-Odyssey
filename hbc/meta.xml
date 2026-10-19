@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+  <name>ASCII Odyssey</name>
+  <coder>cmyksoda</coder>
+  <version>@VERSION@</version>
+  <short_description>Generative ASCII voyages with tracker music</short_description>
+  <long_description>Every voyage is new. Press Start and ASCII Odyssey composes a tracker song from a seed and paints a light show made only of text to match it. Type a seed in Settings to sail back to a piece you loved.</long_description>
+</app>
