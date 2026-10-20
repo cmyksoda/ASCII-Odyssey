@@ -126,6 +126,20 @@ static const Curated CURATED[] = {
      {H(0xfcffa4), H(0x65156e), H(0xf98e09)}, 0, DUBSTEP | TRANCE | KEYGEN | AMBIENT, 1},
     {"plum", H(0x120812), {H(0x2c1230), H(0x4f1f52), H(0x7d3478), H(0xb35e9a), H(0xe8a3c4), H(0xfde6ef)},
      {H(0xffc8a2), H(0xa8d5ba), H(0xfff4d6)}, 0, LOFI | DUB | AMBIENT, 0},
+    {"blueprint", H(0x0a2a5e), {H(0x153a75), H(0x2350a0), H(0x3d6fc4), H(0x7da1e0), H(0xbcd3f5), H(0xffffff)},
+     {H(0xffffff), H(0x9ff0ff), H(0xffe680)}, 0, KEYGEN | SYNTHWAVE | TRANCE, 1},
+    {"halloween", H(0x0a0608), {H(0x2a1208), H(0x55230c), H(0x8f3a0e), H(0xd65f12), H(0xff9a2e), H(0xffd6a0)},
+     {H(0x9b4dff), H(0x7dff6a), H(0xfff2e0)}, 0, SYNTHWAVE | DUBSTEP | KEYGEN | LOFI, 1},
+    {"cga", H(0x000000), {H(0x1a1a1a), H(0x3a3a3a), H(0x6a6a6a), H(0xaaaaaa), H(0xd5d5d5), H(0xffffff)},
+     {H(0x55ffff), H(0xff55ff), H(0xffffff)}, 0, KEYGEN | DUBSTEP | TRANCE, 1},
+    {"mesa", H(0x140b08), {H(0x34180e), H(0x5e2a15), H(0x91431f), H(0xc76a32), H(0xe8a05e), H(0xf8dcb0)},
+     {H(0x7fb8c9), H(0xa8c48a), H(0xfff1d8)}, 0, AMBIENT | DUB | LOFI | SYNTHWAVE, 0},
+    {"mint chip", H(0x0e0a08), {H(0x2a1c14), H(0x4a3022), H(0x6e4a33), H(0x9be0c0), H(0xc8f5e2), H(0xf2fffa)},
+     {H(0xfff2e0), H(0x7ff0c4), H(0xd9a07a)}, 0, LOFI | MUSICBOX, 1},
+    {"foundry", H(0x0c0d10), {H(0x1e2229), H(0x343b46), H(0x55606f), H(0x8392a3), H(0xc0cbd6), H(0xf2f5f8)},
+     {H(0xff7a1a), H(0xffc04a), H(0xff3d2e)}, 0, DUBSTEP | KEYGEN | DUB | TRANCE, 1},
+    {"twilight", H(0x0a0b1e), {H(0x1c1d45), H(0x34306e), H(0x5a3f8f), H(0x9356a6), H(0xd287b5), H(0xffd3d8)},
+     {H(0xffe9a8), H(0x9fe3ff), H(0xffffff)}, 0, AMBIENT | MUSICBOX | LOFI | DUB, 0},
 };
 #define CURATED_COUNT ((int)(sizeof CURATED / sizeof CURATED[0]))
 
