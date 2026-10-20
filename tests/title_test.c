@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Once a title has arrived, every letter of it shows while it's held, whichever way it came in and whatever face it's
 // in.
+#include "core/app.h"
 #include "core/piece.h"
 
 #include <stdio.h>
@@ -65,6 +66,7 @@ static void every_letter_shows_while_held(void) {
 }
 
 int main(void) {
+    app_boot();
     every_letter_shows_while_held();
     if (!failures) printf("title: all passed\n");
     return failures ? 1 : 0;
