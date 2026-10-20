@@ -36,6 +36,8 @@ static struct {
 } job;
 static lwp_t worker;
 static int worker_running;
+// A piece asked for while the worker was busy, started as soon as it's free.
+static AppRequest queued;
 static unsigned char worker_stack[256 * 1024] ATTRIBUTE_ALIGN(32);
 
 static void *compose_worker(void *arg) {
@@ -235,7 +237,6 @@ int main(int argc, char **argv) {
     MusicClock music = {0};
     double last_music = -1;
     float volume = -1;
-    Piece *piece = NULL;
     u64 boot = gettime(), last = boot;
     // A shot stalls the loop while it sends, so the frame after one stays out of the timing stats.
     int shot = 0, after_shot = 0;
@@ -255,10 +256,11 @@ int main(int argc, char **argv) {
             if (worker_running) LWP_JoinThread(worker, NULL);
             worker_running = 0;
             job.done = 0;
-            piece = job.result;
-            if (piece) app_set_piece(app, piece);
+            app_set_piece(app, job.result);
             if (tour) beacon_log("composed \"%s\" in %.0f ms: %s", job.seed, job.millis,
-                                 piece ? mood_names[piece->comp.info.mood] : "failed");
+                                 job.result ? mood_names[job.result->comp.info.mood] : "failed");
+            if (queued.compose) start_compose(&queued, app_viewport(app));
+            queued.compose = 0;
         }
 
         double heard = playing ? (double)audio_played() / AUDIO_RATE : -1;
@@ -282,9 +284,11 @@ int main(int argc, char **argv) {
         // The piece the app let go of this frame is still on the screen it just filled, so it's freed only once that
         // screen has been drawn.
         Piece *retired = app_release_piece(app);
-        if (retired == piece) piece = NULL;
 
-        if (req.compose && !worker_running && !job.done) start_compose(&req, app_viewport(app));
+        if (req.compose && (worker_running || job.done))
+            queued = req;
+        else if (req.compose)
+            start_compose(&req, app_viewport(app));
         if (req.save_settings) {
             char settings[1024];
             settings_format(app_settings(app), settings, sizeof settings);
@@ -294,9 +298,10 @@ int main(int argc, char **argv) {
         if (req.chime >= 0) audio_chime(req.chime);
         if (req.save_last_seed) {
             char line[64];
-            snprintf(line, sizeof line, "%s\n", req.seed);
+            snprintf(line, sizeof line, "%s\n", req.last_seed);
             storage_write(last_file, line);
         }
+        Piece *piece = app_piece(app);
         if (req.start_music && piece && player_init(&player, piece->comp.song, 0) == 0) {
             audio_start(&player);
             playing = 1;
@@ -332,7 +337,7 @@ int main(int argc, char **argv) {
                         stats_report(&stats);
                     }
                     if (want >= scene_kind_count) break;
-                    piece_force_scene(piece, scene_kinds[want].name);
+                    piece_force_scene(app_piece(app), scene_kinds[want].name);
                     scene = want;
                     shot = 0;
                 }

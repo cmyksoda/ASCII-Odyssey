@@ -17,7 +17,8 @@
 
 static void usage(void) {
     fprintf(stderr,
-            "usage: odyssey-render title [--wide] [--scale N] [--times t1,t2,...] [--sheet OUT.png | --out DIR]\n");
+            "usage: odyssey-render title [--wide] [--scale N] [--times t1,t2,...] [--compose-frames N] "
+            "[--sheet OUT.png | --out DIR]\n");
     exit(2);
 }
 
@@ -518,11 +519,13 @@ int main(int argc, char **argv) {
     const char *presses = NULL;
     int scale = 2;
     double times[64] = {0, 1.5, 3, 4.5};
-    int count = 4;
+    int count = 4, compose_frames = 0;
     const char *sheet_path = NULL, *out_dir = NULL;
     for (int i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "--wide"))
             config.wide = 1;
+        else if (!strcmp(argv[i], "--compose-frames") && i + 1 < argc)
+            compose_frames = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--scale") && i + 1 < argc)
             scale = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--times") && i + 1 < argc)
@@ -549,28 +552,41 @@ int main(int argc, char **argv) {
     Image fb, shown = {0}, sheet = {0};
     image_init(&fb, FB_W, FB_H);
     int cols = count < 2 ? 1 : 2;
-    // Stands in for the Wii's main loop: composes when asked, and runs a music clock from when the music starts.
-    Piece *piece = NULL;
+    // Stands in for the Wii's main loop: composes when asked, handing the piece over compose_frames frames later as
+    // the Wii's worker would, one at a time, and runs a music clock from when the music starts.
+    AppRequest asked = {0}, queued = {0};
+    int due = -1;
     double music_start = -1;
     for (int i = 0; i < count; i++) {
+        if (due >= 0 && i >= due) {
+            Piece *piece = malloc(sizeof *piece);
+            if (piece && piece_create(piece, asked.seed, asked.mood, asked.length, app_viewport(app)) != 0) {
+                piece_free(piece);
+                free(piece);
+                piece = NULL;
+            }
+            app_set_piece(app, piece);
+            due = queued.compose ? i + 1 + compose_frames : -1;
+            asked = queued;
+            queued.compose = 0;
+        }
         Input in = {0};
         Screen screen = {0};
         scripted_press(presses, i, &in);
-        AppClock clock = {.wall = times[i], .music = music_start >= 0 ? times[i] - music_start : -1};
+        // Each frame rolls seeds differently, as the Wii's clock makes them.
+        AppClock clock = {.wall = times[i],
+                          .music = music_start >= 0 ? times[i] - music_start : -1,
+                          .entropy = (uint64_t)(i + 1) * 0x9e3779b97f4a7c15u};
         AppRequest req;
         app_frame(app, &clock, &in, &screen, &req);
         if (req.stop_music) music_start = -1;
         // As on the Wii: the piece let go of this frame is still on its screen, so it goes once that is drawn.
         Piece *retired = app_release_piece(app);
-        if (retired == piece) piece = NULL;
-        if (req.compose && (piece = malloc(sizeof *piece)) != NULL) {
-            if (piece_create(piece, req.seed, req.mood, req.length, app_viewport(app)) == 0) {
-                app_set_piece(app, piece);
-            } else {
-                piece_free(piece);
-                free(piece);
-                piece = NULL;
-            }
+        if (req.compose && due >= 0) {
+            queued = req;
+        } else if (req.compose) {
+            asked = req;
+            due = i + 1 + compose_frames;
         }
         if (req.start_music) music_start = times[i];
         soft_render(&screen, &fb);
@@ -592,9 +608,10 @@ int main(int argc, char **argv) {
     image_free(&fb);
     image_free(&shown);
     image_free(&sheet);
-    if (piece) {
-        piece_free(piece);
-        free(piece);
+    Piece *last = app_piece(app);
+    if (last) {
+        piece_free(last);
+        free(last);
     }
     app_destroy(app);
     return 0;

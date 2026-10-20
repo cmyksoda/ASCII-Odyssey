@@ -74,8 +74,6 @@ static const float GLOW_SCALE[GLOW_LEVELS] = {0, 1, 1.6f};
 static const Rgb MENU_DIM = {128, 132, 184}, MENU_LIT = {255, 240, 222}, ACCENT = {255, 106, 138};
 static const Rgb FOOTER = {84, 88, 128}, NOTE = {170, 174, 214};
 
-// Seconds the end card waits before sailing on by itself, when that's what the viewer chose.
-#define AUTOPLAY_WAIT 8.0
 
 typedef struct {
     MenuKind kind;
@@ -92,10 +90,13 @@ struct App {
     Menu menu;
     Keyboard keys;
     Piece *piece, *retired;
-    char seed[SEED_MAX + 1];
-    double since, frozen, ended;
+    // The next voyage, composed in the background while this one plays, so sailing on is instant.
+    Piece *next;
+    int next_asked, drop_next;
+    char seed[SEED_MAX + 1], next_seed[SEED_MAX + 1];
+    double since, frozen;
     float pointer_x, pointer_y;
-    int setting, settings_changed, waiting;
+    int setting, settings_changed;
     Overlay overlay;
 };
 
@@ -170,8 +171,15 @@ App *app_create(const AppConfig *config) {
     return a;
 }
 
+static void free_piece(Piece *p) {
+    if (!p) return;
+    piece_free(p);
+    free(p);
+}
+
 void app_destroy(App *a) {
     if (!a) return;
+    free_piece(a->next);
     title_free(&a->title);
     grid_free(&a->scene);
     grid_free(&a->ui);
@@ -179,7 +187,23 @@ void app_destroy(App *a) {
 }
 
 void app_set_piece(App *a, Piece *p) {
-    a->piece = p;
+    if (!a->next_asked) {
+        a->piece = p;
+        return;
+    }
+    a->next_asked = 0;
+    if (a->drop_next) {
+        a->drop_next = 0;
+        free_piece(p);
+    } else if (a->state == STATE_COMPOSING) {
+        a->piece = p;
+    } else {
+        a->next = p;
+    }
+}
+
+Piece *app_piece(const App *a) {
+    return a->piece;
 }
 
 Piece *app_release_piece(App *a) {
@@ -261,6 +285,7 @@ static void request_voyage(App *a, const AppClock *clock, AppRequest *req, int b
     req->mood = (Mood)s->mood;
     req->length = s->length;
     req->save_last_seed = s->save_last_seed;
+    snprintf(req->last_seed, sizeof req->last_seed, "%s", a->seed);
     snprintf(a->config.last_seed, sizeof a->config.last_seed, "%s", a->seed);
     a->state = STATE_COMPOSING;
     a->since = clock->wall;
@@ -273,11 +298,62 @@ static void retire_piece(App *a, AppRequest *req) {
     a->piece = NULL;
 }
 
+// Composes the voyage after this one in the background, with a seed of its own, as a new voyage would roll it.
+static void compose_next(App *a, const AppClock *clock, AppRequest *req) {
+    if (a->next || a->next_asked) return;
+    const Settings *s = &a->config.settings;
+    if (a->config.fixed_seed[0])
+        snprintf(a->next_seed, sizeof a->next_seed, "%s", a->config.fixed_seed);
+    else
+        seed_random(clock->entropy, a->next_seed, sizeof a->next_seed);
+    req->compose = 1;
+    snprintf(req->seed, sizeof req->seed, "%s", a->next_seed);
+    req->mood = (Mood)s->mood;
+    req->length = s->length;
+    a->next_asked = 1;
+}
+
+static void begin_voyage(App *a, const AppClock *clock, AppRequest *req) {
+    a->state = STATE_PLAYING;
+    req->start_music = 1;
+    compose_next(a, clock, req);
+}
+
+// Sets out on the next voyage: at once when it's ready, after the weaving screen while it's still composing.
+static void sail_on(App *a, const AppClock *clock, AppRequest *req) {
+    retire_piece(a, req);
+    if (!a->next && !a->next_asked) {
+        request_voyage(a, clock, req, 0);
+        return;
+    }
+    snprintf(a->seed, sizeof a->seed, "%s", a->next_seed);
+    snprintf(a->config.last_seed, sizeof a->config.last_seed, "%s", a->seed);
+    req->save_last_seed = a->config.settings.save_last_seed;
+    snprintf(req->last_seed, sizeof req->last_seed, "%s", a->seed);
+    a->since = clock->wall;
+    a->piece = a->next;
+    a->next = NULL;
+    if (a->piece)
+        begin_voyage(a, clock, req);
+    else
+        a->state = STATE_COMPOSING;
+}
+
+// Back to the title, where the settings may change, so the voyage composed ahead is let go.
+static void return_to_title(App *a, AppRequest *req) {
+    retire_piece(a, req);
+    free_piece(a->next);
+    a->next = NULL;
+    if (a->next_asked) a->drop_next = 1;
+    a->state = STATE_TITLE;
+    open_menu(a, MENU_TITLE);
+}
+
 /* ---------- Settings ---------- */
 
 static void setting_value(const App *a, int row, char *out, int size) {
     static const char *const lengths[3] = {"short", "medium", "long"};
-    static const char *const afters[AFTER_MODES] = {"show the card", "sail on", "play it again"};
+    static const char *const afters[AFTER_MODES] = {"show menu", "sail on", "play it again"};
     static const char *const glows[GLOW_LEVELS] = {"off", "soft", "strong"};
     const Settings *s = &a->config.settings;
     switch (row) {
@@ -692,17 +768,15 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
             req->pause_music = 1;
             open_menu(a, MENU_PAUSE);
         } else if (in->pressed & (INPUT_BACK | INPUT_HOME)) {
-            retire_piece(a, req);
-            a->state = STATE_TITLE;
-            open_menu(a, MENU_TITLE);
+            return_to_title(a, req);
         } else if (t >= piece_length(p) && s->after == AFTER_REPLAY) {
             req->stop_music = 1;
             req->start_music = 1;
+        } else if (t >= piece_length(p) && s->after == AFTER_NEXT) {
+            sail_on(a, clock, req);
         } else if (t >= piece_length(p)) {
             a->state = STATE_ENDED;
             a->frozen = t;
-            a->ended = clock->wall;
-            a->waiting = s->after == AFTER_NEXT;
             open_menu(a, MENU_END);
         }
         break;
@@ -719,31 +793,15 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
             req->start_music = 1;
             a->state = STATE_PLAYING;
         } else if (chosen == 2) {
-            retire_piece(a, req);
-            request_voyage(a, clock, req, 0);
+            sail_on(a, clock, req);
         } else if (chosen == 3) {
-            retire_piece(a, req);
-            a->state = STATE_TITLE;
-            open_menu(a, MENU_TITLE);
+            return_to_title(a, req);
         }
         break;
     }
 
     case STATE_ENDED: {
         end_card(a, p, (float)clock->wall);
-        // Sailing on counts down beside the menu; any button keeps the card instead.
-        if (a->waiting && in->pressed) a->waiting = 0;
-        if (a->waiting) {
-            double left = AUTOPLAY_WAIT - (clock->wall - a->ended);
-            if (left <= 0) {
-                retire_piece(a, req);
-                request_voyage(a, clock, req, 0);
-                break;
-            }
-            char line[48];
-            snprintf(line, sizeof line, "sailing on in %d", (int)left + 1);
-            text_center(a, &p->grid, menu_row(&a->menu, a->menu.count) + 1, line, FOOTER);
-        }
         int chosen = menu_input(a, in);
         menu_draw(a, &p->grid, (float)clock->wall);
         if (chosen == 0) {
@@ -751,12 +809,9 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
             req->start_music = 1;
             a->state = STATE_PLAYING;
         } else if (chosen == 1) {
-            retire_piece(a, req);
-            request_voyage(a, clock, req, 0);
+            sail_on(a, clock, req);
         } else if (chosen == 2 || (in->pressed & INPUT_BACK)) {
-            retire_piece(a, req);
-            a->state = STATE_TITLE;
-            open_menu(a, MENU_TITLE);
+            return_to_title(a, req);
         }
         break;
     }
@@ -772,10 +827,7 @@ void app_frame(App *a, const AppClock *clock, const Input *in, Screen *out, AppR
     grid_clear(&a->ui);
     out->ui = &a->ui;
     if (in->pressed & INPUT_QUIT) req->quit = 1;
-    if (a->state == STATE_COMPOSING && a->piece) {
-        a->state = STATE_PLAYING;
-        req->start_music = 1;
-    }
+    if (a->state == STATE_COMPOSING && a->piece) begin_voyage(a, clock, req);
     if (a->state == STATE_NOTICE || a->state == STATE_TITLE || a->state == STATE_SETTINGS || a->state == STATE_KEYS ||
         a->state == STATE_ABOUT ||
         a->state == STATE_COMPOSING || !a->piece)
