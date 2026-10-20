@@ -148,6 +148,9 @@ SCENE(birds)
 SCENE(planet)
 SCENE(street)
 SCENE(piano)
+SCENE(reels)
+SCENE(palms)
+SCENE(slitscan)
 #undef SCENE
 
 #endif

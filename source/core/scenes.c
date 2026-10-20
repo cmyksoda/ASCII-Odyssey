@@ -545,18 +545,27 @@ static void aurora_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-static float aurora_glow(const Aurora *a, float x, float y, float t, float swell, float *above) {
+typedef struct {
+    float base, strength, rays;
+} Curtain;
+
+// Everything about a curtain that depends only on the column, so each row just measures its height above the hem.
+static Curtain aurora_column(const Aurora *a, float x, float t) {
     float drift = noise_fbm(x * 0.5f + a->seed + t * 0.03f, t * 0.01f) - 0.5f;
     float base = a->base + a->amp * msin(x * a->k1 + t * a->w1) + a->amp * 0.5f * msin(x * a->k2 - t * a->w2) + drift * 0.3f;
     float fold = 0.5f + 0.5f * msin(x * a->fold_k + drift * 6 + t * 0.25f);
     fold = fold * fold * fold;
     float rays = noise_value(x * 14 + a->seed, t * 0.06f);
-    float h = y - base;
+    return (Curtain){base, fold * 0.85f + 0.15f, 0.35f + 0.65f * rays};
+}
+
+static float aurora_glow(const Curtain *c, float y, float swell, float *above) {
+    float h = y - c->base;
     *above = h;
     if (h < -0.03f || h > 0.95f) return 0;
     // A bright hem along the bottom, rays fading upward, brightest where the curtain folds toward us.
     float hem = h < 0.04f ? smoothstep(-0.03f, 0.0f, h) * 0.6f : 0;
-    return (fold * 0.85f + 0.15f) * (mexp(-h * 2.4f) * (0.35f + 0.65f * rays) + hem) * (0.8f + swell);
+    return c->strength * (mexp(-h * 2.4f) * c->rays + hem) * (0.8f + swell);
 }
 
 static void aurora_draw(void *state, const Frame *f) {
@@ -572,9 +581,10 @@ static void aurora_draw(void *state, const Frame *f) {
     dust_stars(f, 0xa707a, 0.03f, 0.85f);
     for (int col = 0; col < g->cols; col++) {
         float x = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect;
+        Curtain near = aurora_column(a, x, t), high = aurora_column(&b, x, t);
         for (int row = 0; row < ground_row && row < g->rows; row++) {
             float y = 1 - ((float)row + 0.5f) / (float)g->rows * 2, above, above_b;
-            float glow = aurora_glow(a, x, y, t, swell, &above), second = aurora_glow(&b, x, y, t, swell, &above_b) * 0.75f;
+            float glow = aurora_glow(&near, y, swell, &above), second = aurora_glow(&high, y, swell, &above_b) * 0.75f;
             int far = second > glow;
             if (far) glow = second, above = above_b;
             if (glow < 0.09f) continue;
@@ -587,7 +597,7 @@ static void aurora_draw(void *state, const Frame *f) {
         for (int row = ground_row + 1; row < g->rows; row++) {
             float y = 1 - ((float)row + 0.5f) / (float)g->rows * 2, depth = a->ground - y, above;
             float mirror = a->ground + depth * 1.3f + 0.05f * msin(x * 9 + t * 1.5f + depth * 20);
-            float glow = aurora_glow(a, x, mirror, t, swell, &above) * (0.55f - depth * 0.4f);
+            float glow = aurora_glow(&near, mirror, swell, &above) * (0.55f - depth * 0.4f);
             float ripple = msin(x * 18 + depth * 40 - t * 2.2f);
             if (glow < 0.08f || ripple < -0.2f) continue;
             Rgbf color = frame_dim(f, rgbf_mix(palette_ramp(f->palette, 0.5f), palette_accent(f->palette, 0), 0.3f), 0.5f + glow);
@@ -1254,6 +1264,9 @@ const SceneKind scene_kinds[] = {
     {"planet", W(2, 2, 2, 0, 2, 0, 0, 1, 2), 0.3f, 0, 1, planet_setup, planet_draw},
     {"rainy street", W(0, 0, 1, 3, 0, 0, 0, 2, 1), 0.3f, 0, 0, street_setup, street_draw},
     {"piano roll", W(1, 2, 1, 2, 0, 0, 3, 1, 0), 0.45f, 1, 0, piano_setup, piano_draw},
+    {"reel to reel", W(0, 0, 1, 2, 0, 0, 0, 3, 1), 0.45f, 1, 0, reels_setup, reels_draw},
+    {"palms", W(0, 0, 3, 1, 1, 0, 0, 0, 0), 0.3f, 0, 0, palms_setup, palms_draw},
+    {"slitscan", W(1, 0, 2, 0, 3, 0, 0, 0, 2), 0.85f, 1, 0, slitscan_setup, slitscan_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
 _Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS, "the scene table outgrew MAX_SCENE_KINDS");

@@ -787,3 +787,83 @@ void meteors_draw(void *state, const Frame *f) {
     }
     f->fx->glow = 0.55f;
 }
+
+/* ---------- Reel-to-reel ---------- */
+
+typedef struct {
+    float speed;
+    uint32_t salt;
+} Reels;
+
+void reels_setup(void *state, Rng *r, const Frame *f) {
+    Reels *t = state;
+    t->speed = rng_between(r, 0.7f, 1.0f);
+    t->salt = rng_u32(r);
+    (void)f;
+}
+
+// One reel: its flange with three windows cut into it, turning, and the tape wound on its hub.
+static void reel(const Frame *f, float x, float y, float radius, float pack, float spin) {
+    Rgbf metal = palette_ramp(f->palette, 0.8f), tape = palette_ramp(f->palette, 0.35f);
+    Canvas *c = f->canvas;
+    canvas_disc(c, x, y, pack, 0.8f, tape);
+    for (int k = 0; k < 3; k++) {
+        float a = spin + (float)k * TAU_F / 3;
+        // The flange between windows shows as spokes; the windows themselves are open.
+        for (int s = 0; s < 6; s++) {
+            float r = radius * (0.25f + 0.13f * (float)s);
+            canvas_disc(c, x + mcos(a) * r, y + msin(a) * r, 0.022f, 0.9f, metal);
+        }
+    }
+    canvas_disc(c, x, y, radius * 0.16f, 0.95f, metal);
+}
+
+// A studio tape machine: two big reels turning, the tape running down past the heads, and a pair of VU meters whose
+// needles swing with the music.
+void reels_draw(void *state, const Frame *f) {
+    Reels *t = state;
+    Grid *g = f->grid;
+    float length = mmax(f->score->length, 1), progress = saturate(f->t / length), radius = 0.36f, ry = 0.46f, rx = g->aspect * 0.52f;
+    canvas_clear(f->canvas);
+    for (int side = 0; side < 2; side++) {
+        // The tape runs at a steady speed, so a reel turns faster the less it holds: the angle is the integral of
+        // speed / fill. The tape path pulls both reels clockwise.
+        float start = side ? 0.3f : 0.9f, gain = side ? 0.6f : -0.6f, fill = start + gain * progress;
+        float turned = t->speed * length / gain * mlog2(fill / start) * 0.6931472f;
+        reel(f, side ? rx : -rx, ry, radius, radius * fill, -turned);
+    }
+    frame_resolve(f);
+    Rgbf metal = palette_ramp(f->palette, 0.75f), tape = palette_ramp(f->palette, 0.45f), panel = palette_ramp(f->palette, 0.3f);
+    for (int side = 0; side < 2; side++) {
+        float x = side ? rx : -rx;
+        circle(f, x, ry, radius, metal, 48);
+        // Tape from the reel's pack down round a guide roller to the head block.
+        float pack = radius * (0.3f + 0.6f * (side ? progress : 1 - progress)), gx = (side ? 1 : -1) * 0.36f, gy = -0.08f;
+        line(f, x + (side ? -1 : 1) * pack, ry, gx, gy, tape);
+        circle(f, gx, gy, 0.04f, metal, 12);
+        line(f, gx, gy - 0.04f, (side ? 1 : -1) * 0.12f, -0.16f, tape);
+    }
+    // The head block.
+    StrokePoint head[4] = {{-0.14f, -0.12f, metal}, {0.14f, -0.12f, metal}, {0.14f, -0.24f, metal}, {-0.14f, -0.24f, metal}};
+    stroke_draw(f->stroker, head, 4, 1);
+    for (int k = -1; k <= 1; k++) put_cell(g, cell_col(g, (float)k * 0.08f), cell_row(g, -0.15f), '#', metal);
+    // VU meters: how hard the music is hitting, each side its own blend of parts.
+    for (int side = 0; side < 2; side++) {
+        float cx = (side ? 1 : -1) * g->aspect * 0.42f, cy = -0.62f, w = 0.5f, h = 0.24f;
+        StrokePoint box[4] = {{cx - w, cy + h, panel}, {cx + w, cy + h, panel}, {cx + w, cy - h, panel}, {cx - w, cy - h, panel}};
+        stroke_draw(f->stroker, box, 4, 1);
+        float level = side ? frame_pulse(f, ROLE_SNARE, 0.25f, 0.5f) + frame_pulse(f, ROLE_LEAD, 0.4f, 0.4f) + frame_pulse(f, ROLE_PAD, 0.8f, 0.2f)
+                           : frame_pulse(f, ROLE_KICK, 0.25f, 0.6f) + frame_pulse(f, ROLE_BASS, 0.4f, 0.4f);
+        level = saturate(0.08f + level * 0.65f + 0.04f * msin(f->t * 3.1f + (float)side));
+        // The scale: an arc of ticks, red at the top end.
+        for (int k = 0; k <= 10; k++) {
+            float a = PI_F * (0.75f - 0.5f * (float)k / 10), tx = cx + mcos(a) * w * 0.8f, ty = cy - h * 0.7f + msin(a) * h * 1.3f;
+            put_cell(g, cell_col(g, tx), cell_row(g, ty), k % 5 == 0 ? '|' : '\'', k > 7 ? palette_accent(f->palette, 0) : metal);
+        }
+        float a = PI_F * (0.75f - 0.5f * level);
+        line(f, cx, cy - h * 0.7f, cx + mcos(a) * w * 0.72f, cy - h * 0.7f + msin(a) * h * 1.15f, palette_ramp(f->palette, 1.0f));
+        const char *label = side ? "R" : "L";
+        put_cell(g, cell_col(g, cx), cell_row(g, cy - h * 0.6f), label[0], panel);
+    }
+    f->fx->glow = 0.5f;
+}

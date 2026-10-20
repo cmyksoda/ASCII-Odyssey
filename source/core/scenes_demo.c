@@ -507,3 +507,49 @@ void julia_draw(void *state, const Frame *f) {
     }
     f->fx->glow = 0.55f;
 }
+
+/* ---------- Slit-scan ---------- */
+
+typedef struct {
+    float speed, bands, seed;
+} Slitscan;
+
+void slitscan_setup(void *state, Rng *r, const Frame *f) {
+    Slitscan *s = state;
+    s->speed = rng_between(r, 1.6f, 2.6f);
+    s->bands = rng_between(r, 5, 9);
+    s->seed = rng_between(r, 0, 70);
+    (void)f;
+}
+
+// The star gate: two planes of streaking light, above and below, rushing out of a bright slit at the middle. Every
+// kick surges the flight, and the chords turn the colors.
+void slitscan_draw(void *state, const Frame *f) {
+    Slitscan *s = state;
+    Grid *g = f->grid;
+    float travel = frame_travel(f, s->speed * 0.6f, s->speed) + frame_surge(f, ROLE_KICK, 0.25f, 1.2f);
+    const ChordMark *chord = score_chord(f->score, f->t);
+    int turn = chord ? chord->chord.root_pc : 0;
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row), h = mabs(y);
+        if (h < 0.02f) {
+            for (int col = 0; col < g->cols; col++) put_cell(g, col, row, '=', palette_ramp(f->palette, 1.0f));
+            continue;
+        }
+        float depth = 0.35f / h, fog = saturate(1.2f / depth);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), u = x * depth * 0.35f, v = depth + travel;
+            // Streaks: narrow across, stretched far along the direction of flight.
+            float streak = noise_value(u * s->bands + s->seed + (y > 0 ? 40 : 0), v * 0.12f);
+            streak = smoothstep(0.55f, 0.85f, streak);
+            if (streak < 0.08f) continue;
+            // The glyph follows the streak's slant as it fans out from the middle.
+            float slope = y / (x + (x >= 0 ? 0.0001f : -0.0001f));
+            int glyph = mabs(slope) < 0.35f ? '-' : mabs(slope) > 2.5f ? '|' : (slope > 0 ? '/' : '\\');
+            int hue = (int)(mfloor(u * s->bands * 0.5f)) + turn;
+            Rgbf color = rgbf_mix(palette_accent(f->palette, hue), palette_ramp(f->palette, 1.0f), 0.3f * streak);
+            put_cell(g, col, row, glyph, frame_dim(f, color, (0.35f + 0.65f * streak) * (0.4f + 0.6f * fog)));
+        }
+    }
+    f->fx->glow = 0.7f;
+}

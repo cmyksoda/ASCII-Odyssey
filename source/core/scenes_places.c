@@ -517,3 +517,158 @@ void street_draw(void *state, const Frame *f) {
         }
     f->fx->glow = 0.65f;
 }
+
+/* ---------- Palms ---------- */
+
+#define PALMS 3
+
+typedef struct {
+    float horizon, sun_r, lean[PALMS], height[PALMS], x[PALMS];
+    int count;
+    uint32_t salt;
+} Palms;
+
+void palms_setup(void *state, Rng *r, const Frame *f) {
+    Palms *p = state;
+    p->horizon = rng_between(r, -0.3f, -0.15f);
+    p->sun_r = rng_between(r, 0.3f, 0.42f);
+    p->count = rng_range(r, 2, PALMS + 1);
+    for (int i = 0; i < p->count; i++) {
+        int right = i % 2;
+        p->x[i] = (right ? 1 : -1) * f->grid->aspect * rng_between(r, 0.72f, 0.98f);
+        p->lean[i] = (right ? -1 : 1) * rng_between(r, 0.1f, 0.25f);
+        p->height[i] = rng_between(r, 1.0f, 1.4f);
+    }
+    // Shorter palms stand farther back and are drawn first.
+    for (int i = 0; i < p->count; i++)
+        for (int k = i + 1; k < p->count; k++)
+            if (p->height[k] < p->height[i]) {
+                float swap = p->height[i];
+                p->height[i] = p->height[k];
+                p->height[k] = swap;
+            }
+    p->salt = rng_u32(r);
+}
+
+// Clears each cell along a curve and its four neighbors, so a line drawn there afterwards stands clear of the glow.
+static void carve(Grid *g, const StrokePoint *pts, int n) {
+    static const int AROUND[5][2] = {{0, 0}, {-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+    for (int k = 0; k + 1 < n; k++)
+        for (int s = 0; s <= 6; s++) {
+            float t = (float)s / 6;
+            int col = cell_col(g, mixf(pts[k].x, pts[k + 1].x, t)), row = cell_row(g, mixf(pts[k].y, pts[k + 1].y, t));
+            for (int d = 0; d < 5; d++) {
+                int c = col + AROUND[d][0], r = row + AROUND[d][1];
+                if (c >= 0 && c < g->cols && r >= 0 && r < g->rows) grid_at(g, c, r)->glyph = ' ';
+            }
+        }
+}
+
+static void trace(const Frame *f, const StrokePoint *pts, int n, int carving) {
+    if (carving) carve(f->grid, pts, n);
+    else stroke_draw(f->stroker, pts, n, 0);
+}
+
+// One palm in neon line art: a tapering ringed trunk, fronds arching from the crown and drooping in the breeze with
+// leaflets hanging from them, and a few coconuts. Called twice: once to carve its shape, once to draw it.
+static void palm(const Frame *f, const Palms *p, int i, int carving, Rgbf neon) {
+    static const float ANGLE[4] = {-0.26f, 0.26f, 0.79f, 1.31f}, REACH[4] = {0.28f, 0.36f, 0.34f, 0.26f};
+    static const float DROOP[4] = {0.16f, 0.22f, 0.26f, 0.22f};
+    Grid *g = f->grid;
+    StrokePoint left[16], right[16];
+    float base = -1.05f, h = p->height[i], lean = p->lean[i] * 1.4f;
+    for (int s = 0; s < 16; s++) {
+        float t = (float)s / 15, x = p->x[i] + lean * t * t, y = base + t * h;
+        float tx = 2 * lean * t, len = mhypot(tx, h), half = mixf(0.045f, 0.02f, t);
+        left[s] = (StrokePoint){x - h / len * half, y + tx / len * half, neon};
+        right[s] = (StrokePoint){x + h / len * half, y - tx / len * half, neon};
+    }
+    trace(f, left, 16, carving);
+    trace(f, right, 16, carving);
+    float cx = p->x[i] + lean, cy = base + h;
+    if (!carving)
+        for (int s = 1; s < 10; s += 2) {
+            float t = (float)s / 15;
+            put_cell(g, cell_col(g, p->x[i] + lean * t * t), cell_row(g, base + t * h), '=', frame_dim(f, neon, 0.55f));
+        }
+    // Nearer (taller) palms have bigger crowns.
+    float breeze = 0.04f * msin(f->t * 0.45f + (float)i), crown = 0.85f + 0.35f * saturate((h - 1) / 0.4f);
+    for (int k = 0; k < 8; k++) {
+        int j = k % 4;
+        float side = k < 4 ? 1.0f : -1.0f, sway = 0.035f * msin(f->t * 0.8f + (float)i * 1.7f + (float)k * 0.6f);
+        float dx = mcos(ANGLE[j]) * side * REACH[j] * crown, dy = msin(ANGLE[j]) * REACH[j] * crown, droop = (DROOP[j] + sway) * crown;
+        StrokePoint frond[12];
+        for (int s = 0; s < 12; s++) {
+            float u = (float)s / 11;
+            frond[s] = (StrokePoint){cx + dx * u + breeze * u * u, cy + dy * u - droop * u * u, neon};
+        }
+        trace(f, frond, 12, carving);
+        for (int s = 3; s < 11; s += 2) {
+            float drop = 0.05f * crown * (1 - 0.4f * (float)s / 11);
+            StrokePoint leaf[2] = {frond[s], {frond[s].x + side * 0.37f * drop, frond[s].y - 0.93f * drop, frame_dim(f, neon, 0.8f)}};
+            trace(f, leaf, 2, carving);
+        }
+    }
+    static const float NUT[3][2] = {{-0.035f, -0.05f}, {0.025f, -0.06f}, {-0.005f, -0.09f}};
+    for (int n = 0; n < 3; n++) {
+        int col = cell_col(g, cx + NUT[n][0]), row = cell_row(g, cy + NUT[n][1]);
+        if (carving && col >= 0 && col < g->cols && row >= 0 && row < g->rows) grid_at(g, col, row)->glyph = ' ';
+        if (!carving) put_cell(g, col, row, 'o', frame_dim(f, neon, 0.8f));
+    }
+}
+
+// Dusk on a beach: the sky glowing hotter toward a striped sun settling into the sea, framed by neon palms whose fronds
+// stir in the breeze; small waves wash in.
+void palms_draw(void *state, const Frame *f) {
+    Palms *p = state;
+    Grid *g = f->grid;
+    float hz = p->horizon, sun_y = hz + p->sun_r * 0.35f;
+    static const char glow[] = " .:-=+";
+    Rgbf high = palette_ramp(f->palette, 0.35f), low = palette_accent(f->palette, 1), hot = palette_ramp(f->palette, 1.0f);
+    dust_stars(f, p->salt, 0.0f, 0.6f);
+    for (int row = 0; row <= cell_row(g, hz); row++) {
+        float y = cell_y(g, row), up = saturate((y - hz) / (1 - hz));
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), near_sun = mexp(-mhypot(x * 0.6f, y - sun_y) * 1.8f);
+            float level = saturate((1 - up) * (1 - up) * 0.75f + near_sun * 0.45f);
+            int i = (int)(level * 5.99f);
+            if (i <= 0) continue;
+            Rgbf color = rgbf_mix(rgbf_mix(high, low, 1 - up), hot, near_sun * 0.5f);
+            put_cell(g, col, row, glow[i], frame_dim(f, color, 0.3f + 0.6f * level));
+        }
+    }
+    Rgbf top = palette_ramp(f->palette, 1.0f), bottom = palette_accent(f->palette, 1);
+    for (int row = cell_row(g, sun_y + p->sun_r); row <= cell_row(g, hz); row++) {
+        float y = cell_y(g, row), v = (sun_y + p->sun_r - y) / (2 * p->sun_r);
+        // Bands that thin out toward the horizon, sliding slowly down; the gaps between them show the sky.
+        float band = mfract(v * 7 - f->t * 0.08f), gap = v > 0.45f ? (v - 0.45f) * 1.2f : 0;
+        if (band < gap) continue;
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), d = mhypot(x, y - sun_y);
+            if (d < p->sun_r) put_cell(g, col, row, '#', rgbf_mix(top, bottom, saturate(v * 1.2f)));
+        }
+    }
+    // The sea, with the sun's reflection broken into dashes, and a strip of beach.
+    int beach = cell_row(g, -0.78f);
+    for (int row = cell_row(g, hz) + 1; row < g->rows; row++) {
+        float y = cell_y(g, row), near = (hz - y) / (hz + 1);
+        for (int col = 0; col < g->cols; col++) {
+            if (row >= beach) {
+                if ((row * 31 + col * 7) % 5 == 0) put_cell(g, col, row, '.', frame_dim(f, low, 0.4f));
+                continue;
+            }
+            float x = cell_x(g, col), w = msin(x * 6 * (1 + near * 2) + f->t * 0.9f + y * 25);
+            if (mabs(x) < p->sun_r * (0.6f + near) && w > 0.2f)
+                put_cell(g, col, row, w > 0.7f ? '=' : '-', frame_dim(f, bottom, 0.5f + 0.4f * (1 - near)));
+            else if (w > 0.35f)
+                put_cell(g, col, row, w > 0.8f ? '~' : '-', frame_dim(f, rgbf_mix(low, high, near), 0.3f + 0.25f * (1 - near)));
+        }
+    }
+    for (int col = 0; col < g->cols; col++) put_cell(g, col, cell_row(g, hz), '_', palette_ramp(f->palette, 0.6f));
+    for (int i = 0; i < p->count; i++) {
+        Rgbf neon = frame_dim(f, palette_accent(f->palette, 0), 0.6f + 0.4f * saturate((p->height[i] - 1) / 0.4f));
+        palm(f, p, i, 1, neon);
+        palm(f, p, i, 0, neon);
+    }
+    f->fx->glow = 0.6f;
+}
