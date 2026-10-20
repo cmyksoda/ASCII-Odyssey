@@ -789,17 +789,31 @@ static void constellation_setup(void *state, Rng *r, const Frame *f) {
     c->salt = rng_u32(r);
 }
 
+// The sky turns about a pole above the top of the screen, a little over half a degree a second.
+#define SKY_POLE 2.2f
+
+static void sky_turn(float angle, float x, float y, float *ox, float *oy) {
+    float s = msin(angle), co = mcos(angle), dy = y - SKY_POLE;
+    *ox = x * co - dy * s;
+    *oy = SKY_POLE + x * s + dy * co;
+}
+
 // A star chart drawing itself: the Milky Way across the sky, three figures whose lines grow in over the shot (faster
-// with every note), stars that flare at the notes that name them, and a shooting star now and then on the snare.
+// with every note) and then shimmer as light runs along them, stars that flare at the notes that name them, a
+// shooting star now and then on the snare, and the whole sky slowly turning.
 static void constellation_draw(void *state, const Frame *f) {
     Constellation *c = state;
     Grid *g = f->grid;
     dust_stars(f, c->salt, 0.004f, 0.8f);
+    float turn = f->local * 0.011f * (c->salt & 1 ? 1.0f : -1.0f);
+    float sx[STARS], sy[STARS];
+    for (int i = 0; i < STARS; i++) sky_turn(turn, c->x[i], c->y[i], &sx[i], &sy[i]);
     Rgbf faint = palette_ramp(f->palette, 0.35f), milk = palette_ramp(f->palette, 0.55f);
     for (int row = 0; row < g->rows; row++) {
-        float y = 1 - ((float)row + 0.5f) / (float)g->rows * 2;
+        float sy_row = 1 - ((float)row + 0.5f) / (float)g->rows * 2;
         for (int col = 0; col < g->cols; col++) {
-            float x = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect;
+            float x, y;
+            sky_turn(-turn, ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect, sy_row, &x, &y);
             float d = y - (x * c->band_tilt + c->band_offset), band = mexp(-d * d * 9.0f);
             float dust = band * noise_fbm(x * 2.2f + (float)(c->salt % 53), y * 2.2f + f->t * 0.01f);
             uint32_t id = (uint32_t)(row * 977 + col * 131) ^ c->salt;
@@ -816,14 +830,20 @@ static void constellation_draw(void *state, const Frame *f) {
     for (int v = 0; v < 5; v++) notes += score_count(f->score, sung[v], start, f->t);
     // Every line is drawn by two thirds of the way through the shot; notes hurry it along.
     float drawn = f->local / (f->length * 0.66f) * (float)c->edges * 0.7f + (float)notes * 0.25f * f->react;
-    Rgbf line = frame_dim(f, palette_ramp(f->palette, 0.75f), 0.65f);
+    Rgbf line = frame_dim(f, palette_ramp(f->palette, 0.75f), 0.65f), glint = palette_ramp(f->palette, 1.0f);
     for (int e = 0; e < c->edges; e++) {
         float grow = saturate(drawn - (float)e);
         if (grow <= 0) break;
         int a = c->edge_a[e], b = c->edge_b[e];
-        float bx = c->x[a] + (c->x[b] - c->x[a]) * grow, by = c->y[a] + (c->y[b] - c->y[a]) * grow;
-        StrokePoint seg[2] = {{c->x[a], c->y[a], line}, {bx, by, line}};
+        float bx = sx[a] + (sx[b] - sx[a]) * grow, by = sy[a] + (sy[b] - sy[a]) * grow;
+        StrokePoint seg[2] = {{sx[a], sy[a], line}, {bx, by, line}};
         stroke_draw(f->stroker, seg, 2, 0);
+        // Once a figure is whole, a light runs along its lines one after another, tracing it again and again.
+        float run = mfract(f->t * 0.35f + (float)(e % (STARS / CLUSTERS - 1)) * 0.13f + (float)(e / (STARS / CLUSTERS - 1)) * 0.29f);
+        if (grow >= 1 && run < 0.3f) {
+            float u = run / 0.3f;
+            put_cell(g, cell_col(g, sx[a] + (sx[b] - sx[a]) * u), cell_row(g, sy[a] + (sy[b] - sy[a]) * u), '*', frame_dim(f, glint, 0.8f));
+        }
     }
     float flare[STARS] = {0};
     for (int v = 0; v < 5 && f->react > 0; v++) {
@@ -838,7 +858,7 @@ static void constellation_draw(void *state, const Frame *f) {
     Rgbf white = palette_ramp(f->palette, 1.0f), gold = palette_accent(f->palette, 1);
     for (int i = 0; i < STARS; i++) {
         float tw = (0.65f + 0.35f * msin(f->t * 1.7f + (float)i * 2.1f)) * (1 + kick);
-        int col = cell_col(g, c->x[i]), row = cell_row(g, c->y[i]);
+        int col = cell_col(g, sx[i]), row = cell_row(g, sy[i]);
         Rgbf color = rgbf_mix(frame_dim(f, white, tw), gold, saturate(flare[i] * 1.5f));
         put_cell(g, col, row, flare[i] > 0.25f ? '*' : '+', color);
         if (flare[i] > 0.15f) {

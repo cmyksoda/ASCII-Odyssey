@@ -433,19 +433,24 @@ static void rings(const Frame *f, const Planet *p, int front) {
             float x = p->cx + mcos(a) * rr, y = p->cy + s * rr * p->tilt;
             // Where the ring runs steeply on screen it draws as an upright stroke, elsewhere as a flat one.
             int glyph = mabs(mcos(a)) > 0.93f ? (mcos(a) > 0 ? ')' : '(') : s < 0 ? '_' : '-';
-            (front ? put_cell : put_cell_under)(g, cell_col(g, x), cell_row(g, y), glyph, color);
+            // Now and then an ice grain catches the sun.
+            uint32_t id = (uint32_t)(band * 211 + k) ^ p->salt ^ (uint32_t)mfloor(f->t * 2.5f + (float)k * 0.618f) * 2654435761u;
+            int glint = hash01(id) < 0.02f;
+            (front ? put_cell : put_cell_under)(g, cell_col(g, x), cell_row(g, y), glint ? '*' : glyph,
+                                                 glint ? palette_ramp(f->palette, 1.0f) : color);
         }
     }
 }
 
-// A ringed planet hanging in space: lit from one side with banded clouds, its rings passing behind it and across its
-// face, and two moons on their slow rounds.
+// A ringed planet hanging in space: lit from one side, its banded clouds turning with it, its rings passing behind it
+// and across its face with ice glinting in them, and two moons on their slow rounds.
 void planet_draw(void *state, const Frame *f) {
     Planet *p = state;
     Canvas *c = f->canvas;
     canvas_clear(c);
     Rgbf a = palette_accent(f->palette, 1), b = palette_ramp(f->palette, 0.6f);
     float lx = mcos(p->light), ly = 0.45f, lz = 0.6f, ln = msqrt(lx * lx + ly * ly + lz * lz);
+    float spin = f->t * 0.06f, cs = mcos(spin), sn = msin(spin);
     for (int j = 0; j < c->h; j++) {
         float y = canvas_y(c, j) - p->cy;
         if (mabs(y) > p->radius) continue;
@@ -454,9 +459,12 @@ void planet_draw(void *state, const Frame *f) {
             if (d2 > 1) continue;
             float nz = msqrt(1 - d2), nx = x / p->radius, ny = y / p->radius;
             float lit = saturate((nx * lx + ny * ly + nz * lz) / ln);
-            float bands = 0.5f + 0.5f * msin(ny * 14 + noise_value(nx * 3 + (float)(p->salt % 31), ny * 8) * 2);
+            // Clouds sampled in the planet's own turning frame, so they ride round with it.
+            float ux = nx * cs + nz * sn, uz = nz * cs - nx * sn;
+            float bands = 0.5f + 0.5f * msin(ny * 14 + noise_value(ux * 3 + (float)(p->salt % 31), uz * 3 + ny * 8) * 2);
             Rgbf color = rgbf_mix(a, b, bands);
-            canvas_max(c, i, j, 0.12f + 0.88f * lit, color);
+            // The darker belts read in the glyphs too, so the turning shows in the shapes as well as the colors.
+            canvas_max(c, i, j, (0.12f + 0.88f * lit) * (0.68f + 0.32f * bands), color);
         }
     }
     // Two moons; the far half of each orbit passes behind the planet.
