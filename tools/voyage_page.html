@@ -80,6 +80,15 @@
     width: 100%; font: 15px/1.5 var(--body); color: var(--ink); background: var(--surface);
     border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; resize: vertical; margin-top: -8px;
   }
+  /* The title faces: each on the same seed, two to a row, with its name and the same reactions as a voyage. */
+  .faces { display: flex; flex-direction: column; gap: 12px; padding-top: 28px; border-top: 1px dashed var(--line); min-width: 0; }
+  h2 { font-family: var(--mono); font-weight: 700; font-size: 17px; margin: 0; text-wrap: balance; }
+  .faces > p { margin: 0; max-width: 64ch; color: var(--soft); }
+  .face-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 20px 16px; }
+  .face { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .face img { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 4 / 3; border-radius: 4px; background: var(--screen); }
+  .face figcaption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-family: var(--mono); font-size: 13.5px; }
+  .face .react button { font-size: 13px; padding: 4px 12px; }
   footer { font-size: 13.5px; color: var(--soft); max-width: 64ch; }
 </style>
 </head>
@@ -88,27 +97,34 @@
   <header class="mast">
     <pre class="title" aria-label="ASCII Odyssey">{{TITLE_ART}}</pre>
     <h1>Voyages, {{ROUND}}</h1>
-    <p>The same eight pieces as round three, one for each mood. Seven sound exactly as they did then. What's new:</p>
+    <p>The same eight pieces as round four, one for each mood, and all eight sound exactly as they did then. What's new:</p>
     <ul>
-      <li>From your notes: thunder ribbon's drops are heavier, with the sub louder under a darker wobble, so the highs no longer ride on top. The wobble's rhythms are the same ones you liked.</li>
-      <li>Also from your notes: synthwave is slower and gentler than trance or dubstep, so its drops now pick calmer scenes than theirs do. Midnight skyline keeps a few intense moments, no longer one after another.</li>
-      <li>More of the kaleidoscope and checkerboard kind. Ten new op-art scenes: a checker vortex zooming forever inward, a hypnotic spiral, a rubber checkerboard that breathes and bulges, kaleidoscope mirror tiles, moire rings, Truchet ribbons, a twisting tower of squares, a checkered box tunnel, a honeycomb, and the cafe wall illusion.</li>
-      <li>The kaleidoscope reflects five kinds of pattern now: flowers, stripes, checks, rings and stained glass. The checker floor runs checks, diamonds, chevrons or waves, and sometimes banks from side to side.</li>
-      <li>75 scenes in all. The other 18 new ones are pong, space invaders, a maze typed out in BASIC, the spectrum bent into a halo, pulsar lines, a julia set, a koi pond, a night train's window, a campfire, an hourglass timing the piece, birds flying home, a ringed planet, a rainy street, neon palms at dusk, a piano roll, a reel-to-reel deck, a slit-scan star gate and a carousel.</li>
-      <li>26 kinds of transition, up from 11: push, doors, shatter, typewriter, swirl, zoom, interlace, mosaic, slide, cascade, glitch, flip, kaleido, and a star and a heart for the music box. Each mood has its own taste in them, and each piece moves through many different ones.</li>
-      <li>16 new palettes, 47 in all, among them acid, arcade, inferno, cyberpunk, toxic, starry night, kanagawa, gold leaf, peacock and paper.</li>
-      <li>16 title fonts, up from 9, two of them made for Odyssey: pixel and dots. A title now comes in one of five ways: decoded out of noise, typed, rained down, swept in, or blooming from the middle.</li>
-      <li>I checked every scene in quiet music and gave the ones that froze something to do: the speakers answer every part, a camel caravan crosses the dunes, the skyline has its own traffic, the galaxy winds as it turns, and the constellations' sky slowly wheels.</li>
-      <li>With Reduce flashing on, the striped op-art scenes run at lower contrast. With Reduce motion on, they move at half speed, and transitions reveal in place instead of moving whole pictures.</li>
+      <li>You gave midnight skyline 10/10. Its music is unchanged, but the new scenes shuffled its pictures a little, and its drops came out a shade calmer, with two hypnotic shots of eight where round four had three.</li>
+      <li>Nine more scenes of the kaleidoscope and checkerboard kind: the Amiga's bouncing ball, a kaleidoscope of gems, twisting tiles, Escher's circle limit flying across a checkered hyperbolic plane, a Sierpinski carpet zooming forever, a quasicrystal rosette, a tunnel seen through a kaleidoscope, two checkerboards turning against each other in xor, and tumbling blocks that turn inside out as the light swings around.</li>
+      <li>Six gentle ones for the soft moods: soap bubbles blown by the tune, a snow globe shaken on the bar, a dandelion letting its seeds go one note at a time, a music box ballerina turning a pirouette every bar, strings of fairy lights, and a mandala the melody draws for itself, a petal for every note.</li>
+      <li>More variety inside the favorites. The kaleidoscope is sometimes set in rose-window tiers that turn against each other, the checker vortex is sometimes a dartboard of counter-turning rings, and the rubber checkerboard's lens sometimes twists into a whirlpool. Truchet tiles are sometimes a 10 PRINT maze, xor checkers sometimes cross a board with rings, the nested squares are sometimes triangles or hexagons, and the checkered box tunnel is sometimes hexagonal or triangular. The honeycomb is sometimes filled in three colors that turn as each kick's ring passes, and the cafe wall's courses sometimes run up the screen, though neither of those last two turns up in these videos.</li>
+      <li>90 scenes in all, up from 75.</li>
+      <li>32 kinds of transition, up from 26: tetris blocks, a ripple, a halftone screen of growing dots, a pinwheel, a honeycomb wave, and an old CRT warming up.</li>
+      <li>60 palettes, up from 47: blueprint, halloween, cga, mesa, mint chip, foundry, twilight, home micro, risograph, goldfish, jade, amber terminal and seafoam. Aurora and snow are now called northern lights and porcelain, since two scenes have those names.</li>
+      <li>57 title fonts, up from 16. Three more were made for Odyssey (wire, scanline and neon), and 38 come from FIGlet's big contributed collection, as you said yes to. Each mood now picks from fourteen, and a title too wide for one line stacks its words, so the big faces get their turn. They're all below the voyages, so you can keep or drop each one. Each font's makers and their terms are credited in a licenses folder, which the SD card zip carries from 0.2.0 on.</li>
     </ul>
     <ul class="legend" aria-label="Section colors">
       <li><i class="intro"></i>intro</li><li><i class="verse"></i>verse</li><li><i class="build"></i>build</li>
       <li><i class="drop"></i>drop</li><li><i class="break"></i>break</li><li><i class="outro"></i>outro</li>
     </ul>
     <p>Under each video, every block is one shot, colored by its section. Tall blocks are scenes that answer the music, short ones move on their own. Tap the strip to jump. Reactions and notes save here and reach Mio through the shelf.</p>
-    <p>{{INSTALL}} Your notes on round three are saved with the project.</p>
+    <p>{{INSTALL}} Your notes on round four are saved with the project.</p>
   </header>
 {{PIECES}}
+  <section class="faces" id="faces" aria-labelledby="faces-title">
+    <h2 id="faces-title">The new title faces</h2>
+    <p>Each card writes the same seed, violet lagoon, the way its title card would in a piece. A piece's face comes from its seed, so the eight videos above show only three of the new ones (diamond, cricket and doom), and neon turns up twice. Two cards, block and lean, aren't new. You had them before, but almost no title fit them on one line until titles could wrap. Tap Drop it on any you'd rather not see, and I'll take them out.</p>
+    <div class="face-grid">{{FACES}}
+    </div>
+    <p>One question about titles. When a title decodes out of noise, one of the five ways a title arrives, about a tenth of its letters keep scrambling the whole time it's held. It's been that way since the first round, and the other four ways settle fully. Should decoded titles settle too?</p>
+    <label class="note-label" for="note-faces">Notes on the faces</label>
+    <textarea id="note-faces" rows="2"></textarea>
+  </section>
   <footer>Rendered on the PC by the same engine that runs on the Wii, so a seed looks and sounds the same in both places.</footer>
 </main>
 <script>
@@ -157,6 +173,22 @@
       seek(Math.min(1, Math.max(0, (video.currentTime + (e.key === 'ArrowRight' ? 10 : -10)) / total)));
     });
   });
+  const faces = state.faces || (state.faces = {});
+  document.querySelectorAll('.face').forEach((face) => {
+    const name = face.dataset.face;
+    const buttons = face.querySelectorAll('.react button');
+    const paint = () => buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.reaction === faces[name])));
+    paint();
+    buttons.forEach((b) => b.addEventListener('click', () => {
+      faces[name] = faces[name] === b.dataset.reaction ? null : b.dataset.reaction;
+      paint();
+      save();
+    }));
+  });
+  const facesNote = document.getElementById('note-faces');
+  facesNote.value = state.faces_note || '';
+  facesNote.addEventListener('input', () => { state.faces_note = facesNote.value; save(); });
+  if (!document.querySelector('.face')) document.getElementById('faces').hidden = true;
 </script>
 </body>
 </html>

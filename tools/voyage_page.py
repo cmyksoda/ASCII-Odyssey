@@ -11,12 +11,14 @@ the Wii build is still to come.
 import html
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 
 SHELF = os.path.expanduser('~/Documents/Artifacts')
 MOOD_ORDER = ['synthwave', 'keygen', 'ambient', 'lo-fi', 'trance', 'dubstep', 'music box', 'dub']
+FILLED = {'ROUND', 'TITLE_ART', 'TITLE', 'PAGE', 'INSTALL', 'PIECES', 'FACES'}
 
 
 def figlet(text, font):
@@ -75,6 +77,30 @@ def card(p, page):
 </article>'''
 
 
+def faces(render_dir, media, page):
+    # Title faces rendered on their own, each writing the same seed, so she can keep or drop them one by one.
+    folder = os.path.join(render_dir, 'faces')
+    if not os.path.isdir(folder):
+        return ''
+    os.makedirs(os.path.join(media, 'faces'), exist_ok=True)
+    cards = []
+    for name in sorted(n[:-4] for n in os.listdir(folder) if n.endswith('.jpg')):
+        shutil.copyfile(os.path.join(folder, f'{name}.jpg'), os.path.join(media, 'faces', f'{name}.jpg'))
+        label = html.escape(name)
+        cards.append(f'''
+    <figure class="face" data-face="{label}">
+      <img src="{page}/faces/{label}.jpg" alt="A title written in {label}" loading="lazy" width="640" height="480">
+      <figcaption>
+        <span>{label}</span>
+        <span class="react" role="group" aria-label="Keep {label}?">
+          <button type="button" data-reaction="love">Love it</button>
+          <button type="button" data-reaction="drop">Drop it</button>
+        </span>
+      </figcaption>
+    </figure>''')
+    return ''.join(cards)
+
+
 INSTALL = ('Every seed here is real. To sail one yourself, unzip <a href="downloads/{zip}">{zip}</a> onto your SD card so it '
            'lands in <code>apps/asciiodyssey</code>, start it from the Homebrew Channel, and type the seed in Settings with '
            "Mood on any and Length on medium, which are the defaults. You'll get this exact voyage.")
@@ -86,6 +112,11 @@ WAITING = ("Every seed here is real. The Wii build that plays them comes after a
 def main():
     render_dir, round_name, page_name, title = sys.argv[1:5]
     package = sys.argv[5] if len(sys.argv) > 5 else None
+    template = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voyage_page.html')).read()
+    # Checked before anything reaches the shelf, so a placeholder left for hand-written copy never shows on the page.
+    unfilled = sorted(set(re.findall(r'\{\{(\w+)\}\}', template)) - FILLED)
+    if unfilled:
+        sys.exit(f'voyage_page.html has placeholders nothing fills: {", ".join(unfilled)}')
     media = os.path.join(SHELF, page_name)
     os.makedirs(media, exist_ok=True)
     if package:
@@ -105,11 +136,11 @@ def main():
         info['duration'] = duration(os.path.join(render_dir, f'{slug}.mp4'))
         pieces.append(info)
     pieces.sort(key=lambda p: MOOD_ORDER.index(p['mood']) if p['mood'] in MOOD_ORDER else 99)
-    template = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'voyage_page.html')).read()
-    page = template.replace('{{ROUND}}', html.escape(round_name)).replace('{{TITLE_ART}}', html.escape(figlet('ASCII Odyssey', 'slant')))
+    page =template.replace('{{ROUND}}', html.escape(round_name)).replace('{{TITLE_ART}}', html.escape(figlet('ASCII Odyssey', 'slant')))
     page = page.replace('{{TITLE}}', html.escape(title)).replace('{{PAGE}}', page_name)
     page = page.replace('{{INSTALL}}', INSTALL.format(zip=html.escape(os.path.basename(package))) if package else WAITING)
     page = page.replace('{{PIECES}}', '\n'.join(card(p, page_name) for p in pieces))
+    page = page.replace('{{FACES}}', faces(render_dir, media, page_name))
     with open(os.path.join(SHELF, page_name + '.html'), 'w') as f:
         f.write(page)
     subprocess.run([os.path.join(SHELF, 'refresh-index.py')], check=False, cwd=SHELF)
