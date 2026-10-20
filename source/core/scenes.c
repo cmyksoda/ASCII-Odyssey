@@ -1322,6 +1322,16 @@ const SceneKind scene_kinds[] = {
     {"xor checkers", W(3, 0, 1, 0, 2, 1, 0, 1, 3, 0), 0.85f, 1, 0, xor_setup, xor_draw},
     {"tumbling blocks", W(2, 1, 1, 1, 2, 1, 1, 2, 2, 0), 0.65f, 1, 0, blocks_setup, blocks_draw},
     {"mandala", W(0, 3, 1, 2, 1, 0, 3, 2, 0, 1), 0.45f, 1, 0, mandala_setup, mandala_draw},
+    {"platformer", W(1, 0, 0, 0, 0, 3, 0, 0, 0, 3), 0.55f, 1, 0, platformer_setup, platformer_draw},
+    {"race track", W(1, 0, 2, 0, 2, 1, 0, 0, 1, 3), 0.8f, 1, 0, race_setup, race_draw},
+    {"tetris", W(2, 0, 0, 0, 0, 3, 0, 0, 1, 1), 0.6f, 1, 0, tetris_setup, tetris_draw},
+    {"snake", W(2, 0, 0, 0, 0, 3, 0, 0, 0, 0), 0.5f, 1, 0, snake_setup, snake_draw},
+    {"overworld", W(0, 1, 0, 0, 0, 1, 1, 0, 0, 3), 0.3f, 0, 0, overworld_setup, overworld_draw},
+    {"asteroids", W(2, 0, 1, 0, 1, 2, 0, 0, 1, 0), 0.65f, 1, 0, asteroids_setup, asteroids_draw},
+    {"breakout", W(2, 0, 0, 0, 0, 3, 0, 0, 0, 1), 0.55f, 1, 0, breakout_setup, breakout_draw},
+    {"channel scope", W(2, 0, 0, 0, 1, 3, 0, 0, 1, 1), 0.6f, 1, 0, scope_setup, scope_draw},
+    {"lighthouse", W(0, 3, 0, 1, 0, 0, 1, 2, 0, 1), 0.3f, 0, 0, lighthouse_setup, lighthouse_draw},
+    {"drum machine", W(1, 0, 1, 2, 1, 1, 0, 2, 2, 0), 0.55f, 1, 0, drums_setup, drums_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
 _Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS, "the scene table outgrew MAX_SCENE_KINDS");

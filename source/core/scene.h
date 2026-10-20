@@ -181,6 +181,16 @@ SCENE(ktunnel)
 SCENE(xor)
 SCENE(blocks)
 SCENE(mandala)
+SCENE(platformer)
+SCENE(race)
+SCENE(tetris)
+SCENE(snake)
+SCENE(overworld)
+SCENE(asteroids)
+SCENE(breakout)
+SCENE(scope)
+SCENE(lighthouse)
+SCENE(drums)
 #undef SCENE
 
 #endif
