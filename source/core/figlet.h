@@ -55,8 +55,6 @@ typedef struct {
     X(FUZZY, fuzzy)                                                                                                     \
     X(GRACEFUL, graceful)                                                                                               \
     X(GRAFFITI, graffiti)                                                                                               \
-    X(ISOMETRIC1, isometric1)                                                                                           \
-    X(ISOMETRIC3, isometric3)                                                                                           \
     X(JAZMINE, jazmine)                                                                                                 \
     X(KBAN, kban)                                                                                                       \
     X(LARRY3D, larry3d)                                                                                                 \
@@ -70,8 +68,6 @@ typedef struct {
     X(REV, rev)                                                                                                         \
     X(ROMAN, roman)                                                                                                     \
     X(ROUNDED, rounded)                                                                                                 \
-    X(SMISOME1, smisome1)                                                                                               \
-    X(SMKEYBOARD, smkeyboard)                                                                                           \
     X(SPEED, speed)                                                                                                     \
     X(STARWARS, starwars)                                                                                               \
     X(STELLAR, stellar)                                                                                                 \

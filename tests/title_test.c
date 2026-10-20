@@ -39,7 +39,7 @@ static void every_letter_shows_while_held(void) {
     } TITLES[] = {
         {"static rocket", "digital", 0, 1},
         {"rain orchard", "neon", 0, 1},
-        {"violet lagoon", "isometric1", 0, 2},
+        {"violet lagoon", "colossal", 0, 2},
         {"satellite comet", "univers", 1, 2},
     };
     for (size_t i = 0; i < sizeof TITLES / sizeof TITLES[0]; i++) {

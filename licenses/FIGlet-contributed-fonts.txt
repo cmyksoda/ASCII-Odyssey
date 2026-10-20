@@ -1,7 +1,7 @@
 FIGlet contributed fonts
 ========================
 
-The 38 title fonts in vendor/figlet-contributed/ come unmodified from FIGlet's contributed font
+The 34 title fonts in vendor/figlet-contributed/ come unmodified from FIGlet's contributed font
 collection:
 
   ftp://ftp.figlet.org/pub/figlet/fonts/contributed.tar.gz
@@ -68,10 +68,6 @@ graceful     Mikhael Goikhman, 20 January 2002.
 graffiti     Leigh Purdie, made into a FIGlet font by Leigh Purdie and Tim Maggio, 5 March 1994.
              No terms stated.
 
-isometric1   Lennert Stock (posted 15 July 1994: "if you wanna convert them, be my guest"),
-isometric3   converted to FIGlet by Kent Nassen, 8-10-94.
-             No other terms stated.
-
 jazmine      vampyr@acs.bu.edu.
              No terms stated.
 
@@ -113,14 +109,6 @@ roman        Nick Miners, June 1994.
              No terms stated.
 
 rounded      Nick Miners, May 1994.
-             No terms stated.
-
-smisome1     M. Lindsey, February 24, 1996, a smaller isometric1 (Kent Nassen, after Lennert
-             Stock).
-             No terms stated.
-
-smkeyboard   Kent Nassen, 11/22/94, after an idea posted to rec.arts.ascii by Bas Meijer and the
-             keyboard.flf of "SuperStreetFighter2Turbo".
              No terms stated.
 
 speed        Claude Martins, 2/95, based on Slant.
