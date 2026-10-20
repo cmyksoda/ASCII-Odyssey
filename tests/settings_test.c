@@ -45,6 +45,16 @@ static void round_trip(void) {
     CHECK(b.save_last_seed == 0);
 }
 
+static void saved_before_genres(void) {
+    Settings s;
+    settings_defaults(&s);
+    settings_parse(&s, "mood = dubstep\n");
+    CHECK(s.mood == MOOD_DUBSTEP);
+    char text[1024];
+    settings_format(&s, text, sizeof text);
+    CHECK(strstr(text, "genre = dubstep\n") != NULL);
+}
+
 static void damaged(void) {
     Settings s;
     settings_defaults(&s);
@@ -59,6 +69,7 @@ static void damaged(void) {
 
 int main(void) {
     round_trip();
+    saved_before_genres();
     damaged();
     if (!failures) printf("settings: all passed\n");
     return failures ? 1 : 0;

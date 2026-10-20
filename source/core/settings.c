@@ -34,7 +34,8 @@ static int number(const char *value, int lo, int hi, int fallback) {
 static void apply(Settings *s, const char *key, const char *value) {
     if (!strcmp(key, "seed")) s->seed_mode = (SeedMode)named(value, SEED_NAMES, SEED_MODES, s->seed_mode);
     if (!strcmp(key, "typed_seed")) seed_normalize(value, s->typed_seed, sizeof s->typed_seed);
-    if (!strcmp(key, "mood"))
+    // Settings saved before 1.0 call the genre a mood.
+    if (!strcmp(key, "genre") || !strcmp(key, "mood"))
         s->mood = !strcmp(value, "any") ? MOOD_ANY : named(value, mood_names, MOOD_COUNT, s->mood);
     if (!strcmp(key, "length")) s->length = (LengthPref)named(value, LENGTH_NAMES, 3, s->length);
     if (!strcmp(key, "after")) s->after = (AfterPiece)named(value, AFTER_NAMES, AFTER_MODES, s->after);
@@ -75,7 +76,7 @@ void settings_parse(Settings *s, const char *text) {
 int settings_format(const Settings *s, char *out, int size) {
     return snprintf(out, (size_t)size,
                     "# ASCII Odyssey settings\n"
-                    "seed = %s\ntyped_seed = %s\nmood = %s\nlength = %s\nafter = %s\nvolume = %d\n"
+                    "seed = %s\ntyped_seed = %s\ngenre = %s\nlength = %s\nafter = %s\nvolume = %d\n"
                     "reduce_flashing = %d\nreduce_motion = %d\nglow = %s\nmargin = %d\nsave_last_seed = %d\n",
                     SEED_NAMES[s->seed_mode], s->typed_seed, s->mood < 0 ? "any" : mood_names[s->mood],
                     LENGTH_NAMES[s->length], AFTER_NAMES[s->after], s->volume, s->calm, s->still, GLOW_NAMES[s->glow],

@@ -38,7 +38,7 @@ static const char *const ABOUT_LINES[] = {"how a voyage is made",
                                           "every voyage grows from a seed, a name",
                                           "like violet lagoon. the seed is all it needs.",
                                           "",
-                                          "it picks one of ten moods, then a tempo, a key,",
+                                          "it picks one of ten genres, then a tempo, a key,",
                                           "its instruments and the shape of the song.",
                                           "every note is written fresh and played by a tiny",
                                           "tracker, with sounds built from scratch.",
@@ -66,7 +66,7 @@ typedef enum {
     ROW_COUNT
 } SettingRow;
 
-static const char *const ROW_LABELS[ROW_COUNT] = {"seed", "mood", "length", "after a voyage", "volume",
+static const char *const ROW_LABELS[ROW_COUNT] = {"seed", "genre", "length", "after a voyage", "volume",
                                                  "reduce flashing", "reduce motion", "glow", "screen margin",
                                                  "save last seed", "done"};
 static const float GLOW_SCALE[GLOW_LEVELS] = {0, 1, 1.6f};
