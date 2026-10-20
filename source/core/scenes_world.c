@@ -756,8 +756,8 @@ void dunes_draw(void *state, const Frame *f) {
              shade = palette_ramp(f->palette, 0.3f - 0.06f * (float)layer);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), h = dune_height(d, layer, x), slope = dune_height(d, layer, x + 0.05f) - h;
-            // The flanks that climb toward the moon catch its light.
-            float lit = saturate(0.5f + (d->moon_x > x ? slope : -slope) * 12);
+            // The flanks facing the moon, falling away toward it, catch its light.
+            float lit = saturate(0.5f + (d->moon_x > x ? -slope : slope) * 12);
             for (int row = cell_row(g, h); row < g->rows; row++) {
                 float y = cell_y(g, row), depth = h - y;
                 if (row == cell_row(g, h)) {

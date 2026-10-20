@@ -94,7 +94,7 @@ struct App {
     Piece *next;
     int next_asked, drop_next;
     char seed[SEED_MAX + 1], next_seed[SEED_MAX + 1];
-    double since, frozen;
+    double since, frozen, volume_shown;
     float pointer_x, pointer_y;
     int setting, settings_changed;
     Overlay overlay;
@@ -752,6 +752,21 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
     piece_draw(p, t, out, s->calm, s->still, clock->scope, clock->scope_frames);
     out->fx.glow *= GLOW_SCALE[s->glow];
     out->ui = &a->ui;
+
+    // The volume buttons work all through a voyage, and the new level shows for a moment.
+    int louder = (in->pressed & INPUT_VOLUME_UP ? 1 : 0) - (in->pressed & INPUT_VOLUME_DOWN ? 1 : 0);
+    if (louder) {
+        setting_step(a, ROW_VOLUME, louder);
+        req->volume = (float)s->volume / VOLUME_STEPS;
+        req->save_settings = 1;
+        a->volume_shown = clock->wall + 1.5;
+    }
+    if (clock->wall < a->volume_shown) {
+        char bar[16], line[32];
+        setting_value(a, ROW_VOLUME, bar, sizeof bar);
+        snprintf(line, sizeof line, "volume %s", bar);
+        text_center(a, &p->grid, a->ui.rows - 2, line, NOTE);
+    }
 
     if (a->state == STATE_PLAYING) {
         if (in->pressed & INPUT_ALT1) a->overlay = a->overlay == OVERLAY_TRACKER ? OVERLAY_NONE : OVERLAY_TRACKER;

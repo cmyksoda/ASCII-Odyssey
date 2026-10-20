@@ -78,7 +78,7 @@ build/tests/%: tests/%.c tests/check.h $(TEST_CORE)
 test: $(patsubst tests/%.c,build/tests/%,$(TEST_SOURCES))
 	@for t in $^; do echo "== $$t"; ./$$t || exit 1; done
 
-package: all
+package: all LICENSE
 	python3 tools/package.py $(APP) $(VERSION)
 
 clean:

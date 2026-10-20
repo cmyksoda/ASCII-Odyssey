@@ -290,9 +290,10 @@ static void scripted_press(const char *list, int index, Input *in) {
     static const struct {
         const char *name;
         unsigned bit;
-    } names[] = {{"up", INPUT_UP},       {"down", INPUT_DOWN}, {"left", INPUT_LEFT},   {"right", INPUT_RIGHT},
-                 {"confirm", INPUT_CONFIRM}, {"back", INPUT_BACK}, {"pause", INPUT_PAUSE}, {"one", INPUT_ALT1},
-                 {"two", INPUT_ALT2}};
+    } names[] = {{"up", INPUT_UP},            {"down", INPUT_DOWN},          {"left", INPUT_LEFT},
+                 {"right", INPUT_RIGHT},      {"confirm", INPUT_CONFIRM},    {"back", INPUT_BACK},
+                 {"pause", INPUT_PAUSE},      {"one", INPUT_ALT1},           {"two", INPUT_ALT2},
+                 {"louder", INPUT_VOLUME_UP}, {"quieter", INPUT_VOLUME_DOWN}};
     for (; list && index > 0; index--) {
         list = strchr(list, ',');
         if (list) list++;
@@ -515,7 +516,8 @@ int main(int argc, char **argv) {
     if (argc < 2 || strcmp(argv[1], "title") != 0) usage();
     AppConfig config = {0};
     settings_defaults(&config.settings);
-    // Scripted presses, one per frame: up, down, left, right, confirm, back, pause, none, or type:text.
+    // Scripted presses, one per frame: up, down, left, right, confirm, back, pause, one, two, louder, quieter, none, or
+    // type:text.
     const char *presses = NULL;
     int scale = 2;
     double times[64] = {0, 1.5, 3, 4.5};
