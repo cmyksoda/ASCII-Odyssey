@@ -753,11 +753,14 @@ void dunes_draw(void *state, const Frame *f) {
     static const char ripple[] = "~-~-=~-~";
     for (int layer = 0; layer < 3; layer++) {
         Rgbf sand = palette_ramp(f->palette, 0.65f - 0.15f * (float)layer),
-             shade = palette_ramp(f->palette, 0.3f - 0.06f * (float)layer);
+             shade = palette_ramp(f->palette, 0.3f - 0.06f * (float)layer),
+             moonlit = palette_ramp(f->palette, 0.95f - 0.1f * (float)layer);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), h = dune_height(d, layer, x), slope = dune_height(d, layer, x + 0.05f) - h;
-            // The flanks facing the moon, falling away toward it, catch its light.
-            float lit = saturate(0.5f + (d->moon_x > x ? -slope : slope) * 12);
+            // The flanks facing the moon, falling away toward it, catch its light; the far ones fall into shade, and
+            // the curve stays soft so the crests still blend.
+            float lit = 0.5f + 0.5f * mtanh((d->moon_x > x ? -slope : slope) * 70);
+            Rgbf flank = lit < 0.5f ? rgbf_mix(shade, sand, lit * 2) : rgbf_mix(sand, moonlit, (lit - 0.5f) * 1.4f);
             for (int row = cell_row(g, h); row < g->rows; row++) {
                 float y = cell_y(g, row), depth = h - y;
                 if (row == cell_row(g, h)) {
@@ -765,12 +768,12 @@ void dunes_draw(void *state, const Frame *f) {
                              slope > 0.006f    ? '/'
                              : slope < -0.006f ? '\\'
                                                : '_',
-                             rgbf_mix(shade, sand, 0.4f + 0.6f * lit));
+                             flank);
                     continue;
                 }
                 int i = (int)(mfract(x * 3 + depth * 9 + d->seed - f->t * 0.08f) * 8);
                 int glyph = (row + col / 4) % 4 ? ' ' : ripple[i];
-                put_cell(g, col, row, glyph, frame_dim(f, rgbf_mix(shade, sand, lit), 0.5f + 0.3f * (1 - depth)));
+                put_cell(g, col, row, glyph, frame_dim(f, flank, 0.5f + 0.3f * (1 - depth)));
             }
             // Grains streaming off the crest downwind.
             if (hash01((uint32_t)col * 2654435761u + (uint32_t)layer) < 0.4f) {

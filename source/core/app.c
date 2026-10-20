@@ -753,8 +753,11 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
     out->fx.glow *= GLOW_SCALE[s->glow];
     out->ui = &a->ui;
 
-    // The volume buttons work all through a voyage, and the new level shows for a moment.
-    int louder = (in->pressed & INPUT_VOLUME_UP ? 1 : 0) - (in->pressed & INPUT_VOLUME_DOWN ? 1 : 0);
+    // The volume buttons work all through a voyage, and the new level shows for a moment. The Wii Remote's D-pad joins
+    // in only while the music plays, since in a menu it moves the choice.
+    unsigned up = INPUT_VOLUME_UP, down = INPUT_VOLUME_DOWN;
+    if (a->state == STATE_PLAYING) up |= INPUT_REMOTE_UP, down |= INPUT_REMOTE_DOWN;
+    int louder = (in->pressed & up ? 1 : 0) - (in->pressed & down ? 1 : 0);
     if (louder) {
         setting_step(a, ROW_VOLUME, louder);
         req->volume = (float)s->volume / VOLUME_STEPS;

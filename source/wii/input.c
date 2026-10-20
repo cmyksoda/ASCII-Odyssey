@@ -9,7 +9,6 @@
 
 static volatile int power_pressed, reset_pressed;
 static int keyboard_ready;
-static int sideways[4];
 static unsigned last_held;
 static int repeat_frames;
 
@@ -48,7 +47,7 @@ static unsigned remote(int chan, Input *in) {
     u32 type;
     if (WPAD_Probe(chan, &type) != WPAD_ERR_NONE) return 0;
     WPADData *d = WPAD_Data(chan);
-    u32 b = d->btns_h, down = d->btns_d;
+    u32 b = d->btns_h;
     unsigned r = 0;
 
     if (type == WPAD_EXP_CLASSIC) {
@@ -74,28 +73,14 @@ static unsigned remote(int chan, Input *in) {
         return r;
     }
 
-    // Pressing A means the remote is pointed at the screen; 1 or 2 means it's held sideways.
-    if (down & WPAD_BUTTON_A) sideways[chan] = 0;
-    if (down & (WPAD_BUTTON_1 | WPAD_BUTTON_2)) sideways[chan] = 1;
-    if (sideways[chan]) {
-        if (b & WPAD_BUTTON_RIGHT) r |= INPUT_UP;
-        if (b & WPAD_BUTTON_LEFT) r |= INPUT_DOWN;
-        if (b & WPAD_BUTTON_UP) r |= INPUT_LEFT;
-        if (b & WPAD_BUTTON_DOWN) r |= INPUT_RIGHT;
-        if (b & WPAD_BUTTON_2) r |= INPUT_CONFIRM;
-        if (b & WPAD_BUTTON_1) r |= INPUT_BACK;
-        if (b & WPAD_BUTTON_A) r |= INPUT_ALT1;
-        if (b & WPAD_BUTTON_B) r |= INPUT_ALT2;
-    } else {
-        if (b & WPAD_BUTTON_UP) r |= INPUT_UP;
-        if (b & WPAD_BUTTON_DOWN) r |= INPUT_DOWN;
-        if (b & WPAD_BUTTON_LEFT) r |= INPUT_LEFT;
-        if (b & WPAD_BUTTON_RIGHT) r |= INPUT_RIGHT;
-        if (b & WPAD_BUTTON_A) r |= INPUT_CONFIRM;
-        if (b & WPAD_BUTTON_B) r |= INPUT_BACK;
-        if (b & WPAD_BUTTON_1) r |= INPUT_ALT1;
-        if (b & WPAD_BUTTON_2) r |= INPUT_ALT2;
-    }
+    if (b & WPAD_BUTTON_UP) r |= INPUT_UP | INPUT_REMOTE_UP;
+    if (b & WPAD_BUTTON_DOWN) r |= INPUT_DOWN | INPUT_REMOTE_DOWN;
+    if (b & WPAD_BUTTON_LEFT) r |= INPUT_LEFT;
+    if (b & WPAD_BUTTON_RIGHT) r |= INPUT_RIGHT;
+    if (b & WPAD_BUTTON_A) r |= INPUT_CONFIRM;
+    if (b & WPAD_BUTTON_B) r |= INPUT_BACK;
+    if (b & WPAD_BUTTON_1) r |= INPUT_ALT1;
+    if (b & WPAD_BUTTON_2) r |= INPUT_ALT2;
 
     if (b & WPAD_BUTTON_PLUS) r |= INPUT_PAUSE;
     if (b & WPAD_BUTTON_MINUS) r |= INPUT_VOLUME_DOWN;
@@ -110,7 +95,7 @@ static unsigned remote(int chan, Input *in) {
         if (x > 0.5f) r |= INPUT_RIGHT;
     }
 
-    if (!sideways[chan] && d->ir.valid && !in->pointer) {
+    if (d->ir.valid && !in->pointer) {
         in->pointer = 1;
         in->pointer_x = d->ir.x;
         in->pointer_y = d->ir.y;
@@ -176,8 +161,9 @@ void input_poll(Input *in) {
     in->held = held;
     in->pressed = (held & ~last_held) | typed;
     // Held directions repeat, so long lists and the keyboard are quick to cross.
-    unsigned dirs = held & (INPUT_UP | INPUT_DOWN | INPUT_LEFT | INPUT_RIGHT);
-    if (dirs && dirs == (last_held & (INPUT_UP | INPUT_DOWN | INPUT_LEFT | INPUT_RIGHT))) {
+    unsigned moves = INPUT_UP | INPUT_DOWN | INPUT_LEFT | INPUT_RIGHT | INPUT_REMOTE_UP | INPUT_REMOTE_DOWN;
+    unsigned dirs = held & moves;
+    if (dirs && dirs == (last_held & moves)) {
         if (++repeat_frames > 24 && repeat_frames % 5 == 0) in->pressed |= dirs;
     } else {
         repeat_frames = 0;

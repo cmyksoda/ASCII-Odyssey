@@ -24,6 +24,9 @@ enum {
     INPUT_VOLUME_UP = 1 << 10,
     INPUT_VOLUME_DOWN = 1 << 11,
     INPUT_QUIT = 1 << 12,
+    // The Wii Remote's own D-pad up and down, its only way to turn the music up while it plays.
+    INPUT_REMOTE_UP = 1 << 13,
+    INPUT_REMOTE_DOWN = 1 << 14,
 };
 
 #define INPUT_TYPED_MAX 16
