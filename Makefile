@@ -17,7 +17,7 @@ LIBS := -lfat -lwiikeyboard -lwiiuse -lbte -lasnd -logc -lm
 
 CORE := $(wildcard source/core/*.c)
 GENERATED := build/gen/font_faces.c build/gen/figlet_fonts.c
-FLF := $(wildcard vendor/figlet/*.flf)
+FLF := $(wildcard vendor/figlet/*.flf assets/figlet/*.flf)
 WII_OBJECTS := $(patsubst source/%.c,build/wii/%.o,$(CORE) $(wildcard source/wii/*.c)) \
 	build/wii/gen/font_faces.o build/wii/gen/figlet_fonts.o
 

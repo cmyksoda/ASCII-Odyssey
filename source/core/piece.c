@@ -7,17 +7,26 @@
 
 // Each mood writes its titles in a few faces of its own; one is picked at random, and a title too wide for any of them
 // falls back to the plainer, narrower ones.
-static const FigletId TITLE_FACES[MOOD_COUNT][3] = {
-    [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER},     [MOOD_AMBIENT] = {FIGLET_SCRIPT, FIGLET_LEAN, FIGLET_SLANT},
-    [MOOD_SYNTHWAVE] = {FIGLET_LEAN, FIGLET_SLANT, FIGLET_SHADOW}, [MOOD_LOFI] = {FIGLET_SCRIPT, FIGLET_SHADOW, FIGLET_STANDARD},
-    [MOOD_TRANCE] = {FIGLET_SLANT, FIGLET_LEAN, FIGLET_BIG},       [MOOD_JUNGLE] = {FIGLET_BIG, FIGLET_BLOCK, FIGLET_SHADOW},
-    [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN}, [MOOD_DUB] = {FIGLET_SHADOW, FIGLET_BLOCK, FIGLET_BIG},
-    [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW}};
+#define TITLE_CHOICES 5
+
+static const FigletId TITLE_FACES[MOOD_COUNT][TITLE_CHOICES] = {
+    [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER, FIGLET_DIGITAL, FIGLET_PIXEL},
+    [MOOD_AMBIENT] = {FIGLET_SCRIPT, FIGLET_LEAN, FIGLET_SLANT, FIGLET_SMSCRIPT, FIGLET_SMSLANT},
+    [MOOD_SYNTHWAVE] = {FIGLET_LEAN, FIGLET_SLANT, FIGLET_SHADOW, FIGLET_DOTS, FIGLET_SMSLANT},
+    [MOOD_LOFI] = {FIGLET_SCRIPT, FIGLET_SHADOW, FIGLET_STANDARD, FIGLET_SMSHADOW, FIGLET_BUBBLE},
+    [MOOD_TRANCE] = {FIGLET_SLANT, FIGLET_LEAN, FIGLET_BIG, FIGLET_SMSLANT, FIGLET_DOTS},
+    [MOOD_JUNGLE] = {FIGLET_BIG, FIGLET_BLOCK, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL},
+    [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN, FIGLET_BUBBLE, FIGLET_SMSCRIPT},
+    [MOOD_DUB] = {FIGLET_SHADOW, FIGLET_BLOCK, FIGLET_BIG, FIGLET_SMSHADOW, FIGLET_DOTS},
+    [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL}};
 
 static void layout_title(Piece *p, Rng *r) {
     const FigletId *own = TITLE_FACES[p->comp.info.mood];
-    int first = rng_range(r, 0, 3);
-    FigletId fonts[6] = {own[first], own[(first + 1) % 3], own[(first + 2) % 3], FIGLET_STANDARD, FIGLET_SLANT, FIGLET_SMALL};
+    int first = rng_range(r, 0, TITLE_CHOICES);
+    // The mood's own faces in turn from a random one, then plain ones narrow enough for almost any title.
+    FigletId fonts[TITLE_CHOICES + 3];
+    for (int i = 0; i < TITLE_CHOICES; i++) fonts[i] = own[(first + i) % TITLE_CHOICES];
+    fonts[TITLE_CHOICES] = FIGLET_STANDARD, fonts[TITLE_CHOICES + 1] = FIGLET_SLANT, fonts[TITLE_CHOICES + 2] = FIGLET_SMALL;
     // FIGlet's own space is a sliver; three of them keep the words apart behind the decoding scramble.
     char upper[SEED_MAX * 3 + 1];
     int n = 0;
