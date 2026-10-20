@@ -25,7 +25,7 @@ static int pitched(Role r) {
 enum { KALEIDO_FLOWERS, KALEIDO_STRIPES, KALEIDO_CHECKS, KALEIDO_RINGS, KALEIDO_SHARDS, KALEIDO_STYLES };
 
 typedef struct {
-    int folds, style;
+    int folds, style, tiers;
     float spin, zoom, salt, drift;
 } Kaleidoscope;
 
@@ -38,6 +38,9 @@ void kaleidoscope_setup(void *state, Rng *r, const Frame *f) {
     k->salt = rng_between(r, 0, 60);
     k->drift = rng_between(r, 0.1f, 0.2f);
     k->style = rng_range(r, 0, KALEIDO_STYLES);
+    // Sometimes the mirrors are set in tiers like a rose window: rings turning against each other, the outer ones
+    // folded twice as often.
+    k->tiers = rng_chance(r, 35) ? rng_range(r, 3, 5) : 0;
     (void)f;
 }
 
@@ -95,11 +98,16 @@ void kaleidoscope_draw(void *state, const Frame *f) {
             float x = cell_x(g, col), radius = mhypot(x, y);
             float frame = 1 - smoothstep(0.82f, 1.0f, radius);
             if (frame <= 0) continue;
-            float a = matan2(y, x) + turn;
-            a -= mfloor(a / wedge) * wedge;
-            if (a > wedge * 0.5f) a = wedge - a;
+            float a = matan2(y, x) + turn, fold = wedge;
+            if (k->tiers) {
+                int tier = (int)(radius / 0.82f * (float)k->tiers);
+                if (tier & 1) a -= 2 * turn;
+                if (tier >= 2) fold = wedge * 0.5f;
+            }
+            a -= mfloor(a / fold) * fold;
+            if (a > fold * 0.5f) a = fold - a;
             float u = radius * mcos(a) * zoom, v = radius * msin(a) * zoom;
-            float shape = kaleido_pattern(k, u, v, radius, a, wedge, zoom, t);
+            float shape = kaleido_pattern(k, u, v, radius, a, fold, zoom, t);
             // Rings racing outward from the center, one for each recent kick.
             float rings = 0;
             for (int i = 0; i < n_kicks; i++) {
@@ -115,6 +123,16 @@ void kaleidoscope_draw(void *state, const Frame *f) {
             if (contrast < 1) color = frame_dim(f, color, contrast);
             *grid_at(g, col, row) = (Cell){(uint8_t)ramp[i], rgb_from_f(color), 0};
         }
+    }
+    // The leading between the tiers.
+    for (int j = 1; j < k->tiers; j++) {
+        StrokePoint ring[48];
+        float at = 0.82f * (float)j / (float)k->tiers;
+        for (int i = 0; i < 48; i++) {
+            float b = (float)i / 48 * TAU_F;
+            ring[i] = (StrokePoint){mcos(b) * at, msin(b) * at, frame_dim(f, palette_ramp(f->palette, 0.45f), contrast)};
+        }
+        stroke_draw(f->stroker, ring, 48, 1);
     }
     f->fx->glow = 0.55f + 0.35f * kick;
 }

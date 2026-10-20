@@ -38,7 +38,7 @@ static int slope_glyph(float dx, float dy) {
 /* ---------- Vortex ---------- */
 
 typedef struct {
-    int sectors, rays;
+    int sectors, rays, dart;
     float rings, twist, spin, speed;
 } Vortex;
 
@@ -53,11 +53,14 @@ void vortex_setup(void *state, Rng *r, const Frame *f) {
     v->speed = rng_between(r, 0.6f, 1.1f);
     // Sometimes a sunburst of rays crossed by thin zooming rings, in place of the checkerboard.
     v->rays = rng_chance(r, 35);
+    // Sometimes a dartboard, every ring turning the other way to the rings either side of it as they stream out.
+    v->dart = rng_chance(r, 30);
     (void)f;
 }
 
 // A checkerboard wrapped round a point and zooming into it forever: tiles swell as they reach the edge and dwindle to
-// nothing in the dark eye at the heart, spiralling when the board is twisted. Kicks lunge it forward.
+// nothing in the dark eye at the heart, spiralling when the board is twisted. Kicks lunge it forward, and snares spin a
+// dartboard's rings.
 void vortex_draw(void *state, const Frame *f) {
     Vortex *v = state;
     Grid *g = f->grid;
@@ -66,13 +69,18 @@ void vortex_draw(void *state, const Frame *f) {
     float pace = frame_pace(f), contrast = frame_contrast(f);
     float zoom = (frame_travel(f, v->speed * 0.5f, v->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.8f)) * pace;
     float turn = f->local * v->spin * pace, kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float wheel = (f->local * 0.12f + frame_surge(f, ROLE_SNARE, 0.25f, 0.3f)) * pace * (float)v->sectors;
     for (int row = 0; row < g->rows; row++) {
         float y = cell_y(g, row);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), r = mhypot(x, y);
             if (r < 0.04f) continue;
-            float around = (matan2(y, x) + turn) / TAU_F * (float)v->sectors;
-            float out = mlog2(r) * v->rings - zoom + around * v->twist / (float)v->sectors;
+            float around = (matan2(y, x) + turn) / TAU_F * (float)v->sectors, out = mlog2(r) * v->rings - zoom;
+            // A dartboard's rings can't spiral, so each is found untwisted before its own board is turned.
+            if (v->dart)
+                around += mfloor_i(out) & 1 ? wheel : -wheel;
+            else
+                out += around * v->twist / (float)v->sectors;
             int parity = v->rays ? (mfloor_i(around) & 1) && (mfloor_i(out) & 3) : (mfloor_i(out) + mfloor_i(around)) & 1;
             int edge = mfract(out) < 0.12f || mfract(around) < 0.12f;
             float fade = smoothstep(0.04f, 0.3f, r) * contrast;
@@ -140,7 +148,7 @@ void spiral_draw(void *state, const Frame *f) {
 /* ---------- Rubber checkerboard ---------- */
 
 typedef struct {
-    float tile, wave, freq, lens, phase;
+    float tile, wave, freq, lens, phase, whirl;
 } OpArt;
 
 void opart_setup(void *state, Rng *r, const Frame *f) {
@@ -150,11 +158,13 @@ void opart_setup(void *state, Rng *r, const Frame *f) {
     o->freq = rng_between(r, 2.5f, 4.0f);
     o->lens = rng_between(r, 0.35f, 0.55f);
     o->phase = rng_between(r, 0, TAU_F);
+    // Sometimes the lens twists the board into a whirlpool as well as swelling it.
+    o->whirl = rng_chance(r, 40) ? rng_between(r, 1.5f, 3.0f) * (rng_chance(r, 50) ? 1 : -1) : 0;
     (void)f;
 }
 
 // A checkerboard in the manner of the sixties op artists: waves roll through it and a lens of swollen tiles wanders
-// across, so the flat grid seems to breathe and bulge. Each kick swells the lens.
+// across, so the flat grid seems to breathe and bulge, sometimes twisting into a whirlpool. Each kick swells the lens.
 void opart_draw(void *state, const Frame *f) {
     OpArt *o = state;
     Grid *g = f->grid;
@@ -169,6 +179,11 @@ void opart_draw(void *state, const Frame *f) {
             float dx = cell_x(g, col) - lx, dy = y - ly, bulge = mexp(-(dx * dx + dy * dy) / lens2);
             // Inside the lens the board is sampled closer together, so its tiles look bigger.
             float push = 1 - swell * bulge, u = lx + dx * push, v = ly + dy * push;
+            if (o->whirl != 0 && bulge > 0.01f) {
+                // The twist tightens and loosens slowly, strongest at the lens's heart.
+                float a = o->whirl * bulge * (0.6f + 0.4f * msin(t * 0.5f)), c = mcos(a), s = msin(a), wx = u - lx, wy = v - ly;
+                u = lx + wx * c - wy * s, v = ly + wx * s + wy * c;
+            }
             u += o->wave * msin(v * o->freq + t * 1.3f);
             v += o->wave * msin(u * o->freq * 0.8f - t * 1.1f);
             int tu = mfloor_i(u / o->tile), tv = mfloor_i(v / o->tile);
