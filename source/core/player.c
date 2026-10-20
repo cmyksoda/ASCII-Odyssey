@@ -106,6 +106,8 @@ static void start_note(Player *p, int channel, int note, int offset) {
     v->cutoff_env = ins->cutoff_env;
     v->filtered = v->cutoff > 0 && v->cutoff < 0.999f;
     svf_reset(&v->svf);
+    svf_reset(&v->vowel[0]);
+    svf_reset(&v->vowel[1]);
     c->voice = v;
     c->note = note;
     c->pitch = c->target_pitch = (float)note;
@@ -300,15 +302,21 @@ static void mix_voice(Player *p, Voice *v, int n) {
     float *rev = p->bus[SEND_REVERB], *del = p->bus[SEND_DELAY];
     float dl = (v->target_l - v->gain_l) / (float)n, dr = (v->target_r - v->gain_r) / (float)n;
     int end = s->loop_length ? s->loop_start + s->loop_length : s->length;
-    float knob = v->cutoff + v->cutoff_env;
+    float knob = v->cutoff + v->cutoff_env, lfo = 0;
     if (ins->wobble_depth > 0 && v->wobble > 0) {
         // The LFO runs on the song's own beat, read at the middle of this block.
         double beat = ((double)p->frame + n * 0.5) * (double)p->song->bpm / (60.0 * AUDIO_RATE);
         float phase = (float)(beat * v->wobble - (double)(long long)(beat * v->wobble));
-        float lfo = ins->wobble_shape == 1 ? 1 - phase : ins->wobble_shape == 2 ? 1 - mabs(2 * phase - 1) : 0.5f - 0.5f * mcos(phase * TAU_F);
+        lfo = ins->wobble_shape == 1 ? 1 - phase : ins->wobble_shape == 2 ? 1 - mabs(2 * phase - 1) : 0.5f - 0.5f * mcos(phase * TAU_F);
         knob += ins->wobble_depth * lfo;
     }
     if (v->filtered) svf_set(&v->svf, knob_hz(knob), 0.707f + ins->resonance);
+    float growl = ins->growl, drive = 1 + 3 * growl;
+    if (growl > 0) {
+        // From "o" with the filter shut to "ee" wide open, so every swing of the wobble says "yoi".
+        svf_set(&v->vowel[0], 450 - 150 * lfo, 4.5f);
+        svf_set(&v->vowel[1], 800 * mpow(2.875f, lfo), 7);
+    }
     for (int i = 0; i < n; i++) {
         int idx = (int)v->pos;
         float f = (float)(v->pos - (double)idx), s0, s1, s2, s3;
@@ -327,6 +335,13 @@ static void mix_voice(Player *p, Voice *v, int n) {
         float c1 = 0.5f * (s2 - s0), c2 = s0 - 2.5f * s1 + 2 * s2 - 0.5f * s3, c3 = 0.5f * (s3 - s0) + 1.5f * (s1 - s2);
         float x = ((c3 * f + c2) * f + c1) * f + s1;
         if (v->filtered) x = svf_low(&v->svf, x);
+        if (growl > 0) {
+            float d = mtanh(x * drive);
+            float talk = v->vowel[0].k * svf_band(&v->vowel[0], d) + 0.7f * v->vowel[1].k * svf_band(&v->vowel[1], d);
+            // Added on top of the whole sound, so the body stays, and the drive's overtones reach the mix only
+            // through the formants, or they'd fizz over the top.
+            x += growl * 7 * talk;
+        }
         v->gain_l += dl;
         v->gain_r += dr;
         float l = x * v->gain_l, r = x * v->gain_r, m = (l + r) * 0.5f;

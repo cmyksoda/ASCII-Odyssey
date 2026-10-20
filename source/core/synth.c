@@ -888,6 +888,7 @@ static void bass_wobble(Instrument *ins, Rng *r, float bpm) {
     ins->wobble_depth = rng_between(r, 0.32f, 0.44f);
     ins->wobble_shape = rng_range(r, 0, 3);
     ins->ducked = 2;
+    ins->growl = rng_between(r, 0.5f, 0.8f);
 }
 
 // Mallets: a woody FM strike whose overtone dies almost at once.

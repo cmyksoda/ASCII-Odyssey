@@ -23,7 +23,7 @@ typedef struct {
     // Wobble rate in LFO cycles per beat, copied from its channel each tick.
     float wobble;
     int filtered;
-    Svf svf;
+    Svf svf, vowel[2];
 } Voice;
 
 typedef struct {

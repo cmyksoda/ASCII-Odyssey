@@ -99,6 +99,9 @@ typedef struct {
     // How far the beat-locked LFO swings the cutoff knob, and its shape: 0 sine, 1 falling saw, 2 triangle.
     float wobble_depth;
     int wobble_shape;
+    // A brostep growl, 0 to 1: after the low-pass, the sound is driven and then talks through vowel formants that
+    // ride the same LFO, which puts its weight in the mids where small speakers can still play it.
+    float growl;
 } Instrument;
 
 typedef struct {

@@ -662,6 +662,8 @@ static void make_instruments(Composer *c) {
         sub->ducked = 2;
         sub->send_reverb = sub->send_delay = 0;
     }
+    // Dubstep's snare is darkened above about 7 kHz, so its noise doesn't hiss over drops the growl should own.
+    if (c->mood == MOOD_DUBSTEP && c->slot[SL_SNARE]) s->instruments[c->slot[SL_SNARE] - 1].cutoff = 0.85f;
 }
 
 /* ---------- Drums ---------- */
@@ -928,8 +930,8 @@ static void drums_dubstep(Composer *c, int bar) {
         drum_line(c, bar, CH_KICK, SL_KICK, STEP_KICKS[groove(c, G_KICK, bar)], 62);
         drum_line(c, bar, CH_SNARE, SL_SNARE, pos % 4 == 3 ? "........X.....oX" : "........X.......", 60);
         drum_line(c, bar, CH_PERC, SL_CLAP, "........x.......", 42);
-        drum_line(c, bar, CH_HAT, SL_HAT, STEP_HATS[groove(c, G_HATS, bar)], full ? 28 : 22);
-        if (full && bar >= c->half_bar) drum_line(c, bar, CH_PERC2, SL_OHAT, "......x.......x.", 26);
+        drum_line(c, bar, CH_HAT, SL_HAT, STEP_HATS[groove(c, G_HATS, bar)], 22);
+        if (full && bar >= c->half_bar) drum_line(c, bar, CH_PERC2, SL_OHAT, "......x.......x.", 20);
         break;
     }
     case SECTION_BUILD: drums_build(c, bar); break;
@@ -1688,13 +1690,10 @@ static void hook_in_drop(Composer *c, int b, const Melody *m, int second) {
         }
         break;
     case MOOD_DUBSTEP:
-        // The lead sings the hook over the wobble in both drops, with a bell an octave up the first time and a
-        // harmony under it the second.
-        play_melody(c, b, m, CH_LEAD, SL_LEAD, second ? 40 : 36, 0, 0);
-        if (second)
-            play_melody(c, b, &harmony, CH_ECHO, SL_LEAD, 26, 0, 0);
-        else
-            play_melody(c, b, m, CH_BELL, SL_BELL, 20, 1, 0);
+        // The bass carries a drop's opening on its own, as brostep does, and the hook joins after it, low in the
+        // mix with no bell or harmony over it. A drop too short to have an opening of its own sings throughout.
+        if (c->bar_in_section[b] > 0 || section_bars(c, b) < 16)
+            play_melody(c, b, m, CH_LEAD, SL_LEAD, second ? 28 : 24, 0, 0);
         break;
     case MOOD_KEYGEN:
         play_melody(c, b, m, CH_LEAD, SL_LEAD, 46, 0, 0);
