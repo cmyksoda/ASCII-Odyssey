@@ -8,7 +8,7 @@
 #define TAIL_SECONDS 6
 #define GHOST_FADE 0.05f
 
-enum { DRY_L, DRY_R, DUCK_L, DUCK_R, SEND_REVERB, SEND_DELAY };
+enum { DRY_L, DRY_R, DUCK_L, DUCK_R, SEND_REVERB, SEND_DELAY, HALF_L, HALF_R, BUSES };
 
 int player_init(Player *p, const Song *s, int dry) {
     memset(p, 0, sizeof *p);
@@ -32,6 +32,7 @@ int player_init(Player *p, const Song *s, int dry) {
     limiter_init(&p->limiter, 0.89f);
     p->duck_release = mexp(-1.0f / ((m->duck_release > 0 ? m->duck_release : 0.12f) * AUDIO_RATE));
     p->master_knob = 1;
+    p->master_level = s->level && s->automation_rows ? s->level[0] : 1;
     svf_reset(&p->master_l);
     svf_reset(&p->master_r);
     return 0;
@@ -145,6 +146,7 @@ static void update_voice(Player *p, Voice *v, const Channel *c) {
     if (!v->active) v->target_l = v->target_r = 0;
     float pitch = c ? c->pitch : v->pitch;
     v->pitch = pitch;
+    if (c) v->wobble = c->wobble;
     float vib = 0;
     if (c && c->vibrato_depth) vib += msin(c->vibrato_phase) * (float)c->vibrato_depth * 0.0625f;
     if (ins->vibrato_depth > 0) {
@@ -180,6 +182,7 @@ static void row_effects(Player *p, int channel) {
         break;
     case FX_SET_PAN: c->pan = (float)cell->param / 127.5f - 1; break;
     case FX_RETRIGGER: c->retrigger = cell->param; break;
+    case FX_WOBBLE: c->wobble = (float)cell->param / 4.0f; break;
     case FX_FILTER:
         c->cutoff = (float)cell->param / 255.0f;
         if (c->voice && c->voice->active) {
@@ -292,11 +295,19 @@ static float frame_at(const Sample *s, int i) {
 static void mix_voice(Player *p, Voice *v, int n) {
     const Sample *s = v->smp;
     const Instrument *ins = v->ins;
-    float *out_l = p->bus[ins->ducked ? DUCK_L : DRY_L], *out_r = p->bus[ins->ducked ? DUCK_R : DRY_R];
+    int bus = ins->ducked == 2 ? HALF_L : ins->ducked ? DUCK_L : DRY_L;
+    float *out_l = p->bus[bus], *out_r = p->bus[bus + 1];
     float *rev = p->bus[SEND_REVERB], *del = p->bus[SEND_DELAY];
     float dl = (v->target_l - v->gain_l) / (float)n, dr = (v->target_r - v->gain_r) / (float)n;
     int end = s->loop_length ? s->loop_start + s->loop_length : s->length;
     float knob = v->cutoff + v->cutoff_env;
+    if (ins->wobble_depth > 0 && v->wobble > 0) {
+        // The LFO runs on the song's own beat, read at the middle of this block.
+        double beat = ((double)p->frame + n * 0.5) * (double)p->song->bpm / (60.0 * AUDIO_RATE);
+        float phase = (float)(beat * v->wobble - (double)(long long)(beat * v->wobble));
+        float lfo = ins->wobble_shape == 1 ? 1 - phase : ins->wobble_shape == 2 ? 1 - mabs(2 * phase - 1) : 0.5f - 0.5f * mcos(phase * TAU_F);
+        knob += ins->wobble_depth * lfo;
+    }
     if (v->filtered) svf_set(&v->svf, knob_hz(knob), 0.707f + ins->resonance);
     for (int i = 0; i < n; i++) {
         int idx = (int)v->pos;
@@ -348,11 +359,14 @@ static void master(Player *p, float *out, int n) {
     int row = player_row(p);
     float depth = automation(s->duck_amount, s, row, m->duck_depth);
     float knob_target = automation(s->master_cutoff, s, row, 1);
+    float level_target = automation(s->level, s, row, 1);
     float gain = m->master_gain > 0 ? m->master_gain : 1, pre = m->pre_gain > 0 ? m->pre_gain : 1;
     for (int i = 0; i < n; i++) {
         p->duck *= p->duck_release;
         float duck = 1 - depth * p->duck;
-        float l = p->bus[DRY_L][i] + p->bus[DUCK_L][i] * duck, r = p->bus[DRY_R][i] + p->bus[DUCK_R][i] * duck;
+        float half = 1 - depth * 0.5f * p->duck;
+        float l = p->bus[DRY_L][i] + p->bus[DUCK_L][i] * duck + p->bus[HALF_L][i] * half;
+        float r = p->bus[DRY_R][i] + p->bus[DUCK_R][i] * duck + p->bus[HALF_R][i] * half;
         float rl, rr, dl, dr;
         plate_process(&p->plate, p->bus[SEND_REVERB][i], &rl, &rr);
         pingpong_process(&p->delay, p->bus[SEND_DELAY][i], &dl, &dr);
@@ -360,6 +374,8 @@ static void master(Player *p, float *out, int n) {
         l = (l + rl * rv * duck + dl * dv) * pre;
         r = (r + rr * rv * duck + dr * dv) * pre;
         if ((i & 31) == 0) {
+            // About 25 ms to settle: quick enough for a drop to land on its downbeat, slow enough not to click.
+            p->master_level += (level_target - p->master_level) * 0.06f;
             p->master_knob += (knob_target - p->master_knob) * 0.08f;
             if (p->master_knob < 0.995f) {
                 svf_set(&p->master_l, knob_hz(p->master_knob), 0.9f);
@@ -378,9 +394,10 @@ static void master(Player *p, float *out, int n) {
         p->dc_in_r = r;
         l = p->dc_l;
         r = p->dc_r;
-        float g = compressor_gain(&p->glue, mmax(mabs(l), mabs(r)));
-        l *= g * 1.2f;
-        r *= g * 1.2f;
+        // The section level comes after the glue, so the compressor can't even out a song's quiet and loud parts.
+        float g = compressor_gain(&p->glue, mmax(mabs(l), mabs(r))) * 1.2f * p->master_level;
+        l *= g;
+        r *= g;
         if (m->drive > 0) {
             l = soft_clip(l * (1 + m->drive)) / (1 + m->drive * 0.5f);
             r = soft_clip(r * (1 + m->drive)) / (1 + m->drive * 0.5f);
@@ -414,7 +431,7 @@ int player_render(Player *p, float *out, int frames) {
             p->tail_frames -= n;
         }
         if (!p->dry) {
-            for (int b = 0; b < 6; b++) memset(p->bus[b], 0, sizeof(float) * (size_t)n);
+            for (int b = 0; b < BUSES; b++) memset(p->bus[b], 0, sizeof(float) * (size_t)n);
             int active = 0;
             for (int i = 0; i < PLAYER_VOICES; i++)
                 if (p->voices[i].active) {

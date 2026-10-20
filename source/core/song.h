@@ -5,9 +5,9 @@
 #include <stdint.h>
 
 #define AUDIO_RATE 48000
-#define SONG_CHANNELS 16
+#define SONG_CHANNELS 24
 #define PATTERN_ROWS 64
-#define MAX_PATTERNS 160
+#define MAX_PATTERNS 64
 #define MAX_ORDER 160
 #define MAX_INSTRUMENTS 32
 #define MAX_SAMPLES_PER_INSTRUMENT 6
@@ -31,6 +31,7 @@ enum {
     FX_NOTE_CUT,        // ECx: silence after x ticks
     FX_NOTE_DELAY,      // EDx: start the note x ticks late
     FX_FILTER,          // Zxx (from Impulse Tracker): low-pass cutoff, 0 closed to 255 open
+    FX_WOBBLE,          // Wxx: the filter LFO's rate in quarter cycles per beat, locked to the song (0 holds still)
     FX_COUNT
 };
 
@@ -90,11 +91,14 @@ typedef struct {
     float fadeout;
     float volume, pan;
     float send_reverb, send_delay;
-    // Pumped by the kick's sidechain.
+    // Pumped by the kick's sidechain: 0 not at all, 1 fully, 2 at half depth.
     int ducked;
     // Low-pass cutoff as a 0..1 knob (0 = off), with resonance, and an envelope that opens it on each note.
     float cutoff, resonance, cutoff_env, cutoff_decay;
     float vibrato_depth, vibrato_rate;
+    // How far the beat-locked LFO swings the cutoff knob, and its shape: 0 sine, 1 falling saw, 2 triangle.
+    float wobble_depth;
+    int wobble_shape;
 } Instrument;
 
 typedef struct {
@@ -121,6 +125,8 @@ typedef struct {
     // Per row of the whole song: how far the duck bus pumps (0..1) and a master low-pass sweep (0..1, 1 open).
     int automation_rows;
     float *duck_amount, *master_cutoff;
+    // Per row: the section's place in the song's dynamics, as a gain after the glue compressor (1 at a drop).
+    float *level;
 } Song;
 
 Song *song_create(void);

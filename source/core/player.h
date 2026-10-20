@@ -20,13 +20,15 @@ typedef struct {
     int env_tick, released, active, owner;
     float fade, volume, pan;
     float cutoff, cutoff_env;
+    // Wobble rate in LFO cycles per beat, copied from its channel each tick.
+    float wobble;
     int filtered;
     Svf svf;
 } Voice;
 
 typedef struct {
     int note, instrument;
-    float volume, pan, pitch, target_pitch, cutoff;
+    float volume, pan, pitch, target_pitch, cutoff, wobble;
     uint8_t porta, vibrato_speed, vibrato_depth, slide, arpeggio, retrigger;
     float vibrato_phase;
     int retrigger_count;
@@ -48,8 +50,8 @@ typedef struct {
     Compressor glue;
     Limiter limiter;
     Svf master_l, master_r;
-    float duck, duck_release, master_knob, dc_l, dc_r, dc_in_l, dc_in_r;
-    float bus[6][PLAYER_BLOCK];
+    float duck, duck_release, master_knob, master_level, dc_l, dc_r, dc_in_l, dc_in_r;
+    float bus[8][PLAYER_BLOCK];
     uint64_t frame;
     int tail_frames;
     // A dry run only walks the score: no mixing, just note events, a hundred times faster.

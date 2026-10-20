@@ -15,6 +15,7 @@ typedef enum {
     MOOD_JUNGLE,
     MOOD_MUSICBOX,
     MOOD_DUB,
+    MOOD_DUBSTEP,
     MOOD_COUNT,
     MOOD_ANY = -1
 } Mood;

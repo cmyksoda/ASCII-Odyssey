@@ -407,6 +407,8 @@ static void cymbal(Instrument *ins, Rng *r, int ride) {
 }
 
 // Jungle breaks: drier, grittier hits that sound sampled off a record.
+// A hit chopped from a sampled breakbeat: the drum, the small room it was played in, and on the snare the ride
+// still ringing behind it, all through an old twelve-bit sampler.
 static void break_hit(Instrument *ins, Rng *r, int snare_hit) {
     if (snare_hit)
         snare(ins, r, 0, 0);
@@ -414,13 +416,42 @@ static void break_hit(Instrument *ins, Rng *r, int snare_hit) {
         kick(ins, r, 0);
     strncpy(ins->name, snare_hit ? "break snare" : "break kick", sizeof ins->name - 1);
     Sample *s = &ins->samples[0];
+    int dry = s->length, n = dry + (int)(0.14f * RATE);
+    float *d = realloc(s->frames, sizeof(float) * (size_t)n);
+    if (!d) return;
+    memset(d + dry, 0, sizeof(float) * (size_t)(n - dry));
+    s->frames = d;
+    s->length = n;
     uint32_t seed = rng_u32(r) | 1;
-    for (int i = 0; i < s->length; i++) {
-        float v = mtanh(s->frames[i] * 2.2f) * 0.8f + white(&seed) * 0.015f;
-        // Twelve-bit grit, like an old sampler.
-        s->frames[i] = (float)((int)(v * 2048.0f)) / 2048.0f;
+    // Two short combs make the room; their lengths are a seed's choice of kit and studio.
+    int c1 = (int)(rng_between(r, 0.009f, 0.013f) * RATE), c2 = (int)(rng_between(r, 0.015f, 0.021f) * RATE);
+    float *room = calloc((size_t)n, sizeof(float));
+    if (room) {
+        for (int i = 0; i < n; i++) {
+            float in = i < dry ? d[i] : 0;
+            room[i] = in + (i >= c1 ? 0.42f * room[i - c1] : 0) + (i >= c2 ? 0.33f * room[i - c2] : 0);
+        }
+        for (int i = 0; i < n; i++) d[i] = (i < dry ? d[i] : 0) + 0.22f * room[i];
+        free(room);
     }
-    ins->volume = snare_hit ? 0.7f : 0.85f;
+    if (snare_hit) {
+        Svf bleed;
+        svf_reset(&bleed);
+        svf_set(&bleed, rng_between(r, 6000, 8500), 1.4f);
+        float env = 0.16f, k_env = decay_factor(0.07f);
+        for (int i = 0; i < n; i++) {
+            d[i] += svf_band(&bleed, white(&seed)) * env;
+            env *= k_env;
+        }
+    }
+    float peak = 1e-6f;
+    for (int i = 0; i < n; i++) {
+        float v = mtanh(d[i] * 2.2f) * 0.8f + white(&seed) * 0.012f;
+        d[i] = (float)((int)(v * 2048.0f)) / 2048.0f;
+        peak = mmax(peak, mabs(d[i]));
+    }
+    for (int i = 0; i < n; i++) d[i] *= 0.92f / peak;
+    ins->volume = snare_hit ? 0.72f : 0.85f;
 }
 
 /* ---------- Bass ---------- */
@@ -841,6 +872,23 @@ static void bass_square(Instrument *ins, Rng *r, float bpm) {
     ins->ducked = 1;
 }
 
+// Wobble bass: detuned saws and a square, driven into a growl, for a resonant filter the song's beat opens and shuts.
+static void bass_wobble(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "wobble bass", ROLE_BASS, 0.5f);
+    saw_stack(ins, r, 3, rng_between(r, 8, 18), 1.0f, 9000, 25, rng_between(r, 0.2f, 0.5f));
+    float drive = rng_between(r, 1.8f, 3.2f);
+    for (int k = 0; k < ins->sample_count; k++) {
+        Sample *s = &ins->samples[k];
+        for (int i = 0; i < s->length; i++) s->frames[i] = mtanh(s->frames[i] * drive) * 0.92f;
+    }
+    envelope(&ins->volume_env, bpm, 0.004f, 0.1f, 0.95f, 0.06f);
+    ins->cutoff = rng_between(r, 0.26f, 0.36f);
+    ins->resonance = rng_between(r, 1.4f, 2.4f);
+    ins->wobble_depth = rng_between(r, 0.38f, 0.5f);
+    ins->wobble_shape = rng_range(r, 0, 3);
+    ins->ducked = 2;
+}
+
 // Mallets: a woody FM strike whose overtone dies almost at once.
 static void mallet(Instrument *ins, Rng *r, float bpm) {
     (void)bpm;
@@ -1229,6 +1277,7 @@ int synth_instrument(Instrument *ins, VoiceKind kind, Rng *r, float bpm) {
     case VOICE_BASS_SQUARE: bass_square(ins, r, bpm); break;
     case VOICE_MALLET: mallet(ins, r, bpm); break;
     case VOICE_VIBES: vibes(ins, r, bpm); break;
+    case VOICE_BASS_WOBBLE: bass_wobble(ins, r, bpm); break;
     case VOICE_LEAD_SAW: lead_saw(ins, r, bpm); break;
     case VOICE_LEAD_SQUARE: lead_square(ins, r, bpm); break;
     case VOICE_LEAD_SINE: lead_sine(ins, r, bpm); break;

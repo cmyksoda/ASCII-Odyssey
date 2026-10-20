@@ -44,6 +44,7 @@ static const int WEIGHTS[MOOD_COUNT][COUNT] = {
     [MOOD_JUNGLE] = {[PHOSPHOR] = 30, [EMBER] = 25, [DEEP] = 25, [STORM] = 20},
     [MOOD_MUSICBOX] = {[SAKURA] = 30, [SNOW] = 25, [ICE] = 25, [AURORA] = 20},
     [MOOD_DUB] = {[DEEP] = 35, [PHOSPHOR] = 20, [ICE] = 25, [DUSK] = 20},
+    [MOOD_DUBSTEP] = {[EMBER] = 25, [STORM] = 25, [PHOSPHOR] = 20, [OUTRUN] = 15, [DEEP] = 15},
 };
 
 Rgbf palette_ramp(const Palette *p, float v) {

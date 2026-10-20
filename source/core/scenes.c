@@ -839,7 +839,7 @@ static void cracktro_draw(void *state, const Frame *f) {
 
 enum { M_KEYGEN = 1u << MOOD_KEYGEN, M_AMBIENT = 1u << MOOD_AMBIENT, M_SYNTHWAVE = 1u << MOOD_SYNTHWAVE,
        M_LOFI = 1u << MOOD_LOFI, M_TRANCE = 1u << MOOD_TRANCE, M_JUNGLE = 1u << MOOD_JUNGLE,
-       M_MUSICBOX = 1u << MOOD_MUSICBOX, M_DUB = 1u << MOOD_DUB };
+       M_MUSICBOX = 1u << MOOD_MUSICBOX, M_DUB = 1u << MOOD_DUB, M_DUBSTEP = 1u << MOOD_DUBSTEP };
 
 /* ---------- Rain on a night window ---------- */
 
@@ -1044,14 +1044,14 @@ static void snow_draw(void *state, const Frame *f) {
 }
 
 const SceneKind scene_kinds[] = {
-    {"warp", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_AMBIENT, 0.0f, 1.0f, warp_setup, warp_draw},
-    {"tunnel", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_DUB, 0.5f, 1.0f, tunnel_setup, tunnel_draw},
-    {"plasma", M_KEYGEN | M_DUB | M_TRANCE | M_JUNGLE | M_LOFI, 0.3f, 1.0f, plasma_setup, plasma_draw},
+    {"warp", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_AMBIENT | M_DUBSTEP, 0.0f, 1.0f, warp_setup, warp_draw},
+    {"tunnel", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_DUB | M_DUBSTEP, 0.5f, 1.0f, tunnel_setup, tunnel_draw},
+    {"plasma", M_KEYGEN | M_DUB | M_TRANCE | M_JUNGLE | M_LOFI | M_DUBSTEP, 0.3f, 1.0f, plasma_setup, plasma_draw},
     {"sunset", M_SYNTHWAVE, 0.3f, 1.0f, sunset_setup, sunset_draw},
-    {"solids", M_KEYGEN | M_SYNTHWAVE | M_DUB | M_TRANCE, 0.2f, 1.0f, solids_setup, solids_draw},
+    {"solids", M_KEYGEN | M_SYNTHWAVE | M_DUB | M_TRANCE | M_DUBSTEP, 0.2f, 1.0f, solids_setup, solids_draw},
     {"aurora", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.0f, 0.8f, aurora_setup, aurora_draw},
     {"sea", M_AMBIENT | M_LOFI | M_MUSICBOX | M_DUB | M_SYNTHWAVE | M_JUNGLE, 0.0f, 0.75f, sea_setup, sea_draw},
-    {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_JUNGLE, 0.0f, 0.8f, nebula_setup, nebula_draw},
+    {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_JUNGLE | M_DUBSTEP, 0.0f, 0.8f, nebula_setup, nebula_draw},
     {"constellations", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.0f, 0.7f, constellation_setup, constellation_draw},
     {"cracktro", M_KEYGEN, 0.4f, 1.0f, cracktro_setup, cracktro_draw},
     {"rain", M_LOFI | M_DUB | M_AMBIENT | M_JUNGLE, 0.0f, 0.85f, rain_setup, rain_draw},

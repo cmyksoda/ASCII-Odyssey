@@ -25,6 +25,7 @@ void song_free(Song *s) {
     free(s->patterns);
     free(s->duck_amount);
     free(s->master_cutoff);
+    free(s->level);
     free(s);
 }
 
