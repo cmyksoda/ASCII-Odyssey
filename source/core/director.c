@@ -17,37 +17,52 @@ static int edm(Mood m) {
     return m == MOOD_SYNTHWAVE || m == MOOD_TRANCE || m == MOOD_KEYGEN || m == MOOD_JUNGLE || m == MOOD_DUBSTEP;
 }
 
-// How many shots a section gets: each a few bars long, from about seven and a half seconds in a quiet passage down to
-// five and a half in a drop.
+// How many shots a section gets: each a few bars long, from about ten seconds in a quiet passage to eight and a half
+// in a drop, and never more than twelve.
 static int shot_count(const Section *sec, float bar_seconds) {
-    float target = 8.0f - 2.5f * sec->energy, length = (float)sec->bars * bar_seconds;
-    int n = (int)(length / target + 0.5f);
+    float target = 10.5f - 2.0f * sec->energy, length = (float)sec->bars * bar_seconds;
+    int n = (int)(length / target + 0.5f), least = (int)(length / 12.0f + 0.999f);
+    if (n < least) n = least;
     return n < 1 ? 1 : n > sec->bars ? sec->bars : n;
 }
 
-// The scene whose intensity best suits the music, among those not shown yet. Drops lean on reactive scenes and quiet
-// stretches on still ones. Once every reactive (or still) scene made for the mood has had a turn, reactive (or still)
-// scenes from other moods stand in before any comes back, except those made for one mood alone.
-static int choose_scene(Rng *r, Mood mood, const Section *sec, const int *uses, int previous) {
-    int fresh[2] = {0, 0};
-    for (int k = 0; k < scene_kind_count; k++)
-        if ((scene_kinds[k].moods & MOOD_BIT(mood)) && !uses[k]) fresh[scene_kinds[k].reactive != 0]++;
-    int best = -1;
-    float best_cost = 1e9f;
-    for (int k = 0; k < scene_kind_count; k++) {
-        const SceneKind *s = &scene_kinds[k];
-        int own = (s->moods & MOOD_BIT(mood)) != 0, single = !(s->moods & (s->moods - 1));
-        if (k == previous || !s->moods || (!own && (fresh[s->reactive != 0] || single))) continue;
-        float cost = mabs(s->intensity - sec->energy) * (own ? 1.5f : 3.0f) + rng_float(r) * 0.5f + (float)uses[k] * 3.0f +
-                     (own ? 0.0f : 0.5f);
-        if (sec->kind == SECTION_DROP && !s->reactive) cost += 1.2f;
-        if (sec->energy < 0.4f && s->reactive) cost += 0.3f;
-        if (cost < best_cost) {
-            best_cost = cost;
-            best = k;
+static int single_mood(const SceneKind *s) {
+    int moods = 0;
+    for (int m = 0; m < MOOD_COUNT; m++) moods += s->weights[m] > 0;
+    return moods == 1;
+}
+
+// The scene for one shot. Its intensity must suit the music's energy: only scenes within a narrow window of it are
+// considered, and the window widens only when nothing fits. Within the window the mood's own scenes come first, then
+// those it shows now and then, then stand-ins from other moods. Drops take scenes that answer the music, two of the
+// Wii's heaviest scenes never meet in a transition, and a scene comes back only when nothing else is left.
+static int choose_scene(Rng *r, Mood mood, const Section *sec, const int *uses, const int *rolled, int previous) {
+    static const struct {
+        float window;
+        int repeats;
+    } passes[4] = {{0.25f, 0}, {0.4f, 0}, {0.25f, 1}, {2.0f, 1}};
+    for (int pass = 0; pass < 4; pass++) {
+        int best = -1;
+        float best_cost = 1e9f;
+        for (int k = 0; k < scene_kind_count; k++) {
+            const SceneKind *s = &scene_kinds[k];
+            int weight = s->weights[mood];
+            float off = mabs(s->intensity - sec->energy);
+            if (k == previous || !scene_in_use(s) || off > passes[pass].window || (!weight && single_mood(s))) continue;
+            if (uses[k] && !passes[pass].repeats) continue;
+            if (previous >= 0 && s->heavy && scene_kinds[previous].heavy) continue;
+            float cost = off * 2.0f + rng_float(r) * 0.4f + (float)uses[k] * 3.0f - 0.3f * (float)weight;
+            if (weight == 1 && !rolled[k]) cost += 1.0f;
+            if (!weight) cost += 2.0f;
+            if (sec->kind == SECTION_DROP && !s->reactive) cost += 3.0f;
+            if (cost < best_cost) {
+                best_cost = cost;
+                best = k;
+            }
         }
+        if (best >= 0) return best;
     }
-    return best >= 0 ? best : previous >= 0 ? previous : 0;
+    return previous >= 0 ? previous : 0;
 }
 
 static Entrance pick_entrance(Rng *r, const Entrance *list, int count, Entrance previous) {
@@ -57,22 +72,25 @@ static Entrance pick_entrance(Rng *r, const Entrance *list, int count, Entrance 
     return e;
 }
 
-static int palette_for(SectionKind kind) {
+// Calm parts paint with the base palette, builds and breaks with their own, and drops take turns between two more.
+static int palette_for(SectionKind kind, int drop_shots) {
     switch (kind) {
-    case SECTION_DROP: return 1;
+    case SECTION_DROP: return drop_shots & 1 ? 3 : 1;
     case SECTION_BUILD:
     case SECTION_BREAK: return 2;
     default: return 0;
     }
 }
 
-void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto, const Palette *const palettes[3]) {
+void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto,
+                    const Palette *const palettes[PALETTE_FAMILY]) {
     const SongInfo *info = score->info;
     Mood mood = info->mood;
     memset(d, 0, sizeof *d);
-    d->scratch_shot = -1;
-    for (int i = 0; i < 3; i++) d->palettes[i] = palettes[i];
-    int uses[64] = {0}, previous = -1;
+    for (int i = 0; i < PALETTE_FAMILY; i++) d->palettes[i] = palettes[i];
+    // Scenes a mood shows only now and then each join a piece by chance, so two pieces of a mood differ.
+    int uses[64] = {0}, rolled[64] = {0}, previous = -1, drop_shots = 0;
+    for (int k = 0; k < scene_kind_count && k < 64; k++) rolled[k] = rng_chance(r, 35);
     Entrance last = ENTER_CUT;
     float bar = (float)info->bar_seconds;
     for (int s = 0; s < info->section_count && d->count < MAX_SHOTS; s++) {
@@ -82,17 +100,22 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
             Shot *shot = &d->shots[d->count];
             shot->start = (float)sec->start + (float)(p * sec->bars / pieces) * bar;
             shot->end = (float)sec->start + (float)((p + 1) * sec->bars / pieces) * bar;
-            shot->kind = choose_scene(r, mood, sec, uses, previous);
-            shot->palette = palette_for(sec->kind);
+            shot->kind = choose_scene(r, mood, sec, uses, rolled, previous);
+            shot->palette = palette_for(sec->kind, sec->kind == SECTION_DROP ? drop_shots++ : 0);
             shot->direction = rng_range(r, 0, 4);
             if (sec->kind == SECTION_DROP && p == 0 && edm(mood)) {
                 shot->entrance = pick_entrance(r, BURST, (int)(sizeof BURST / sizeof BURST[0]), last);
-                shot->fade = score->beat * 0.5f;
+                shot->fade = clampf(score->beat * 0.5f, 0.18f, 0.35f);
             } else {
                 shot->entrance = pick_entrance(r, SOFT, (int)(sizeof SOFT / sizeof SOFT[0]), last);
-                shot->fade = mmin(score->beat * (sec->energy < 0.5f ? 4.0f : 2.0f), (shot->end - shot->start) * 0.4f);
+                shot->fade = clampf(score->beat * (sec->energy < 0.5f ? 2.0f : 1.0f), 0.45f, 1.1f);
             }
             last = shot->entrance;
+            // The change lands with the music: the transition is already more than half done on the bar line.
+            if (d->count) {
+                shot->start -= shot->fade * 0.6f;
+                d->shots[d->count - 1].end = shot->start;
+            }
             Frame look = *proto;
             look.palette = palettes[shot->palette];
             Rng shot_rng;
@@ -198,14 +221,8 @@ void direction_draw(Direction *d, Frame *f, Grid *scratch) {
     Shot *shot = &d->shots[i];
     float since = f->t - shot->start;
     if (i > 0 && shot->fade > 0 && since < shot->fade) {
-        // The outgoing shot redraws at fifteen frames a second, so a transition costs the Wii little more than a shot.
-        if (d->scratch_shot != i - 1 || f->t < d->scratch_t || f->t - d->scratch_t >= 1.0f / 15) {
-            render_shot(d, &d->shots[i - 1], f, scratch);
-            d->scratch_shot = i - 1;
-            d->scratch_t = f->t;
-            d->scratch_glow = f->fx->glow;
-        }
-        float glow = d->scratch_glow;
+        render_shot(d, &d->shots[i - 1], f, scratch);
+        float glow = f->fx->glow;
         render_shot(d, shot, f, f->grid);
         float progress = smoothstep(0.0f, shot->fade, since);
         f->fx->glow = mixf(glow, f->fx->glow, progress);

@@ -908,9 +908,6 @@ static void cracktro_draw(void *state, const Frame *f) {
     f->fx->glow = 0.5f;
 }
 
-enum { M_KEYGEN = 1u << MOOD_KEYGEN, M_AMBIENT = 1u << MOOD_AMBIENT, M_SYNTHWAVE = 1u << MOOD_SYNTHWAVE,
-       M_LOFI = 1u << MOOD_LOFI, M_TRANCE = 1u << MOOD_TRANCE, M_JUNGLE = 1u << MOOD_JUNGLE,
-       M_MUSICBOX = 1u << MOOD_MUSICBOX, M_DUB = 1u << MOOD_DUB, M_DUBSTEP = 1u << MOOD_DUBSTEP };
 
 /* ---------- Rain on a night window ---------- */
 
@@ -1175,38 +1172,63 @@ static void snow_draw(void *state, const Frame *f) {
     f->fx->glow = 0.5f;
 }
 
+// Weights by mood, in the order keygen, ambient, synthwave, lo-fi, trance, jungle, music box, dub, dubstep.
+#define W(k, a, s, l, t, j, m, d, x) {k, a, s, l, t, j, m, d, x}
+
 const SceneKind scene_kinds[] = {
-    {"warp", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_AMBIENT | M_DUBSTEP, 0.75f, 1, warp_setup, warp_draw},
-    {"tunnel", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_DUB | M_DUBSTEP, 0.85f, 1, tunnel_setup, tunnel_draw},
-    {"plasma", M_KEYGEN | M_DUB | M_TRANCE | M_JUNGLE | M_LOFI | M_DUBSTEP, 0.6f, 1, plasma_setup, plasma_draw},
-    {"sunset", M_SYNTHWAVE, 0.5f, 0, sunset_setup, sunset_draw},
-    {"solids", M_KEYGEN | M_SYNTHWAVE | M_DUB | M_TRANCE | M_DUBSTEP, 0.6f, 1, solids_setup, solids_draw},
-    {"aurora", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.25f, 0, aurora_setup, aurora_draw},
-    {"sea", 0, 0.3f, 0, sea_setup, sea_draw},
-    {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_JUNGLE | M_DUBSTEP, 0.3f, 0, nebula_setup, nebula_draw},
-    {"constellations", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.35f, 1, constellation_setup, constellation_draw},
-    {"cracktro", M_KEYGEN, 0.8f, 1, cracktro_setup, cracktro_draw},
-    {"rain", M_LOFI | M_DUB | M_AMBIENT | M_JUNGLE, 0.4f, 1, rain_setup, rain_draw},
-    {"snow", M_MUSICBOX | M_AMBIENT | M_LOFI, 0.2f, 1, snow_setup, snow_draw},
-    {"kaleidoscope", ALL_MOODS, 0.7f, 1, kaleidoscope_setup, kaleidoscope_draw},
-    {"spectrum", ALL_MOODS & ~M_AMBIENT, 0.7f, 1, spectrum_setup, spectrum_draw},
-    {"ripples", ALL_MOODS, 0.45f, 1, ripples_setup, ripples_draw},
-    {"fireworks", ALL_MOODS & ~(M_DUB | M_AMBIENT), 0.75f, 1, fireworks_setup, fireworks_draw},
-    {"lasers", M_TRANCE | M_DUBSTEP | M_SYNTHWAVE | M_KEYGEN | M_JUNGLE, 0.9f, 1, lasers_setup, lasers_draw},
-    {"lissajous", ALL_MOODS, 0.5f, 1, lissajous_setup, lissajous_draw},
-    {"skyline", M_LOFI | M_SYNTHWAVE | M_DUB | M_JUNGLE | M_DUBSTEP, 0.45f, 1, skyline_setup, skyline_draw},
-    {"digital rain", M_KEYGEN | M_DUBSTEP | M_JUNGLE | M_TRANCE | M_SYNTHWAVE | M_DUB, 0.7f, 1, digital_rain_setup,
-     digital_rain_draw},
-    {"checker", M_KEYGEN | M_TRANCE | M_SYNTHWAVE | M_DUBSTEP | M_JUNGLE, 0.85f, 1, checker_setup, checker_draw},
-    {"petals", M_AMBIENT | M_MUSICBOX | M_LOFI, 0.25f, 0, petals_setup, petals_draw},
-    {"lava", M_LOFI | M_DUB | M_AMBIENT | M_SYNTHWAVE | M_TRANCE | M_KEYGEN | M_DUBSTEP, 0.35f, 0, lava_setup, lava_draw},
-    {"clouds", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.15f, 0, clouds_setup, clouds_draw},
-    {"lanterns", M_MUSICBOX | M_AMBIENT | M_LOFI, 0.2f, 0, lanterns_setup, lanterns_draw},
-    {"jellyfish", M_AMBIENT | M_DUB | M_TRANCE | M_LOFI | M_DUBSTEP, 0.3f, 0, jellyfish_setup, jellyfish_draw},
-    {"terrain", M_SYNTHWAVE | M_AMBIENT | M_TRANCE | M_DUB | M_KEYGEN | M_DUBSTEP, 0.45f, 0, terrain_setup, terrain_draw},
-    {"galaxy", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_DUBSTEP | M_JUNGLE | M_KEYGEN, 0.35f, 0, galaxy_setup,
-     galaxy_draw},
-    {"fireflies", M_LOFI | M_AMBIENT | M_MUSICBOX, 0.2f, 0, fireflies_setup, fireflies_draw},
-    {"ocean", M_AMBIENT | M_LOFI | M_DUB | M_MUSICBOX | M_SYNTHWAVE, 0.25f, 0, ocean_setup, ocean_draw},
+    {"warp", W(2, 1, 2, 0, 3, 3, 0, 0, 1), 0.75f, 1, 0, warp_setup, warp_draw},
+    {"tunnel", W(2, 0, 2, 0, 3, 3, 0, 1, 2), 0.85f, 1, 1, tunnel_setup, tunnel_draw},
+    {"plasma", W(3, 0, 1, 1, 1, 1, 0, 2, 1), 0.6f, 1, 1, plasma_setup, plasma_draw},
+    {"sunset", W(0, 0, 3, 1, 0, 0, 0, 0, 0), 0.5f, 0, 0, sunset_setup, sunset_draw},
+    {"solids", W(2, 0, 2, 0, 2, 0, 0, 2, 2), 0.6f, 1, 0, solids_setup, solids_draw},
+    {"aurora", W(0, 3, 0, 1, 1, 0, 2, 1, 0), 0.25f, 0, 0, aurora_setup, aurora_draw},
+    {"sea", W(0, 0, 0, 0, 0, 0, 0, 0, 0), 0.3f, 0, 0, sea_setup, sea_draw},
+    {"nebula", W(0, 3, 0, 0, 2, 1, 1, 2, 1), 0.3f, 0, 0, nebula_setup, nebula_draw},
+    {"constellations", W(0, 2, 0, 1, 0, 0, 3, 1, 0), 0.35f, 1, 0, constellation_setup, constellation_draw},
+    {"cracktro", W(3, 0, 0, 0, 0, 0, 0, 0, 0), 0.8f, 1, 0, cracktro_setup, cracktro_draw},
+    {"rain", W(0, 1, 0, 3, 0, 2, 0, 2, 0), 0.4f, 1, 0, rain_setup, rain_draw},
+    {"snow", W(0, 2, 0, 2, 0, 0, 3, 0, 0), 0.2f, 1, 0, snow_setup, snow_draw},
+    {"kaleidoscope", W(1, 1, 1, 0, 3, 0, 1, 1, 1), 0.7f, 1, 1, kaleidoscope_setup, kaleidoscope_draw},
+    {"spectrum", W(2, 0, 2, 1, 1, 1, 0, 1, 3), 0.7f, 1, 0, spectrum_setup, spectrum_draw},
+    {"ripples", W(0, 2, 0, 1, 1, 0, 1, 2, 0), 0.45f, 1, 0, ripples_setup, ripples_draw},
+    {"fireworks", W(1, 0, 2, 0, 2, 1, 2, 0, 1), 0.75f, 1, 0, fireworks_setup, fireworks_draw},
+    {"lasers", W(1, 0, 2, 0, 3, 1, 0, 0, 3), 0.9f, 1, 0, lasers_setup, lasers_draw},
+    {"lissajous", W(2, 1, 1, 0, 1, 0, 0, 2, 1), 0.5f, 1, 0, lissajous_setup, lissajous_draw},
+    {"skyline", W(0, 0, 2, 3, 0, 2, 0, 2, 1), 0.45f, 1, 0, skyline_setup, skyline_draw},
+    {"digital rain", W(3, 0, 1, 0, 1, 2, 0, 1, 2), 0.7f, 1, 0, digital_rain_setup, digital_rain_draw},
+    {"checker", W(2, 0, 3, 0, 2, 1, 0, 0, 2), 0.85f, 1, 0, checker_setup, checker_draw},
+    {"petals", W(0, 2, 0, 2, 0, 0, 2, 0, 0), 0.25f, 0, 0, petals_setup, petals_draw},
+    {"lava", W(1, 1, 1, 2, 0, 0, 0, 3, 1), 0.35f, 0, 1, lava_setup, lava_draw},
+    {"clouds", W(0, 3, 0, 1, 0, 0, 2, 1, 0), 0.15f, 0, 1, clouds_setup, clouds_draw},
+    {"lanterns", W(0, 2, 0, 2, 0, 0, 3, 0, 0), 0.2f, 0, 0, lanterns_setup, lanterns_draw},
+    {"jellyfish", W(0, 2, 0, 1, 1, 0, 0, 3, 1), 0.3f, 0, 0, jellyfish_setup, jellyfish_draw},
+    {"terrain", W(1, 1, 3, 0, 2, 0, 0, 1, 1), 0.45f, 0, 0, terrain_setup, terrain_draw},
+    {"galaxy", W(1, 2, 0, 0, 2, 1, 1, 2, 1), 0.35f, 0, 0, galaxy_setup, galaxy_draw},
+    {"fireflies", W(0, 2, 0, 2, 0, 0, 3, 0, 0), 0.2f, 0, 0, fireflies_setup, fireflies_draw},
+    {"ocean", W(0, 3, 1, 2, 0, 0, 1, 2, 0), 0.25f, 0, 0, ocean_setup, ocean_draw},
+    {"fire", W(2, 0, 1, 0, 1, 2, 0, 0, 3), 0.85f, 1, 0, fire_setup, fire_draw},
+    {"twister", W(3, 0, 1, 0, 2, 0, 0, 0, 1), 0.7f, 1, 0, twister_setup, twister_draw},
+    {"rotozoom", W(3, 0, 2, 0, 2, 1, 0, 0, 1), 0.75f, 1, 0, rotozoom_setup, rotozoom_draw},
+    {"vector balls", W(2, 0, 1, 0, 3, 0, 0, 1, 1), 0.6f, 1, 0, balls_setup, balls_draw},
+    {"torus", W(1, 0, 2, 0, 2, 0, 0, 1, 2), 0.6f, 1, 0, torus_setup, torus_draw},
+    {"spirograph", W(1, 1, 0, 0, 2, 0, 3, 1, 0), 0.45f, 1, 0, spirograph_setup, spirograph_draw},
+    {"turntable", W(0, 0, 1, 3, 0, 0, 0, 3, 1), 0.3f, 0, 0, turntable_setup, turntable_draw},
+    {"cassette", W(1, 0, 2, 3, 0, 0, 0, 1, 0), 0.3f, 0, 0, cassette_setup, cassette_draw},
+    {"music box comb", W(0, 1, 0, 1, 0, 0, 3, 0, 0), 0.4f, 1, 0, cylinder_setup, cylinder_draw},
+    {"mobile", W(0, 2, 0, 1, 0, 0, 3, 0, 0), 0.2f, 0, 0, mobile_setup, mobile_draw},
+    {"gears", W(1, 0, 0, 1, 0, 0, 2, 1, 0), 0.35f, 0, 0, gears_setup, gears_draw},
+    {"canopy", W(0, 2, 0, 1, 0, 3, 0, 1, 0), 0.3f, 0, 0, canopy_setup, canopy_draw},
+    {"light trails", W(0, 0, 3, 0, 1, 2, 0, 1, 2), 0.8f, 1, 0, trails_setup, trails_draw},
+    {"speakers", W(0, 0, 0, 1, 0, 2, 0, 3, 3), 0.75f, 1, 0, speakers_setup, speakers_draw},
+    {"lightning", W(0, 0, 0, 0, 1, 2, 0, 1, 3), 0.85f, 1, 1, lightning_setup, lightning_draw},
+    {"dunes", W(0, 2, 1, 1, 0, 0, 0, 2, 0), 0.25f, 0, 0, dunes_setup, dunes_draw},
+    {"kelp", W(0, 2, 0, 1, 0, 0, 1, 2, 0), 0.25f, 0, 0, kelp_setup, kelp_draw},
+    {"meteors", W(0, 2, 1, 1, 1, 0, 2, 0, 0), 0.3f, 0, 0, meteors_setup, meteors_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
+
+int scene_in_use(const SceneKind *k) {
+    for (int m = 0; m < MOOD_COUNT; m++)
+        if (k->weights[m]) return 1;
+    return 0;
+}

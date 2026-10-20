@@ -86,11 +86,11 @@ static const Tour TOURS[] = {
      "4.7:up,5.0:confirm"},
     // Start on the first press, then the tracker view, then the info view.
     {"overlays", 20.0, {1.6, 9.0, 15.0}, 3, 0, "1.0:confirm,6.0:one,12.0:two"},
-    // Every scene in turn over a real piece, three music seconds each, with its own timings and a shot.
-    {"scenes", 140.0, {0}, 0, 1, "1.0:confirm"},
+    // Every scene in turn over a real piece, two and a half music seconds each, with its own timings and a shot.
+    {"scenes", 160.0, {0}, 0, 1, "1.0:confirm"},
 };
 
-#define SCENE_SECONDS 3.0
+#define SCENE_SECONDS 2.5
 
 // Presses a tour's scripted buttons as their moments come, one per frame, the way a person with a remote would.
 static unsigned scripted(const char **cursor, double wall) {
@@ -208,6 +208,8 @@ int main(int argc, char **argv) {
         if (argv[i] && !strncmp(argv[i], "seed=", 5)) seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
         for (int m = 0; argv[i] && !strncmp(argv[i], "mood=", 5) && m < MOOD_COUNT; m++)
             if (!strcmp(argv[i] + 5, mood_names[m])) config.settings.mood = m;
+        if (argv[i] && !strcmp(argv[i], "length=long")) config.settings.length = LENGTH_LONG;
+        if (argv[i] && !strcmp(argv[i], "length=short")) config.settings.length = LENGTH_SHORT;
         // A quiet run still mixes every voice, so its audio timings hold; only the console's output is turned down.
         if (argv[i] && !strncmp(argv[i], "volume=", 7)) config.settings.volume = atoi(argv[i] + 7) < 0 ? 0 : atoi(argv[i] + 7) % 11;
     }
@@ -297,7 +299,7 @@ int main(int argc, char **argv) {
             last = now;
             if (!strcmp(tour->name, "scenes")) {
                 int want = playing ? (int)(clock.music / SCENE_SECONDS) : -1;
-                while (want >= 0 && want < scene_kind_count && !scene_kinds[want].moods) want++;
+                while (want >= 0 && want < scene_kind_count && !scene_in_use(&scene_kinds[want])) want++;
                 if (want != scene && want >= 0) {
                     if (scene >= 0) {
                         beacon_log("scene %s", scene_kinds[scene].name);
@@ -308,7 +310,7 @@ int main(int argc, char **argv) {
                     scene = want;
                     shot = 0;
                 }
-                if (scene >= 0 && !shot && clock.music >= (double)scene * SCENE_SECONDS + 2.0) {
+                if (scene >= 0 && !shot && clock.music >= (double)scene * SCENE_SECONDS + 1.8) {
                     int w, h;
                     const void *xfb = video_xfb(&w, &h);
                     beacon_shot(scene_kinds[scene].name, xfb, w, h);

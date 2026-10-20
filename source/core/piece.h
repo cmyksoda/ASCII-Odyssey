@@ -19,7 +19,7 @@ typedef struct {
     AsciiMatcher matcher;
     FrameFx fx;
     // The piece's palette family (calm parts, drops, builds and breaks), and the first of them, for its title.
-    Palette colors[3];
+    Palette colors[PALETTE_FAMILY];
     const Palette *palette;
     const FigletFont *art_font;
     char art[FIGLET_MAX_HEIGHT * PIECE_ART_W];

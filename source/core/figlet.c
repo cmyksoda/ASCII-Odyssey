@@ -16,8 +16,10 @@ enum {
     SM_SMUSH = 128,
 };
 
-extern const unsigned char flf_standard[], flf_slant[], flf_small[], flf_big[];
-extern const unsigned int flf_standard_size, flf_slant_size, flf_small_size, flf_big_size;
+extern const unsigned char flf_standard[], flf_slant[], flf_small[], flf_big[], flf_block[], flf_lean[], flf_script[],
+    flf_shadow[], flf_banner[];
+extern const unsigned int flf_standard_size, flf_slant_size, flf_small_size, flf_big_size, flf_block_size, flf_lean_size,
+    flf_script_size, flf_shadow_size, flf_banner_size;
 
 static char *next_line(char **cursor) {
     char *line = *cursor;
@@ -170,8 +172,10 @@ int figlet_width(const FigletFont *f, const char *text) {
 const FigletFont *figlet_font(FigletId id) {
     static FigletFont fonts[FIGLET_FONTS];
     static int loaded[FIGLET_FONTS];
-    static const unsigned char *const data[] = {flf_standard, flf_slant, flf_small, flf_big};
-    const unsigned int sizes[] = {flf_standard_size, flf_slant_size, flf_small_size, flf_big_size};
+    static const unsigned char *const data[] = {flf_standard, flf_slant, flf_small,  flf_big,   flf_block,
+                                                flf_lean,     flf_script, flf_shadow, flf_banner};
+    const unsigned int sizes[] = {flf_standard_size, flf_slant_size,  flf_small_size,  flf_big_size,   flf_block_size,
+                                  flf_lean_size,     flf_script_size, flf_shadow_size, flf_banner_size};
     if (id < 0 || id >= FIGLET_FONTS) id = FIGLET_STANDARD;
     if (!loaded[id]) {
         if (figlet_load(&fonts[id], data[id], sizes[id]) != 0) return NULL;

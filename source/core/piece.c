@@ -5,8 +5,19 @@
 
 #include <string.h>
 
-static void layout_title(Piece *p) {
-    static const FigletId fonts[] = {FIGLET_BIG, FIGLET_STANDARD, FIGLET_SLANT, FIGLET_SMALL};
+// Each mood writes its titles in a few faces of its own; one is picked at random, and a title too wide for any of them
+// falls back to the plainer, narrower ones.
+static const FigletId TITLE_FACES[MOOD_COUNT][3] = {
+    [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER},     [MOOD_AMBIENT] = {FIGLET_SCRIPT, FIGLET_LEAN, FIGLET_SLANT},
+    [MOOD_SYNTHWAVE] = {FIGLET_LEAN, FIGLET_SLANT, FIGLET_SHADOW}, [MOOD_LOFI] = {FIGLET_SCRIPT, FIGLET_SHADOW, FIGLET_STANDARD},
+    [MOOD_TRANCE] = {FIGLET_SLANT, FIGLET_LEAN, FIGLET_BIG},       [MOOD_JUNGLE] = {FIGLET_BIG, FIGLET_BLOCK, FIGLET_SHADOW},
+    [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN}, [MOOD_DUB] = {FIGLET_SHADOW, FIGLET_BLOCK, FIGLET_BIG},
+    [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW}};
+
+static void layout_title(Piece *p, Rng *r) {
+    const FigletId *own = TITLE_FACES[p->comp.info.mood];
+    int first = rng_range(r, 0, 3);
+    FigletId fonts[6] = {own[first], own[(first + 1) % 3], own[(first + 2) % 3], FIGLET_STANDARD, FIGLET_SLANT, FIGLET_SMALL};
     // FIGlet's own space is a sliver; three of them keep the words apart behind the decoding scramble.
     char upper[SEED_MAX * 3 + 1];
     int n = 0;
@@ -84,10 +95,10 @@ int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const
     ascii_prepare(&p->matcher, p->grid.face, &style);
     Frame proto = {.score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid,
                    .stroker = &p->stroker, .matcher = &p->matcher, .fx = &p->fx};
-    const Palette *family[3] = {&p->colors[0], &p->colors[1], &p->colors[2]};
+    const Palette *family[PALETTE_FAMILY] = {&p->colors[0], &p->colors[1], &p->colors[2], &p->colors[3]};
     direction_plan(&p->direction, &p->score, &r, &proto, family);
     plan_reactivity(p, &r);
-    layout_title(p);
+    layout_title(p, &r);
     return 0;
 }
 
@@ -121,7 +132,7 @@ int piece_force_palette(Piece *p, const char *name) {
         Palette pal;
         palette_curated(i, &pal);
         if (strcmp(pal.name, name)) continue;
-        for (int k = 0; k < 3; k++) p->colors[k] = pal;
+        for (int k = 0; k < PALETTE_FAMILY; k++) p->colors[k] = pal;
         return 0;
     }
     return -1;

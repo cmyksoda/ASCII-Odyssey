@@ -36,18 +36,15 @@ typedef struct {
 typedef struct {
     Shot shots[MAX_SHOTS];
     int count;
-    const Palette *palettes[3];
+    const Palette *palettes[PALETTE_FAMILY];
     // The backup way: reactivity from a per-section plan instead of each scene's own nature.
     int by_section;
-    // Which shot the scratch grid holds, when it was drawn and the glow it asked for, so an outgoing shot redraws at
-    // half rate without its glow flickering in between.
-    int scratch_shot;
-    float scratch_t, scratch_glow;
 } Direction;
 
-// Gives each section shots a few bars long, never repeating a scene while unused ones remain, and matching each
-// scene's intensity to the music's energy.
-void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto, const Palette *const palettes[3]);
+// Gives each section shots of eight to ten seconds, each a scene whose intensity suits the music there, picked by
+// how much the mood likes it, with entrances that land on the bar line.
+void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto,
+                    const Palette *const palettes[PALETTE_FAMILY]);
 // Draws the shot playing at f->t, blended with the one before it while it makes its entrance.
 void direction_draw(Direction *d, Frame *f, Grid *scratch);
 

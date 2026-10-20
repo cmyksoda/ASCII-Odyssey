@@ -58,8 +58,8 @@ static const Curated CURATED[] = {
      {H(0xffdf6a), H(0x6af0ff), H(0xff7ab8)}, 0, TRANCE | SYNTHWAVE | DUBSTEP | KEYGEN, 0},
     {"rainbow", H(0x0c0816), {H(0x3b0f6b), H(0x2f4bff), H(0x00c2ff), H(0x2bdc6b), H(0xffd23f), H(0xff6b6b)},
      {H(0xff3d81), H(0xffffff), H(0x00ffd0)}, 0, EVERY, 1},
-    {"cmyk", H(0xf5f3ee), {H(0xd4ecf4), H(0x79cde8), H(0x00a0d6), H(0xe6007e), H(0x5a1b6e), H(0x141414)},
-     {H(0xe6007e), H(0x00a0d6), H(0xffc800)}, 1, EVERY, 1},
+    {"cmyk", H(0x09090c), {H(0x1c2530), H(0x006f7d), H(0x00b4e6), H(0xe6007e), H(0xffd400), H(0xfff6d8)},
+     {H(0x00b4e6), H(0xe6007e), H(0xffd400)}, 0, EVERY, 1},
     {"vaporwave", H(0x1a0b2e), {H(0x3d1a5c), H(0x7a2c8f), H(0xc74ab0), H(0xff7ac6), H(0x8ef0ff), H(0xf2fbff)},
      {H(0x00f0ff), H(0xff9de2), H(0xfffd82)}, 0, SYNTHWAVE | LOFI | TRANCE, 1},
     {"pocket green", H(0x0f1a0f), {H(0x1f3a1f), H(0x306230), H(0x4f8a2f), H(0x8bac0f), H(0xb6d23c), H(0xe0f8d0)},
@@ -201,35 +201,43 @@ static float swing(Rng *r, float lo, float hi) {
     return (rng_chance(r, 50) ? 1 : -1) * rng_between(r, lo, hi);
 }
 
-void palette_family(Rng *r, Mood mood, Palette out[3]) {
-    int curated = rng_chance(r, 65), index = -1;
+void palette_family(Rng *r, Mood mood, Palette out[PALETTE_FAMILY]) {
+    int curated = rng_chance(r, 65), used[PALETTE_FAMILY] = {-1, -1, -1, -1};
     Recipe k = {0};
     if (curated) {
-        index = pick_curated(r, mood);
-        from_curated(&CURATED[index], &out[0]);
-        if (!CURATED[index].fixed) turn(&out[0], rng_between(r, -25, 25));
+        used[0] = pick_curated(r, mood);
+        from_curated(&CURATED[used[0]], &out[0]);
+        if (!CURATED[used[0]].fixed) turn(&out[0], rng_between(r, -25, 25));
     } else {
         k = recipe(r);
         generate(k, &out[0]);
     }
-    // The drops get a sibling: another palette the mood suits, or this one moved well round the wheel.
-    out[1] = out[0];
-    if (rng_chance(r, curated && CURATED[index].fixed ? 50 : 40)) {
-        from_curated(&CURATED[pick_curated(r, mood)], &out[1]);
-    } else if (curated && !CURATED[index].fixed) {
-        turn(&out[1], swing(r, 35, 80));
-    } else if (!curated) {
-        Recipe drop = k;
-        drop.hue += swing(r, 35, 80);
-        generate(drop, &out[1]);
-    }
-    // Builds and breaks lean a little the other way.
-    out[2] = out[0];
-    if (!curated) {
-        Recipe lean = k;
-        lean.hue += swing(r, 15, 35);
-        generate(lean, &out[2]);
-    } else if (!CURATED[index].fixed) {
-        turn(&out[2], swing(r, 15, 35));
+    // Builds and breaks may lean a little off the base; every other place, and the drops always, take a palette of
+    // their own: another one the mood suits that the piece isn't using yet, or one generated well round the wheel.
+    for (int i = 1; i < PALETTE_FAMILY; i++) {
+        int movable = !curated || !CURATED[used[0]].fixed;
+        if (i == 2 && movable && rng_chance(r, 40)) {
+            if (curated) {
+                out[2] = out[0];
+                turn(&out[2], swing(r, 15, 35));
+            } else {
+                Recipe lean = k;
+                lean.hue += swing(r, 15, 35);
+                generate(lean, &out[2]);
+            }
+            continue;
+        }
+        if (rng_chance(r, 70)) {
+            int pick = pick_curated(r, mood);
+            for (int tries = 0; tries < 12 && (pick == used[0] || pick == used[1] || pick == used[2] || pick == used[3]); tries++)
+                pick = pick_curated(r, mood);
+            used[i] = pick;
+            from_curated(&CURATED[pick], &out[i]);
+            if (!CURATED[pick].fixed) turn(&out[i], rng_between(r, -25, 25));
+        } else {
+            Recipe other = recipe(r);
+            if (!curated) other.hue = k.hue + swing(r, 90, 180);
+            generate(other, &out[i]);
+        }
     }
 }

@@ -16,7 +16,18 @@ typedef struct {
     char *data;
 } FigletFont;
 
-typedef enum { FIGLET_STANDARD, FIGLET_SLANT, FIGLET_SMALL, FIGLET_BIG, FIGLET_FONTS } FigletId;
+typedef enum {
+    FIGLET_STANDARD,
+    FIGLET_SLANT,
+    FIGLET_SMALL,
+    FIGLET_BIG,
+    FIGLET_BLOCK,
+    FIGLET_LEAN,
+    FIGLET_SCRIPT,
+    FIGLET_SHADOW,
+    FIGLET_BANNER,
+    FIGLET_FONTS
+} FigletId;
 
 int figlet_load(FigletFont *f, const unsigned char *flf, unsigned int size);
 const FigletFont *figlet_font(FigletId id);

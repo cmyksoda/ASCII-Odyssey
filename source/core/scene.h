@@ -35,12 +35,15 @@ typedef struct {
 // A scene draws a whole frame into the grid as a pure function of the Frame; setup picks its look for one shot.
 typedef struct {
     const char *name;
-    // Bit per Mood that features it.
-    unsigned moods;
+    // How much each mood likes it, by Mood: 0 never, 1 now and then, 2 often, 3 one of the mood's own.
+    uint8_t weights[MOOD_COUNT];
     // How busy and bright it is, from 0 (calm) to 1 (intense), matched against the music's energy.
     float intensity;
     // Reactive scenes answer the music all the way through; the rest never do.
     int reactive;
+    // The scenes that cost the Wii the most, which never follow one another so a transition between them stays
+    // within its frame.
+    int heavy;
     void (*setup)(void *state, Rng *r, const Frame *f);
     void (*draw)(void *state, const Frame *f);
 } SceneKind;
@@ -48,8 +51,8 @@ typedef struct {
 extern const SceneKind scene_kinds[];
 extern const int scene_kind_count;
 
-#define MOOD_BIT(m) (1u << (m))
-#define ALL_MOODS ((1u << MOOD_COUNT) - 1)
+// A scene some mood still shows; retired scenes keep their code but appear nowhere.
+int scene_in_use(const SceneKind *k);
 
 // Resolves the canvas into the grid with the frame's matcher.
 void frame_resolve(const Frame *f);
@@ -110,6 +113,24 @@ SCENE(terrain)
 SCENE(galaxy)
 SCENE(fireflies)
 SCENE(ocean)
+SCENE(fire)
+SCENE(twister)
+SCENE(rotozoom)
+SCENE(balls)
+SCENE(torus)
+SCENE(spirograph)
+SCENE(turntable)
+SCENE(cassette)
+SCENE(cylinder)
+SCENE(mobile)
+SCENE(gears)
+SCENE(canopy)
+SCENE(trails)
+SCENE(speakers)
+SCENE(lightning)
+SCENE(dunes)
+SCENE(kelp)
+SCENE(meteors)
 #undef SCENE
 
 #endif

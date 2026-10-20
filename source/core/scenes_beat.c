@@ -129,9 +129,12 @@ void spectrum_draw(void *state, const Frame *f) {
         }
     }
     int base = s->mirror ? g->rows * 2 / 3 : g->rows - 2, height = base - 1;
-    // A noise floor that never quite settles, so the bars breathe even between notes.
-    for (int b = 0; b < bars; b++)
-        level[b] = mmax(level[b], (0.04f + 0.08f * f->energy) * (0.5f + 0.5f * msin(f->t * 7.3f + (float)b * 1.7f)));
+    // A floor that rolls across the bars like a slow swell, so the analyzer breathes between notes and in silence.
+    for (int b = 0; b < bars; b++) {
+        float x = (float)b / (float)bars;
+        float swell = 0.5f + 0.25f * msin(f->t * 1.1f + x * 9.0f) + 0.25f * msin(f->t * 0.7f - x * 5.0f + 1.3f);
+        level[b] = mmax(level[b], (0.06f + 0.12f * f->energy) * swell + 0.03f * msin(f->t * 6.1f + (float)b * 1.7f));
+    }
     for (int b = 0; b < bars; b++) {
         int top = (int)(saturate(level[b]) * (float)height), cap = (int)(saturate(peak[b]) * (float)height);
         for (int k = 0; k < s->width - 1; k++) {
@@ -179,8 +182,9 @@ void ripples_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Canvas *c = f->canvas;
     canvas_clear(c);
-    bokeh(c, p->cx, p->cy, 0.25f + 0.1f * frame_pulse(f, ROLE_KICK, 0.2f, 1.0f), 0.35f + 0.4f * frame_pulse(f, ROLE_KICK, 0.2f, 1.0f),
-          palette_accent(f->palette, 0));
+    float breathe = 0.03f * msin(f->t * 0.8f);
+    bokeh(c, p->cx, p->cy, 0.25f + breathe + 0.1f * frame_pulse(f, ROLE_KICK, 0.2f, 1.0f),
+          0.35f + breathe + 0.4f * frame_pulse(f, ROLE_KICK, 0.2f, 1.0f), palette_accent(f->palette, 0));
     frame_resolve(f);
     dust_stars(f, p->salt, 0.0f, 0.5f);
     static const Role roles[4] = {ROLE_KICK, ROLE_SNARE, ROLE_PERC, ROLE_HAT};
@@ -198,6 +202,27 @@ void ripples_draw(void *state, const Frame *f) {
             if (fade > 0.05f) ring(f, x, y, radius, color);
             if (fade > 0.25f && roles[k] != ROLE_HAT) ring(f, x, y, radius * 0.6f, frame_dim(f, color, 0.5f));
         }
+    }
+    // Melody notes fall like drops on the water, across the width by pitch.
+    static const Role sung[3] = {ROLE_LEAD, ROLE_BELL, ROLE_PLUCK};
+    for (int k = 0; k < 3; k++) {
+        const ScoreEvent *notes[12];
+        int n = recent_notes(f->score, sung[k], f->t, 1.8f, notes, 12);
+        for (int i = 0; i < n; i++) {
+            float age = f->t - notes[i]->time, fade = mexp(-age / 0.7f) * notes[i]->velocity * frame_bright(f);
+            if (fade < 0.05f) continue;
+            uint32_t id = (uint32_t)(notes[i]->time * 613.0f) ^ p->salt;
+            float x = ((float)(notes[i]->note % 36) / 36.0f * 1.6f - 0.8f) * g->aspect, y = hash01(id) * 1.3f - 0.65f;
+            ring(f, x, y, age * p->speed * 0.5f + 0.02f, frame_dim(f, palette_accent(f->palette, k + 1), 0.3f + fade));
+        }
+    }
+    // And a slow rain of quiet drops that never stops, music or not.
+    for (int j = 0; j < 4; j++) {
+        float slot = mfloor(f->t / 0.7f) - (float)j, age = f->t - slot * 0.7f;
+        uint32_t id = (uint32_t)slot * 2654435761u ^ p->salt;
+        float x = (hash01(id) * 1.8f - 0.9f) * g->aspect, y = hash01(id + 1) * 1.6f - 0.8f;
+        float fade = mexp(-age / 1.0f) * 0.35f;
+        if (fade > 0.04f) ring(f, x, y, age * p->speed * 0.35f + 0.02f, frame_dim(f, palette_ramp(f->palette, 0.6f), fade + 0.15f));
     }
     f->fx->glow = 0.55f;
 }
@@ -251,12 +276,14 @@ void fireworks_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     dust_stars(f, w->salt, 0.0f, 0.45f);
     float flare = frame_pulse(f, ROLE_KICK, 0.15f, 0.6f);
-    static const Role cues[3] = {ROLE_SNARE, ROLE_PERC, ROLE_CRASH};
-    for (int k = 0; k < 3; k++) {
+    static const Role cues[5] = {ROLE_SNARE, ROLE_PERC, ROLE_CRASH, ROLE_BELL, ROLE_LEAD};
+    for (int k = 0; k < 5; k++) {
         const ScoreEvent *notes[24];
         int n = recent_notes(f->score, cues[k], f->t + w->rise, 2.8f + w->rise, notes, 24);
         for (int i = 0; i < n; i++) {
             uint32_t id = (uint32_t)(notes[i]->time * 613.0f) ^ w->salt;
+            // Only some melody notes launch a rocket, or a busy tune would fill the sky.
+            if (k >= 3 && hash01(id + 9) > 0.3f) continue;
             float bx = (hash01(id) * 1.4f - 0.7f) * g->aspect, by = 0.1f + hash01(id + 3) * 0.6f;
             float age = f->t - notes[i]->time;
             if (age < 0) {
@@ -428,7 +455,10 @@ void skyline_draw(void *state, const Frame *f) {
                     put_cell(g, x, y, ' ', wall);
                 }
             }
-        if (s->h[b] > g->rows * 2 / 5) put_cell(g, s->x[b] + s->w[b] / 2, top - 1, kick > 0.2f ? '*' : '.', palette_accent(f->palette, 0));
+        if (s->h[b] > g->rows * 2 / 5) {
+            int blink = kick > 0.2f || mfract(f->t * 0.5f + (float)b * 0.37f) < 0.12f;
+            put_cell(g, s->x[b] + s->w[b] / 2, top - 1, blink ? '*' : '.', palette_accent(f->palette, 0));
+        }
     }
     f->fx->glow = 0.5f;
 }

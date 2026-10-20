@@ -249,7 +249,7 @@ static void piece_info(const Piece *p, const char *path) {
     fprintf(f, "{\"title\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, ", info->title,
             mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length);
     fprintf(f, "\"palettes\": [");
-    for (int i = 0; i < 3; i++) fprintf(f, "%s\"%s\"", i ? ", " : "", p->direction.palettes[i]->name);
+    for (int i = 0; i < PALETTE_FAMILY; i++) fprintf(f, "%s\"%s\"", i ? ", " : "", p->direction.palettes[i]->name);
     fprintf(f, "], \"sections\": [");
     for (int s = 0; s < info->section_count; s++)
         fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f}", s ? ", " : "", section_names[info->sections[s].kind],
@@ -257,9 +257,10 @@ static void piece_info(const Piece *p, const char *path) {
     fprintf(f, "], \"shots\": [");
     for (int i = 0; i < p->direction.count; i++) {
         const Shot *s = &p->direction.shots[i];
-        fprintf(f, "%s{\"scene\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"reactive\": %d, \"palette\": \"%s\", \"entrance\": \"%s\"}",
-                i ? ", " : "", scene_kinds[s->kind].name, s->start, s->end, scene_kinds[s->kind].reactive,
-                p->direction.palettes[s->palette]->name, entrance_names[s->entrance]);
+        fprintf(f, "%s{\"scene\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"reactive\": %d, \"heavy\": %d, \"intensity\": %.2f, "
+                   "\"palette\": \"%s\", \"entrance\": \"%s\", \"fade\": %.2f}",
+                i ? ", " : "", scene_kinds[s->kind].name, s->start, s->end, scene_kinds[s->kind].reactive, scene_kinds[s->kind].heavy,
+                scene_kinds[s->kind].intensity, p->direction.palettes[s->palette]->name, entrance_names[s->entrance], s->fade);
     }
     fprintf(f, "]}\n");
     fclose(f);
@@ -307,7 +308,7 @@ static void bench(Piece *p, double rain_on_wii) {
     double cost[64] = {0}, worst[64] = {0};
     int rain = -1;
     for (int k = 0; k < scene_kind_count && k < 64; k++) {
-        if (!scene_kinds[k].moods) continue;
+        if (!scene_in_use(&scene_kinds[k])) continue;
         if (!strcmp(scene_kinds[k].name, "rain")) rain = k;
         piece_force_scene(p, scene_kinds[k].name);
         // The quickest of three passes, since this machine's other work only ever adds time.
@@ -331,7 +332,7 @@ static void bench(Piece *p, double rain_on_wii) {
     int a = -1, b = -1;
     printf("scene            pc ms  worst   wii ms (est.)\n");
     for (int k = 0; k < scene_kind_count && k < 64; k++) {
-        if (!scene_kinds[k].moods) continue;
+        if (!scene_in_use(&scene_kinds[k])) continue;
         printf("%-14s %7.3f %6.3f   %5.1f\n", scene_kinds[k].name, cost[k], worst[k], cost[k] * scale);
         if (a < 0 || cost[k] > cost[a]) {
             b = a;
