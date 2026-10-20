@@ -262,12 +262,10 @@ int main(int argc, char **argv) {
             player_free(&player);
             playing = paused = 0;
         }
+        // The piece the app let go of this frame is still on the screen it just filled, so it's freed only once that
+        // screen has been drawn.
         Piece *retired = app_release_piece(app);
-        if (retired) {
-            piece_free(retired);
-            free(retired);
-            if (retired == piece) piece = NULL;
-        }
+        if (retired == piece) piece = NULL;
         if (req.compose && !worker_running && !job.done) start_compose(&req, app_viewport(app));
         if (req.save_settings) {
             char settings[1024];
@@ -290,6 +288,10 @@ int main(int argc, char **argv) {
         if (req.resume_music) audio_pause(paused = 0);
         video_set_interval(playing || worker_running ? 2 : 1);
         int retraces = video_draw(&screen);
+        if (retired) {
+            piece_free(retired);
+            free(retired);
+        }
         if (tour) {
             unsigned build, gpu;
             video_times(&build, &gpu);

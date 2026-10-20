@@ -537,12 +537,9 @@ int main(int argc, char **argv) {
         AppRequest req;
         app_frame(app, &clock, &in, &screen, &req);
         if (req.stop_music) music_start = -1;
+        // As on the Wii: the piece let go of this frame is still on its screen, so it goes once that is drawn.
         Piece *retired = app_release_piece(app);
-        if (retired) {
-            piece_free(retired);
-            free(retired);
-            if (retired == piece) piece = NULL;
-        }
+        if (retired == piece) piece = NULL;
         if (req.compose && (piece = malloc(sizeof *piece)) != NULL) {
             if (piece_create(piece, req.seed, req.mood, req.length, app_viewport(app)) == 0) {
                 app_set_piece(app, piece);
@@ -554,6 +551,10 @@ int main(int argc, char **argv) {
         }
         if (req.start_music) music_start = times[i];
         soft_render(&screen, &fb);
+        if (retired) {
+            piece_free(retired);
+            free(retired);
+        }
         soft_present(&fb, config.wide, sheet_path ? 1 : scale, &shown);
         if (sheet_path) {
             if (!sheet.rgb) image_init(&sheet, shown.w * cols, shown.h * ((count + cols - 1) / cols));
