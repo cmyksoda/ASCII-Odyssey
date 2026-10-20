@@ -3,6 +3,7 @@
   <name>ASCII Odyssey</name>
   <coder>cmyksoda</coder>
   <version>@VERSION@</version>
-  <short_description>Generative ASCII voyages with tracker music</short_description>
-  <long_description>Every voyage is new. Press Start and ASCII Odyssey composes a tracker song from a seed and paints a light show made only of text to match it. Type a seed in Settings to sail back to a piece you loved.</long_description>
+  <release_date>20261020000000</release_date>
+  <short_description>Seeds become songs and ASCII light shows</short_description>
+  <long_description>Press Start and ASCII Odyssey makes you a brand new voyage: a tracker song composed from a seed, with a light show drawn only in text characters that dances along to it. Ten vibes from 8-bit to dubstep, a hundred scenes, and a rainbow or two. Type a seed in Settings to sail back to one you loved :3</long_description>
 </app>
