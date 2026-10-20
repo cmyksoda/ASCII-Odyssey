@@ -31,9 +31,6 @@ typedef struct {
     X(BANNER, banner)                                                                                                   \
     X(BUBBLE, bubble)                                                                                                   \
     X(DIGITAL, digital)                                                                                                 \
-    X(SMSCRIPT, smscript)                                                                                               \
-    X(SMSHADOW, smshadow)                                                                                               \
-    X(SMSLANT, smslant)                                                                                                 \
     X(PIXEL, pixel)                                                                                                     \
     X(DOTS, dots)                                                                                                       \
     X(WIRE, wire)                                                                                                       \
