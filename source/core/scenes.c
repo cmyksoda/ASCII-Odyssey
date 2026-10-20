@@ -1296,6 +1296,9 @@ const SceneKind scene_kinds[] = {
     {"moire", W(3, 0, 1, 0, 2, 0, 0, 2, 2), 0.75f, 1, 0, moire_setup, moire_draw},
     {"truchet", W(3, 0, 2, 1, 1, 0, 0, 1, 1), 0.65f, 1, 0, truchet_setup, truchet_draw},
     {"squares", W(2, 0, 2, 0, 3, 0, 0, 1, 3), 0.85f, 1, 0, squares_setup, squares_draw},
+    {"box tunnel", W(2, 0, 2, 0, 3, 0, 0, 1, 3), 0.9f, 1, 0, boxtunnel_setup, boxtunnel_draw},
+    {"honeycomb", W(2, 1, 2, 0, 2, 0, 1, 1, 2), 0.65f, 1, 0, honeycomb_setup, honeycomb_draw},
+    {"cafe wall", W(3, 0, 2, 1, 1, 0, 0, 2, 2), 0.6f, 1, 0, cafewall_setup, cafewall_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
 _Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS, "the scene table outgrew MAX_SCENE_KINDS");

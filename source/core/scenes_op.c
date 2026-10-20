@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Op art at full tilt: a checkerboard vortex zooming forever inward, a hypnotic spiral, a rubber checkerboard, a
-// kaleidoscope tiled across the whole screen, moire rings, flipping Truchet tiles and a twisting tower of squares.
-// Kicks drive their motion and chords turn their colors.
+// kaleidoscope tiled across the whole screen, moire rings, flipping Truchet tiles, a twisting tower of squares, a
+// checkered box tunnel, a honeycomb and the cafe wall illusion. Kicks drive their motion and chords turn their colors.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -389,4 +389,162 @@ void squares_draw(void *state, const Frame *f) {
         }
     }
     f->fx->glow = 0.55f + 0.3f * kick;
+}
+
+/* ---------- Box tunnel ---------- */
+
+typedef struct {
+    float speed, twist, spin;
+    int tiles;
+} BoxTunnel;
+
+void boxtunnel_setup(void *state, Rng *r, const Frame *f) {
+    BoxTunnel *b = state;
+    b->speed = rng_between(r, 1.2f, 2.0f);
+    b->twist = rng_between(r, 0.1f, 0.3f) * (rng_chance(r, 50) ? 1 : -1);
+    b->spin = rng_between(r, 0.1f, 0.25f) * (rng_chance(r, 50) ? 1 : -1);
+    b->tiles = rng_range(r, 2, 4) * 2;
+    (void)f;
+}
+
+// Flying down a square tunnel lined with checkerboard: the walls rush past, the far end twists ahead of the near,
+// and every kick lunges deeper; far away the walls fade into a dark square.
+void boxtunnel_draw(void *state, const Frame *f) {
+    BoxTunnel *b = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float pace = op_pace(f), contrast = op_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float travel = (frame_travel(f, b->speed * 0.5f, b->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.9f)) * pace;
+    float base = f->local * b->spin * pace;
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), r = mhypot(x, y);
+            // The twist grows with depth, and depth grows as the radius shrinks, which turning doesn't change.
+            float a = base + b->twist * 0.4f / (r + 0.08f), c = mcos(a), s = msin(a);
+            float px = x * c - y * s, py = x * s + y * c, m = mmax(mabs(px), mabs(py));
+            if (m < 0.06f) continue;
+            int side = mabs(px) > mabs(py), wall = side ? (px > 0 ? 0 : 2) : (py > 0 ? 1 : 3);
+            float along = (side ? py : px) / m * (float)b->tiles * 0.5f, deep = 0.4f / m * 2 + travel;
+            int parity = (mfloor_i(along) + mfloor_i(deep) + wall) & 1;
+            int edge = mfract(along) < 0.12f || mfract(deep) < 0.12f;
+            float fog = smoothstep(0.06f, 0.5f, m) * contrast;
+            if (parity)
+                put_cell(g, col, row, edge ? '+' : '#', frame_dim(f, inks[wall % 3], fog * (0.9f + 0.3f * kick)));
+            else
+                put_cell(g, col, row, edge ? '.' : ':', frame_dim(f, inks[(wall + 1) % 3], fog * 0.6f));
+        }
+    }
+    f->fx->glow = 0.55f + 0.3f * kick;
+}
+
+/* ---------- Honeycomb ---------- */
+
+#define HONEY_KICKS 16
+
+typedef struct {
+    float size, drift;
+    uint32_t salt;
+} Honeycomb;
+
+void honeycomb_setup(void *state, Rng *r, const Frame *f) {
+    Honeycomb *h = state;
+    h->size = rng_between(r, 0.11f, 0.17f);
+    h->drift = rng_between(r, -0.05f, 0.05f);
+    h->salt = rng_u32(r);
+    (void)f;
+}
+
+// A honeycomb of hexagons drawn edge by edge: each kick sends a ring of light rippling out across the cells from the
+// middle, and between kicks a slow tide of color washes over them.
+void honeycomb_draw(void *state, const Frame *f) {
+    Honeycomb *h = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float contrast = op_contrast(f), t = f->local * op_pace(f), s = h->size;
+    const ScoreEvent *kicks[HONEY_KICKS];
+    int n = f->react > 0 ? recent_notes(f->score, ROLE_KICK, f->t, 1.6f, kicks, HONEY_KICKS) : 0;
+    // The three directions an edge of a pointy-topped hexagon faces, and the glyph that draws each edge.
+    static const float NX[3] = {1.0f, 0.5f, -0.5f}, NY[3] = {0.0f, 0.8660254f, 0.8660254f};
+    static const char EDGE[3] = {'|', '\\', '/'};
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row) + h->drift * t;
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col);
+            // Axial coordinates of the hexagon holding (x, y), rounded through cube coordinates.
+            float q = (x * 0.5773503f - y / 3) / s, rr = y * 2 / 3 / s, cx = q, cz = rr, cy = -q - rr;
+            float rx = mfloor(cx + 0.5f), ry = mfloor(cy + 0.5f), rz = mfloor(cz + 0.5f);
+            float ex = mabs(rx - cx), ey = mabs(ry - cy), ez = mabs(rz - cz);
+            if (ex > ey && ex > ez)
+                rx = -ry - rz;
+            else if (ey > ez)
+                ry = -rx - rz;
+            else
+                rz = -rx - ry;
+            float hx = s * 1.7320508f * (rx + rz * 0.5f), hy = s * 1.5f * rz, lx = x - hx, ly = (y - hy);
+            int facing = 0;
+            float reach = 0;
+            for (int k = 0; k < 3; k++) {
+                float p = mabs(lx * NX[k] + ly * NY[k]);
+                if (p > reach) reach = p, facing = k;
+            }
+            float depth = reach / (s * 0.8660254f), dist = mhypot(hx, hy - h->drift * t);
+            float wave = 0;
+            for (int k = 0; k < n; k++) {
+                float front = (f->t - kicks[k]->time) * 1.4f - dist;
+                wave = mmax(wave, mexp(-front * front * 40) * kicks[k]->velocity * frame_bright(f));
+            }
+            float tide = 0.5f + 0.5f * msin(dist * 3 - t * 1.2f + hash01((uint32_t)(rx * 31 + rz * 977) ^ h->salt) * 2);
+            Rgbf ink = inks[(int)(tide * 2.99f)];
+            if (depth > 0.86f)
+                put_cell(g, col, row, EDGE[facing], frame_dim(f, ink, (0.7f + 0.6f * wave) * contrast));
+            else if (tide + wave > 0.75f)
+                put_cell(g, col, row, wave > 0.3f ? '#' : ':', frame_dim(f, ink, (0.25f + 0.5f * tide + wave) * contrast));
+        }
+    }
+    f->fx->glow = 0.55f;
+}
+
+/* ---------- Cafe wall ---------- */
+
+typedef struct {
+    int tile, course;
+    float sway, phase;
+} CafeWall;
+
+void cafewall_setup(void *state, Rng *r, const Frame *f) {
+    CafeWall *w = state;
+    w->tile = rng_range(r, 5, 8);
+    w->course = rng_range(r, 3, 5);
+    w->sway = rng_between(r, 0.6f, 1.2f);
+    w->phase = rng_between(r, 0.4f, 0.9f);
+    (void)f;
+}
+
+// The cafe wall illusion: courses of light and dark tiles with grey mortar between, each course shifted against the
+// next, so perfectly level rows seem to slope. The courses slide to and fro in a wave, so the slopes seem to breathe
+// and flip; each kick nudges them along.
+void cafewall_draw(void *state, const Frame *f) {
+    CafeWall *w = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float contrast = op_contrast(f), t = f->local * op_pace(f), nudge = frame_surge(f, ROLE_KICK, 0.2f, 0.5f) * op_pace(f);
+    Rgbf mortar = palette_ramp(f->palette, 0.45f);
+    int band = w->course + 1;
+    for (int row = 0; row < g->rows; row++) {
+        int k = row / band;
+        if (row % band == w->course) {
+            for (int col = 0; col < g->cols; col++) put_cell(g, col, row, '-', frame_dim(f, mortar, contrast));
+            continue;
+        }
+        float shift = ((float)(k & 1) * 0.5f + w->sway * 0.5f * msin(t * 0.9f + (float)k * w->phase) + nudge * 0.25f) * (float)w->tile;
+        for (int col = 0; col < g->cols; col++) {
+            int light = mfloor_i(((float)col + shift) / (float)w->tile) & 1;
+            if (light) put_cell(g, col, row, '#', frame_dim(f, inks[k % 3 == 2 ? 1 : 0], 0.95f * contrast));
+        }
+    }
+    f->fx->glow = 0.45f;
 }

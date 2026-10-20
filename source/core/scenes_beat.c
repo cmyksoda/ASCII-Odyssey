@@ -21,8 +21,11 @@ static int pitched(Role r) {
 
 /* ---------- Kaleidoscope ---------- */
 
+// What the kaleidoscope's mirrors reflect: drifting flowers, woven stripes, checks, rings or shards of glass.
+enum { KALEIDO_FLOWERS, KALEIDO_STRIPES, KALEIDO_CHECKS, KALEIDO_RINGS, KALEIDO_SHARDS, KALEIDO_STYLES };
+
 typedef struct {
-    int folds;
+    int folds, style;
     float spin, zoom, salt, drift;
 } Kaleidoscope;
 
@@ -34,10 +37,45 @@ void kaleidoscope_setup(void *state, Rng *r, const Frame *f) {
     k->zoom = rng_between(r, 1.5f, 2.3f);
     k->salt = rng_between(r, 0, 60);
     k->drift = rng_between(r, 0.1f, 0.2f);
+    k->style = rng_range(r, 0, KALEIDO_STYLES);
     (void)f;
 }
 
-// A mandala: slow-moving shapes caught in one mirrored wedge and repeated round the center. Each kick punches the
+// How much of the reflected pattern lies at (u, v) in the mirrored wedge, from 0 to about 1.
+static float kaleido_pattern(const Kaleidoscope *k, float u, float v, float radius, float a, float wedge, float zoom, float t) {
+    switch (k->style) {
+    case KALEIDO_STRIPES: {
+        float warp = msin(u * 9 + t * 2.2f) * msin(v * 5 - t * 1.3f);
+        return smoothstep(0.1f, 0.6f, 0.5f + 0.5f * warp);
+    }
+    case KALEIDO_CHECKS: {
+        int parity = (mfloor_i(u * 3.2f + t * 1.4f) + mfloor_i(v * 3.2f - t * 0.6f)) & 1;
+        float edge = mmin(mabs(mfract(u * 3.2f + t * 1.4f) - 0.5f), mabs(mfract(v * 3.2f - t * 0.6f) - 0.5f));
+        return parity ? 0.55f + 0.45f * smoothstep(0.0f, 0.2f, edge) : 0.12f;
+    }
+    case KALEIDO_RINGS: {
+        float da = mhypot(u - 0.6f - 0.3f * msin(t * 0.7f), v - 0.25f), db = mhypot(u - 1.1f, v + 0.3f * mcos(t * 0.5f));
+        return smoothstep(0.2f, 0.9f, (0.5f + 0.5f * mcos(da * 13 - t * 3)) * (0.5f + 0.5f * mcos(db * 9 + t * 2)) * 2);
+    }
+    case KALEIDO_SHARDS: {
+        // Facets of colored glass: each tile of a slanted grid lit at its own level, slowly turning over.
+        float gu = u * 2.6f + v * 0.9f + t * 0.5f, gv = v * 2.6f - u * 0.7f;
+        uint32_t id = (uint32_t)(mfloor_i(gu) * 73856093) ^ (uint32_t)(mfloor_i(gv) * 19349663) ^ (uint32_t)k->salt;
+        float level = hash01(id), turn = 0.5f + 0.5f * msin(t * 1.3f + hash01(id + 1) * TAU_F);
+        float seam = mmin(mabs(mfract(gu) - 0.5f), mabs(mfract(gv) - 0.5f));
+        return smoothstep(0.02f, 0.12f, seam) * (0.25f + 0.75f * level * turn);
+    }
+    default: {
+        // A petal in every wedge and rings drifting outward, so the figure keeps a flower's bones when the noise
+        // it's built from runs thin.
+        float petal = (0.5f + 0.5f * mcos(a / wedge * TAU_F)) * (0.5f + 0.5f * mcos(radius * 7 * zoom - t * 6));
+        return smoothstep(0.42f, 0.72f, noise_fbm(u + k->salt + t, v - t * 0.6f) * 0.7f + petal * 0.4f + 0.02f);
+    }
+    }
+}
+
+// A mandala: slow-moving shapes (flowers, stripes, checks, rings or glass) caught in one mirrored wedge and repeated
+// round the center. Each kick punches the
 // zoom and sends a bright ring outward, each snare turns the figure a step, and chord changes shift its colors.
 void kaleidoscope_draw(void *state, const Frame *f) {
     Kaleidoscope *k = state;
@@ -60,10 +98,7 @@ void kaleidoscope_draw(void *state, const Frame *f) {
             a -= mfloor(a / wedge) * wedge;
             if (a > wedge * 0.5f) a = wedge - a;
             float u = radius * mcos(a) * zoom, v = radius * msin(a) * zoom;
-            // A petal in every wedge and rings drifting outward, so the figure keeps a flower's bones when the noise
-            // it's built from runs thin.
-            float petal = (0.5f + 0.5f * mcos(a / wedge * TAU_F)) * (0.5f + 0.5f * mcos(radius * 7 * zoom - t * 6));
-            float shape = smoothstep(0.42f, 0.72f, noise_fbm(u + k->salt + t, v - t * 0.6f) * 0.7f + petal * 0.4f + 0.02f);
+            float shape = kaleido_pattern(k, u, v, radius, a, wedge, zoom, t);
             // Rings racing outward from the center, one for each recent kick.
             float rings = 0;
             for (int i = 0; i < n_kicks; i++) {
@@ -565,9 +600,12 @@ void digital_rain_draw(void *state, const Frame *f) {
 
 /* ---------- Checker floor ---------- */
 
+// The floor's pattern: checks, diamonds, chevrons rushing forward, or checks rolling in waves.
+enum { FLOOR_CHECKS, FLOOR_DIAMONDS, FLOOR_CHEVRONS, FLOOR_WAVES, FLOOR_STYLES };
+
 typedef struct {
-    float speed, sway, horizon, scale;
-    int ceiling;
+    float speed, sway, horizon, scale, roll;
+    int ceiling, style;
     uint32_t salt;
 } Checker;
 
@@ -579,40 +617,55 @@ void checker_setup(void *state, Rng *r, const Frame *f) {
     c->scale = rng_between(r, 2.5f, 3.5f);
     c->ceiling = rng_chance(r, 40);
     c->salt = rng_u32(r);
+    c->style = rng_range(r, 0, FLOOR_STYLES);
+    c->roll = rng_chance(r, 50) ? rng_between(r, 0.1f, 0.22f) : 0;
     (void)f;
 }
 
-// An endless checkerboard rushing toward the viewer under a glowing horizon: it lunges forward on every kick, and the
-// chords swap its colors.
+static int floor_tile(int style, float x, float z) {
+    switch (style) {
+    case FLOOR_DIAMONDS: return (mfloor_i((x + z) * 0.7071f) + mfloor_i((x - z) * 0.7071f)) & 1;
+    case FLOOR_CHEVRONS: return mfloor_i(z * 0.5f + mabs(mfract(x * 0.5f) - 0.5f) * 2) & 1;
+    case FLOOR_WAVES: return (mfloor_i(x) + mfloor_i(z + 0.35f * msin(x * 1.3f))) & 1;
+    default: return (mfloor_i(x) + mfloor_i(z)) & 1;
+    }
+}
+
+// An endless patterned floor rushing toward the viewer under a glowing horizon, banking from side to side on some
+// flights: it lunges forward on every kick, and the chords swap its colors.
 void checker_draw(void *state, const Frame *f) {
     Checker *c = state;
     Grid *g = f->grid;
     if (!c->ceiling) dust_stars(f, c->salt, 0.004f, 0.7f);
     float travel = frame_travel(f, c->speed * 0.4f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.9f);
     float side = c->sway * msin(f->local * 0.35f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float bank = c->roll * msin(f->local * 0.3f) * (f->still ? 0.5f : 1.0f), bc = mcos(bank), bs = msin(bank);
     const ChordMark *chord = score_chord(f->score, f->t);
     int swap = chord ? chord->chord.root_pc % 3 : 0;
     Rgbf tile = palette_accent(f->palette, swap), glow = palette_ramp(f->palette, 0.9f);
     for (int row = 0; row < g->rows; row++) {
-        float y = cell_y(g, row) - c->horizon;
-        if (y > 0 && !c->ceiling) continue;
-        float h = mabs(y);
-        if (h < 0.025f) continue;
-        float depth = 0.5f / h, fog = saturate(1.6f / depth);
+        float sy = cell_y(g, row) - c->horizon;
         for (int col = 0; col < g->cols; col++) {
-            float x = (cell_x(g, col) + side) * depth * c->scale, z = (depth + travel) * c->scale;
-            int parity = (mfloor_i(x) + mfloor_i(z)) & 1;
+            float sx = cell_x(g, col), y = sx * bs + sy * bc;
+            if (y > 0 && !c->ceiling) continue;
+            float h = mabs(y);
+            if (h < 0.025f) continue;
+            float depth = 0.5f / h, fog = saturate(1.6f / depth);
+            float x = (sx * bc - sy * bs + side) * depth * c->scale, z = (depth + travel) * c->scale;
+            int parity = floor_tile(c->style, x, z);
             if (!parity) continue;
             // Tile edges draw as lines near the viewer and fade to dots in the distance.
-            float fx = mfract(x), fz = mfract(z);
-            int edge = fx < 0.12f || fx > 0.88f || fz < 0.12f || fz > 0.88f;
+            int edge = floor_tile(c->style, x + 0.12f, z) != parity || floor_tile(c->style, x - 0.12f, z) != parity ||
+                       floor_tile(c->style, x, z + 0.12f) != parity || floor_tile(c->style, x, z - 0.12f) != parity;
             int glyph = fog > 0.5f ? (edge ? '+' : '#') : fog > 0.22f ? (edge ? '.' : '=') : '.';
             Rgbf color = rgbf_mix(frame_dim(f, tile, fog * (0.75f + 0.45f * kick)), glow, (1 - fog) * 0.35f);
             *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
         }
     }
-    // The horizon line, bright and pulsing.
-    int hz = cell_row(g, c->horizon);
-    for (int col = 0; col < g->cols; col++) put_cell(g, col, hz, '=', frame_dim(f, glow, 0.7f + 0.4f * kick));
+    // The horizon line, bright and pulsing, tilting as the floor banks.
+    for (int col = 0; col < g->cols; col++) {
+        float sx = cell_x(g, col);
+        put_cell(g, col, cell_row(g, c->horizon - sx * bs / bc), '=', frame_dim(f, glow, 0.7f + 0.4f * kick));
+    }
     f->fx->glow = 0.55f;
 }

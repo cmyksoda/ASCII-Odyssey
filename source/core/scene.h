@@ -159,6 +159,9 @@ SCENE(mirror)
 SCENE(moire)
 SCENE(truchet)
 SCENE(squares)
+SCENE(boxtunnel)
+SCENE(honeycomb)
+SCENE(cafewall)
 #undef SCENE
 
 #endif
