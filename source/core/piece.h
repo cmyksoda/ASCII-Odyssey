@@ -9,6 +9,8 @@
 #define PIECE_ART_W 200
 #define PIECE_ART_H (FIGLET_LINES * (FIGLET_MAX_HEIGHT + 1))
 
+enum { INTRO_DECODE, INTRO_TYPED, INTRO_RAIN, INTRO_SWEEP, INTRO_BLOOM, INTROS };
+
 // One voyage: the song, its score, the shots that picture it, and the grids they draw into.
 typedef struct {
     Composition comp;

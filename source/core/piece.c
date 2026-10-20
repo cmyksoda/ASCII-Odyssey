@@ -9,8 +9,6 @@
 // wrapped, falls back to the plainer, narrower ones.
 #define TITLE_CHOICES 14
 
-enum { INTRO_DECODE, INTRO_TYPED, INTRO_RAIN, INTRO_SWEEP, INTRO_BLOOM, INTROS };
-
 static const FigletId TITLE_FACES[MOOD_COUNT][TITLE_CHOICES] = {
     [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER, FIGLET_DIGITAL, FIGLET_PIXEL, FIGLET_SCANLINE, FIGLET_WIRE,
                      FIGLET_DOOM, FIGLET_REV, FIGLET_COMPUTER, FIGLET_SMKEYBOARD, FIGLET_SPEED, FIGLET_LARRY3D, FIGLET_EPIC},
@@ -192,12 +190,14 @@ static float intro_order(int intro, int x, int y, int w, int h, float reading, u
 
 // The piece's name, brought in over the intro, held, then taken away the same way: the only words a piece shows.
 static void title_card(Piece *p, float t) {
-    const float in = 0.8f, hold = 5.5f, out = 7.0f;
+    const float in = 0.8f, hold = 5.5f, out = 7.0f, band = 0.1f;
     if (!p->art_font || t < in || t > out) return;
     Grid *g = &p->grid;
     const FigletLayout *lay = &p->art_layout;
     int row0 = (g->rows - lay->height) / 2;
-    float reveal = smoothstep(in, in + 1.6f, t), vanish = smoothstep(hold, out, t);
+    // The reveal runs on past 1 by the arriving band's depth, or the last cells to arrive would never settle into
+    // their letters.
+    float reveal = (1 + band) * smoothstep(in, in + 1.6f, t), vanish = smoothstep(hold, out, t);
     Rgbf pearl = palette_ramp(p->palette, 1.0f), gold = palette_accent(p->palette, 1);
     // A wrapped title centers and shades each line on its own, so every line looks like a title of one line.
     for (int l = 0; l < lay->lines; l++) {
@@ -219,7 +219,7 @@ static void title_card(Piece *p, float t) {
                     continue;
                 }
                 Rgbf color = rgbf_mix(pearl, gold, (float)y / (float)(tall > 1 ? tall - 1 : 1));
-                int settling = h > reveal - 0.1f;
+                int settling = h > reveal - band;
                 uint32_t roll = hash_u32((uint32_t)(row * 31 + col) ^ (uint32_t)(t * 20));
                 // The front of the arrival: noise for a decode, a cursor for typing, falling drops for rain, a bright
                 // edge for a sweep, and sparks for a bloom.
