@@ -166,6 +166,9 @@ SCENE(squares)
 SCENE(boxtunnel)
 SCENE(honeycomb)
 SCENE(cafewall)
+SCENE(boing)
+SCENE(gems)
+SCENE(tiletwist)
 #undef SCENE
 
 #endif

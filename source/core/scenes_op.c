@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Op art at full tilt: a checkerboard vortex zooming forever inward, a hypnotic spiral, a rubber checkerboard, a
 // kaleidoscope tiled across the whole screen, moire rings, flipping Truchet tiles, a twisting tower of squares, a
-// checkered box tunnel, a honeycomb and the cafe wall illusion. Kicks drive their motion and chords turn their colors.
+// checkered box tunnel, a honeycomb, the cafe wall illusion, the Amiga's bouncing ball, a kaleidoscope of gems and a
+// grid of twisting tiles. Kicks drive their motion and chords turn their colors.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -285,6 +286,12 @@ typedef struct {
     uint32_t salt;
 } Truchet;
 
+// Rows that make a tile `cols` columns wide look square, given the cells' shape on screen.
+static int square_rows(const Grid *g, int cols) {
+    int rows = (int)((float)cols * (float)g->cell_w * g->pixel_aspect / (float)g->cell_h + 0.5f);
+    return rows < 1 ? 1 : rows;
+}
+
 void truchet_setup(void *state, Rng *r, const Frame *f) {
     Truchet *tr = state;
     static const int sizes[3] = {8, 10, 12};
@@ -305,20 +312,21 @@ void truchet_draw(void *state, const Frame *f) {
     const ScoreEvent *kicks[TRUCHET_KICKS];
     int n = f->react > 0 && !f->still ? recent_notes(f->score, ROLE_KICK, f->t, f->local, kicks, TRUCHET_KICKS) : 0;
     float pace = frame_pace(f), contrast = frame_contrast(f), flow = f->t * 0.8f * pace;
-    for (int ty = 0; ty * tr->size < g->rows; ty++)
+    int tall = square_rows(g, tr->size);
+    for (int ty = 0; ty * tall < g->rows; ty++)
         for (int tx = 0; tx * tr->size < g->cols; tx++) {
             float cx = cell_x(g, tx * tr->size) + (float)tr->size / (float)g->cols * g->aspect;
-            float cy = cell_y(g, ty * tr->size) - (float)tr->size / (float)g->rows;
+            float cy = cell_y(g, ty * tall) - (float)tall / (float)g->rows;
             float reach = mhypot(cx, cy) / tr->wave;
             int flips = mfloor_i((f->local - reach) / (3.0f / pace));
             for (int k = 0; k < n; k++) flips += f->t - kicks[k]->time > reach;
             int turned = ((int)(hash_u32(tr->salt + (uint32_t)(ty * 131 + tx)) & 1) + flips) & 1;
-            for (int r = 0; r < tr->size; r++)
+            for (int r = 0; r < tall; r++)
                 for (int c = 0; c < tr->size; c++) {
-                    int col = tx * tr->size + c, row = ty * tr->size + r;
+                    int col = tx * tr->size + c, row = ty * tall + r;
                     if (col >= g->cols || row >= g->rows) continue;
                     // Within the tile, u runs right and v runs up; the arcs are centred on two opposite corners.
-                    float u = ((float)c + 0.5f) / (float)tr->size, v = 1 - ((float)r + 0.5f) / (float)tr->size;
+                    float u = ((float)c + 0.5f) / (float)tr->size, v = 1 - ((float)r + 0.5f) / (float)tall;
                     float ax = turned ? 1.0f : 0.0f, du1 = u - ax, dv1 = v, du2 = u - (1 - ax), dv2 = v - 1;
                     float d1 = mhypot(du1, dv1), d2 = mhypot(du2, dv2);
                     float off1 = mabs(d1 - 0.5f), off2 = mabs(d2 - 0.5f);
@@ -429,6 +437,21 @@ void boxtunnel_draw(void *state, const Frame *f) {
     f->fx->glow = 0.55f + 0.3f * kick;
 }
 
+// The hexagon of a pointy-topped honeycomb of size s holding (x, y): its center and its cube coordinates, found by
+// rounding through cube coordinates so the nearest center always wins.
+static void hex_cell(float x, float y, float s, float *cx, float *cy, float *qx, float *qz) {
+    float q = (x * 0.5773503f - y / 3) / s, rr = y * 2 / 3 / s, ax = q, az = rr, ay = -q - rr;
+    float rx = mfloor(ax + 0.5f), ry = mfloor(ay + 0.5f), rz = mfloor(az + 0.5f);
+    float ex = mabs(rx - ax), ey = mabs(ry - ay), ez = mabs(rz - az);
+    if (ex > ey && ex > ez)
+        rx = -ry - rz;
+    else if (ey > ez)
+        ry = -rx - rz;
+    else
+        rz = -rx - ry;
+    *cx = s * 1.7320508f * (rx + rz * 0.5f), *cy = s * 1.5f * rz, *qx = rx, *qz = rz;
+}
+
 /* ---------- Honeycomb ---------- */
 
 #define HONEY_KICKS 16
@@ -462,18 +485,9 @@ void honeycomb_draw(void *state, const Frame *f) {
     for (int row = 0; row < g->rows; row++) {
         float y = cell_y(g, row) + h->drift * t;
         for (int col = 0; col < g->cols; col++) {
-            float x = cell_x(g, col);
-            // Axial coordinates of the hexagon holding (x, y), rounded through cube coordinates.
-            float q = (x * 0.5773503f - y / 3) / s, rr = y * 2 / 3 / s, cx = q, cz = rr, cy = -q - rr;
-            float rx = mfloor(cx + 0.5f), ry = mfloor(cy + 0.5f), rz = mfloor(cz + 0.5f);
-            float ex = mabs(rx - cx), ey = mabs(ry - cy), ez = mabs(rz - cz);
-            if (ex > ey && ex > ez)
-                rx = -ry - rz;
-            else if (ey > ez)
-                ry = -rx - rz;
-            else
-                rz = -rx - ry;
-            float hx = s * 1.7320508f * (rx + rz * 0.5f), hy = s * 1.5f * rz, lx = x - hx, ly = (y - hy);
+            float x = cell_x(g, col), hx, hy, rx, rz;
+            hex_cell(x, y, s, &hx, &hy, &rx, &rz);
+            float lx = x - hx, ly = y - hy;
             int facing = 0;
             float reach = 0;
             for (int k = 0; k < 3; k++) {
@@ -537,4 +551,199 @@ void cafewall_draw(void *state, const Frame *f) {
         }
     }
     f->fx->glow = 0.45f;
+}
+
+/* ---------- Boing ball ---------- */
+
+typedef struct {
+    float tilt, radius, cross;
+    int bands;
+} Boing;
+
+void boing_setup(void *state, Rng *r, const Frame *f) {
+    Boing *b = state;
+    b->tilt = rng_between(r, 0.25f, 0.4f) * (rng_chance(r, 50) ? 1 : -1);
+    b->radius = rng_between(r, 0.28f, 0.36f);
+    b->cross = rng_between(r, 0.25f, 0.4f);
+    b->bands = rng_chance(r, 50) ? 8 : 6;
+    (void)f;
+}
+
+// The Amiga's bouncing ball: a checkered sphere on a tilted axis, rolling as it crosses a room of grid lines and
+// landing on every other beat, squashing a little as it lands, its shadow sliding along the wall behind.
+void boing_draw(void *state, const Frame *f) {
+    Boing *b = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float contrast = frame_contrast(f), pace = frame_pace(f), rad = b->radius, floor_y = -0.72f;
+    Rgbf line = frame_dim(f, palette_ramp(f->palette, 0.4f), contrast), white = palette_ramp(f->palette, 1.0f);
+    // The room: a wall of grid squares, each line on the row or column nearest it, and a floor whose lines run off
+    // toward the horizon.
+    int wall_bottom = cell_row(g, floor_y);
+    for (float gy = 0.2f * mfloor(floor_y / 0.2f + 1); gy < 1; gy += 0.2f) {
+        int row = cell_row(g, gy);
+        for (int col = 0; col < g->cols && row < wall_bottom; col++) put_cell(g, col, row, '-', line);
+    }
+    for (float gx = 0.2f * mfloor(-g->aspect / 0.2f); gx < g->aspect; gx += 0.2f) {
+        int col = cell_col(g, gx);
+        if (col < 0 || col >= g->cols) continue;
+        for (int row = 0; row < wall_bottom && row < g->rows; row++)
+            put_cell(g, col, row, grid_at(g, col, row)->glyph == '-' ? '+' : '|', line);
+    }
+    for (int row = wall_bottom; row < g->rows; row++) {
+        // Only rows truly below the floor line, so the depth stays bounded whatever the cells' size.
+        float y = cell_y(g, row), below = floor_y - y;
+        if (below < 0) continue;
+        float depth = 0.3f / (below + 0.02f);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), across = x * depth;
+            int run = mabs(mfract(across / 0.2f * 0.25f + 0.5f) - 0.5f) < 0.05f * depth + 0.03f;
+            int rung = mfract(depth * 1.5f) < 0.18f;
+            if (run || rung) put_cell(g, col, row, run ? (x * depth > 0 ? '\\' : '/') : '-', frame_dim(f, line, 0.8f));
+        }
+    }
+    // A hop every two beats, landing on the beat; under reduce motion it hops half as high.
+    float hop = mabs(msin(PI_F * f->t / (f->score->beat * 2))), height = (1.05f - 2 * rad) * pace;
+    float squash = 1 - 0.14f * (1 - smoothstep(0.0f, 0.18f, hop)) * pace;
+    float cy = floor_y + rad * squash + hop * height, sweep = mfract(f->local * b->cross * pace * 0.25f);
+    float cx = (mabs(sweep * 2 - 1) * 2 - 1) * (g->aspect - rad - 0.08f);
+    float roll = cx / rad, tc = mcos(b->tilt), ts = msin(b->tilt), lx = -0.45f, ly = 0.55f, lz = 0.7f;
+    // Its shadow on the wall, down and to the right.
+    for (int row = cell_row(g, cy + rad + 0.1f); row <= cell_row(g, cy - rad); row++)
+        for (int col = cell_col(g, cx - rad); col <= cell_col(g, cx + rad + 0.2f); col++) {
+            float dx = (cell_x(g, col) - cx - 0.16f) / rad, dy = (cell_y(g, row) - cy + 0.06f) / rad;
+            if (dx * dx + dy * dy < 1 && cell_y(g, row) > floor_y && col >= 0 && col < g->cols && row >= 0 && row < g->rows)
+                grid_at(g, col, row)->glyph = ' ';
+        }
+    for (int row = cell_row(g, cy + rad / squash); row <= cell_row(g, cy - rad / squash); row++)
+        for (int col = cell_col(g, cx - rad / squash); col <= cell_col(g, cx + rad / squash); col++) {
+            float u = (cell_x(g, col) - cx) / (rad / squash), v = (cell_y(g, row) - cy) / (rad * squash), d2 = u * u + v * v;
+            if (d2 >= 1) continue;
+            float nz = msqrt(1 - d2), tu = u * tc - v * ts, tv = u * ts + v * tc;
+            float lon = matan2(tu, nz) + roll, lat = matan2(tv, msqrt(mmax(0.0f, 1 - tv * tv)));
+            int parity = (mfloor_i(lon / PI_F * (float)b->bands) + mfloor_i(lat / PI_F * (float)b->bands)) & 1;
+            float lit = 0.3f + 0.7f * saturate(u * lx + v * ly + nz * lz);
+            static const char ramp[] = ".:=+*#@";
+            put_cell(g, col, row, ramp[(int)(lit * 6.99f)], frame_dim(f, parity ? inks[0] : white, lit * contrast * 1.1f));
+        }
+    f->fx->glow = 0.5f;
+}
+
+/* ---------- Gems ---------- */
+
+typedef struct {
+    float scale, spin, phase[6], size[3];
+} Gems;
+
+void gems_setup(void *state, Rng *r, const Frame *f) {
+    Gems *m = state;
+    m->scale = rng_between(r, 0.32f, 0.5f);
+    m->spin = rng_between(r, 0.04f, 0.1f) * (rng_chance(r, 50) ? 1 : -1);
+    for (int k = 0; k < 6; k++) m->phase[k] = rng_between(r, 0, TAU_F);
+    for (int k = 0; k < 3; k++) m->size[k] = rng_between(r, 0.09f, 0.15f);
+    (void)f;
+}
+
+// A three-mirror kaleidoscope: every hexagon of a honeycomb holds the same twelvefold rosette of tumbling gems and a
+// ring of light, reflected in the hexagon's mirrors, so the screen tiles with jewels. The lattice slowly turns, and
+// each kick swells it.
+void gems_draw(void *state, const Frame *f) {
+    Gems *m = state;
+    Grid *g = f->grid;
+    static const char ramp[] = " .:-=+*#@";
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float contrast = frame_contrast(f), t = f->local * frame_pace(f), kick = frame_pulse(f, ROLE_KICK, 0.22f, 1.0f);
+    float a0 = t * m->spin, ca = mcos(a0), sa = msin(a0), s = m->scale * (1 + 0.1f * kick);
+    float gu[3], gv[3];
+    for (int k = 0; k < 3; k++) {
+        // Each gem tumbles about inside the wedge between the hexagon's middle and its edge.
+        gu[k] = 0.12f + 0.32f * (0.5f + 0.5f * msin(t * (0.5f + 0.17f * (float)k) + m->phase[k]));
+        gv[k] = gu[k] * 0.5f * (0.5f + 0.5f * msin(t * (0.37f + 0.11f * (float)k) + m->phase[k + 3]));
+    }
+    float ring = 0.25f + 0.15f * msin(t * 0.9f);
+    for (int row = 0; row < g->rows; row++) {
+        float y0 = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x0 = cell_x(g, col), x = x0 * ca - y0 * sa, y = x0 * sa + y0 * ca, hx, hy, qx, qz;
+            hex_cell(x, y, s, &hx, &hy, &qx, &qz);
+            // Fold into one twelfth of the hexagon by its mirrors: across both axes, then the lines at 60 and 30 degrees.
+            float u = mabs(x - hx) / s, v = mabs(y - hy) / s, r = mhypot(u, v), d = v * 0.5f - u * 0.8660254f;
+            if (d > 0) u += 2 * d * 0.8660254f, v -= 2 * d * 0.5f;
+            d = v * 0.8660254f - u * 0.5f;
+            if (d > 0) u += 2 * d * 0.5f, v -= 2 * d * 0.8660254f;
+            float best = 0;
+            int which = 0;
+            for (int k = 0; k < 3; k++) {
+                float d = (mabs(u - gu[k]) + mabs(v - gv[k]) * 1.6f) / m->size[k];
+                float gem = d < 1 ? 0.55f + 0.45f * (1 - d) + (d > 0.8f ? 0.3f : 0) : 0;
+                if (gem > best) best = gem, which = k;
+            }
+            float off = mabs(r - ring) / 0.06f, halo = off < 1 ? (1 - off * off) * (1 - off * off) : 0;
+            if (halo > best) best = halo, which = 2;
+            // A faint glass ground fills each hexagon, and neighbouring hexagons take the colors in turn.
+            best = mmax(best, 0.14f + 0.1f * (1 - r));
+            int turn = ((int)(qx - qz) % 3 + 3) % 3, i = (int)(saturate(best) * 8.99f);
+            if (i <= 0) continue;
+            put_cell(g, col, row, ramp[i], frame_dim(f, inks[(which + turn) % 3], (0.4f + 0.7f * best) * contrast));
+        }
+    }
+    f->fx->glow = 0.55f + 0.25f * kick;
+}
+
+/* ---------- Twisting tiles ---------- */
+
+#define TILES_ACROSS 24
+#define TILES_DOWN 14
+
+typedef struct {
+    float size, speed, wave;
+} TileTwist;
+
+void tiletwist_setup(void *state, Rng *r, const Frame *f) {
+    TileTwist *w = state;
+    w->size = rng_between(r, 0.17f, 0.26f);
+    w->speed = rng_between(r, 0.8f, 1.4f);
+    w->wave = rng_between(r, 2.0f, 4.0f);
+    (void)f;
+}
+
+// A grid of squares, each turning the opposite way to its neighbours, so star-shaped gaps open between them and close
+// again; the turning spreads outward from the middle in a wave, and every kick gives it a push.
+void tiletwist_draw(void *state, const Frame *f) {
+    TileTwist *w = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float contrast = frame_contrast(f), pace = frame_pace(f), s = w->size;
+    float t = (f->local * w->speed + frame_surge(f, ROLE_KICK, 0.25f, 0.6f)) * pace;
+    // Every tile's turn, worked out once: the grid is TILES_ACROSS by TILES_DOWN, centred on the screen.
+    static float tc[TILES_DOWN][TILES_ACROSS], ts[TILES_DOWN][TILES_ACROSS];
+    int half_x = TILES_ACROSS / 2, half_y = TILES_DOWN / 2;
+    for (int ty = 0; ty < TILES_DOWN; ty++)
+        for (int tx = 0; tx < TILES_ACROSS; tx++) {
+            float cx = ((float)(tx - half_x) + 0.5f) * s, cy = ((float)(ty - half_y) + 0.5f) * s;
+            float turn = PI_F * 0.25f * msin(t - mhypot(cx, cy) * w->wave) * (((tx + ty) & 1) ? 1.0f : -1.0f);
+            tc[ty][tx] = mcos(turn), ts[ty][tx] = msin(turn);
+        }
+    static const int NEAR[5][2] = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col);
+            int bx = mfloor_i(x / s) + half_x, by = mfloor_i(y / s) + half_y, hit = -1;
+            float edge = 0;
+            for (int k = 0; k < 5 && hit < 0; k++) {
+                int tx = bx + NEAR[k][0], ty = by + NEAR[k][1];
+                if (tx < 0 || ty < 0 || tx >= TILES_ACROSS || ty >= TILES_DOWN) continue;
+                float lx = x / s - ((float)(tx - half_x) + 0.5f), ly = y / s - ((float)(ty - half_y) + 0.5f);
+                float rx = lx * tc[ty][tx] + ly * ts[ty][tx], ry = -lx * ts[ty][tx] + ly * tc[ty][tx], m = mmax(mabs(rx), mabs(ry));
+                if (m < 0.47f) hit = (tx + ty) & 1, edge = m;
+            }
+            if (hit < 0) continue;
+            put_cell(g, col, row, edge > 0.38f ? '+' : '#', frame_dim(f, inks[hit], (edge > 0.38f ? 1.05f : 0.8f) * contrast));
+        }
+    }
+    f->fx->glow = 0.5f;
 }
