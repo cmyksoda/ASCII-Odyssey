@@ -391,6 +391,7 @@ void gears_draw(void *state, const Frame *f) {
 /* ---------- Jungle canopy ---------- */
 
 #define LEAVES 12
+#define CANOPY_BEAM_SAMPLES 128
 
 typedef struct {
     float x[LEAVES], y[LEAVES], angle[LEAVES], length[LEAVES], width[LEAVES], phase[LEAVES];
@@ -414,12 +415,32 @@ void canopy_setup(void *state, Rng *r, const Frame *f) {
     c->salt = rng_u32(r);
 }
 
-// Under a rainforest canopy: broad leaves hanging in from above and the sides, veined and swaying, drips falling
-// from their tips, and mist lying low.
+// Under a rainforest canopy: sunbeams slanting down through the gaps and slowly shifting, broad leaves hanging in from
+// above and the sides, veined and stirring in the breeze, drips falling from their tips, mist lying low, and a pair of
+// butterflies wandering through.
 void canopy_draw(void *state, const Frame *f) {
     Canopy *c = state;
     Grid *g = f->grid;
     Rgbf dark = palette_ramp(f->palette, 0.3f), light = palette_ramp(f->palette, 0.8f), drip = palette_ramp(f->palette, 0.95f);
+    // Beams lean about twenty degrees off upright, each a soft band that brightens and fades on its own, shown as the
+    // dust and damp lit up in the air, drifting slowly down.
+    const float lean_c = 0.94f, lean_s = 0.34f, reach = g->aspect * lean_c + lean_s;
+    Rgbf sun = rgbf_mix(drip, palette_accent(f->palette, 1), 0.35f);
+    // The beams vary only across their own slant, so they're sampled once per frame along it.
+    float beams[CANOPY_BEAM_SAMPLES];
+    for (int k = 0; k < CANOPY_BEAM_SAMPLES; k++) {
+        float across = ((float)k / (CANOPY_BEAM_SAMPLES - 1) * 2 - 1) * reach;
+        beams[k] = smoothstep(0.6f, 0.82f, noise_value(across * 4 + (float)(c->salt % 47), f->t * 0.06f));
+    }
+    for (int row = 0; row < g->rows; row++)
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), y = cell_y(g, row), across = x * lean_c - y * lean_s;
+            float beam = beams[(int)((across / reach * 0.5f + 0.5f) * (CANOPY_BEAM_SAMPLES - 1) + 0.5f)] * (0.5f + 0.3f * y);
+            if (beam <= 0.05f) continue;
+            uint32_t mote = (uint32_t)(row + (int)mfloor(f->t * 0.8f + hash01((uint32_t)col * 7919u) * 9) * 61) * 977u + (uint32_t)col;
+            if (hash01(mote ^ c->salt) < beam * 1.1f)
+                put_cell(g, col, row, hash01(mote * 3u) < beam * 0.5f ? ':' : '.', frame_dim(f, sun, 0.25f + 0.45f * beam));
+        }
     // Mist along the floor.
     for (int row = g->rows * 3 / 4; row < g->rows; row++)
         for (int col = 0; col < g->cols; col++) {
@@ -427,7 +448,7 @@ void canopy_draw(void *state, const Frame *f) {
             if (m > 0.55f) put_cell(g, col, row, m > 0.65f ? '~' : '-', frame_dim(f, light, 0.25f + (m - 0.55f)));
         }
     for (int i = 0; i < LEAVES; i++) {
-        float sway = 0.08f * msin(f->t * 0.5f + c->phase[i]), a = c->angle[i] + sway;
+        float sway = 0.08f * msin(f->t * 0.5f + c->phase[i]) + 0.025f * msin(f->t * 1.9f + c->phase[i] * 2), a = c->angle[i] + sway;
         float dx = mcos(a), dy = msin(a), tipx = c->x[i] + dx * c->length[i], tipy = c->y[i] + dy * c->length[i];
         // Bounding box, then each cell tests itself against the leaf's lens shape.
         float minx = mmin(c->x[i], tipx) - c->width[i], maxx = mmax(c->x[i], tipx) + c->width[i];
@@ -445,8 +466,17 @@ void canopy_draw(void *state, const Frame *f) {
                 put_cell(g, col, row, glyph, rgbf_mix(dark, light, shade * (0.6f + 0.4f * along)));
             }
         // A drop gathers at the tip and falls now and then.
-        float period = 2.5f + (float)(i % 4), age = mfract((f->t + c->phase[i]) / period) * period;
+        float period = 1.8f + 0.8f * (float)(i % 4), age = mfract((f->t + c->phase[i]) / period) * period;
         if (age < 1.2f) put_cell(g, cell_col(g, tipx), cell_row(g, tipy - age * age * 0.8f), age < 0.2f ? 'o' : '.', drip);
+    }
+    for (int k = 0; k < 2; k++) {
+        float p = c->phase[k] + (float)k * 2.1f, t = f->t;
+        float x = (0.6f * msin(t * 0.21f + p) + 0.25f * msin(t * 0.67f + p * 1.7f)) * g->aspect;
+        float y = 0.35f * msin(t * 0.29f + p * 0.6f) + 0.12f * msin(t * 1.1f + p) - 0.05f;
+        int col = cell_col(g, x), row = cell_row(g, y), open = (int)mfloor(t * 5 + (float)k * 0.5f) & 1;
+        Rgbf wing = palette_accent(f->palette, k ? 2 : 0);
+        put_cell(g, col, row, open ? '}' : ']', wing);
+        put_cell(g, col + 1, row, open ? '{' : '[', wing);
     }
     f->fx->glow = 0.4f;
 }
