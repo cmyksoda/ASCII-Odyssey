@@ -567,17 +567,22 @@ static void info_overlay(App *a, Piece *p, double t) {
                                           "reacts in pockets"};
     const SongInfo *info = &p->comp.info;
     const Section *sec = score_section(&p->score, (float)t);
-    const char *scene = "";
+    const Shot *shot = NULL;
     for (int i = 0; i < p->direction.count; i++)
-        if (t >= p->direction.shots[i].start && t < p->direction.shots[i].end) scene = scene_kinds[p->direction.shots[i].kind].name;
+        if (t >= p->direction.shots[i].start && t < p->direction.shots[i].end) shot = &p->direction.shots[i];
+    const char *scene = shot ? scene_kinds[shot->kind].name : "";
+    const char *palette = shot ? p->direction.palettes[shot->palette]->name : p->palette->name;
+    const char *reacts = p->direction.by_section            ? shapes[p->react_shape]
+                         : shot && scene_kinds[shot->kind].reactive ? "answers the music"
+                                                                     : "moves on its own";
     char lines[5][64];
     snprintf(lines[0], sizeof lines[0], "%s", info->title);
     snprintf(lines[1], sizeof lines[1], "%s  %s %s  %d bpm", mood_names[info->mood], note_names[info->key.tonic],
              scale_names[info->key.scale], info->bpm);
     snprintf(lines[2], sizeof lines[2], "%s  %d:%02d of %d:%02d", sec ? section_names[sec->kind] : "", (int)t / 60, (int)t % 60,
              (int)info->length / 60, (int)info->length % 60);
-    snprintf(lines[3], sizeof lines[3], "%s on %s", scene, p->palette->name);
-    snprintf(lines[4], sizeof lines[4], "%s", shapes[p->react_shape]);
+    snprintf(lines[3], sizeof lines[3], "%s on %s", scene, palette);
+    snprintf(lines[4], sizeof lines[4], "%s", reacts);
     for (int i = 0; i < 5; i++) {
         clear_behind(a, &p->grid, 2, 1 + i, (int)strlen(lines[i]), 0);
         grid_text(&a->ui, 2, 1 + i, lines[i], i ? NOTE : MENU_LIT);

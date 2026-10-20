@@ -3,28 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ASCII Odyssey Voyages</title>
+<title>{{TITLE}}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
-  /* One reading column. Each voyage: its name as FIGlet art, the facts, the video, the arrangement with each
-     section as tall as its picture's reactivity, and a reaction. */
+  /* One reading column. Each voyage: its name as FIGlet art, the facts, the video, its shots as a strip colored by
+     section (tall where the scene answers the music), and a reaction. */
   :root {
     --bg: #f1f0f8; --surface: #fbfaff; --ink: #1c1d36; --soft: #585b7e; --line: #d6d4ea;
-    --gold: #8f5d0e; --rose: #c23a62; --on-rose: #ffffff; --title-a: #94610f; --title-b: #6a4cc4;
+    --gold: #8f5d0e; --rose: #c23a62; --on-rose: #ffffff;
     --playhead: #1c1d36; --screen: #07081a;
     --intro: #7b67d6; --verse: #2f9fb4; --build: #c98d1c; --drop: #d9476f; --break: #7380a8; --outro: #574aa0;
-    --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
     --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #07081a; --surface: #0e1027; --ink: #ece8f6; --soft: #a3a4ca; --line: #262a52;
-      --gold: #ffcc78; --rose: #ff6a8a; --on-rose: #1a0a12; --title-a: #fff0de; --title-b: #ffcc78;
+      --gold: #ffcc78; --rose: #ff6a8a; --on-rose: #1a0a12;
       --playhead: #fff0de; --screen: #000000;
       --intro: #9a87ff; --verse: #4fd0e0; --build: #ffcc66; --drop: #ff6a8a; --break: #8c97c4; --outro: #7a6dd0;
       color-scheme: dark;
@@ -32,7 +32,7 @@
   }
   :root[data-theme="dark"] {
     --bg: #07081a; --surface: #0e1027; --ink: #ece8f6; --soft: #a3a4ca; --line: #262a52;
-    --gold: #ffcc78; --rose: #ff6a8a; --on-rose: #1a0a12; --title-a: #fff0de; --title-b: #ffcc78;
+    --gold: #ffcc78; --rose: #ff6a8a; --on-rose: #1a0a12;
     --playhead: #fff0de; --screen: #000000;
     --intro: #9a87ff; --verse: #4fd0e0; --build: #ffcc66; --drop: #ff6a8a; --break: #8c97c4; --outro: #7a6dd0;
     color-scheme: dark;
@@ -47,12 +47,8 @@
   .wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
   pre { margin: 0; font-family: var(--mono); overflow-x: auto; overflow-y: hidden; }
   .mast { display: flex; flex-direction: column; gap: 14px; }
-  .title {
-    font-size: clamp(7px, 1.75vw, 13px); line-height: 1.12; font-weight: 600;
-    background: linear-gradient(180deg, var(--title-a), var(--title-b)); -webkit-background-clip: text; background-clip: text;
-    color: transparent;
-  }
-  h1 { font-family: var(--mono); font-weight: 800; font-size: 20px; margin: 4px 0 0; text-wrap: balance; }
+  .title { font-size: clamp(7px, 1.75vw, 13px); line-height: 1.12; font-weight: 500; color: var(--gold); }
+  h1 { font-family: var(--mono); font-weight: 700; font-size: 20px; margin: 4px 0 0; text-wrap: balance; }
   .mast p { margin: 0; max-width: 64ch; color: var(--soft); }
   .mast ul { margin: 0; padding-left: 20px; max-width: 64ch; color: var(--soft); display: flex; flex-direction: column; gap: 4px; }
   .legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--mono); font-size: 13px; color: var(--soft); }
@@ -63,9 +59,10 @@
   .meta { margin: 0; font-family: var(--mono); font-size: 13.5px; color: var(--soft); }
   .dot { color: var(--line); }
   video { display: block; width: 100%; max-width: 100%; aspect-ratio: 4 / 3; height: auto; background: var(--screen); border-radius: 4px; }
-  /* The arrangement: each section as wide as its time and as tall as its picture's reactivity. */
+  /* The shots: each as wide as its time, colored by its section, full height when its scene answers the music. */
   .arrangement { position: relative; height: 28px; cursor: pointer; }
-  .seg { position: absolute; bottom: 0; border-radius: 1px 1px 0 0; min-height: 3px; }
+  .seg { position: absolute; bottom: 0; height: 100%; border-radius: 1px 1px 0 0; box-shadow: inset -1px 0 var(--bg); }
+  .seg.still { height: 34%; }
   .intro { background: var(--intro); } .verse { background: var(--verse); } .build { background: var(--build); }
   .drop { background: var(--drop); } .break { background: var(--break); } .outro { background: var(--outro); }
   .playhead { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--playhead); pointer-events: none; }
@@ -91,28 +88,29 @@
   <header class="mast">
     <pre class="title" aria-label="ASCII Odyssey">{{TITLE_ART}}</pre>
     <h1>Voyages, {{ROUND}}</h1>
-    <p>One voyage for each of the eight moods, with picture and sound together, at 4:3 like your Wii's TV. What changed since the sound check:</p>
+    <p>One voyage for each of the nine moods, with picture and sound together, at 4:3 like your Wii's TV. What changed since the first round:</p>
     <ul>
-      <li>Pieces run about two minutes instead of two and a half.</li>
-      <li>Every piece picks its own drums, bass line, arp, chord rhythm and story shape, and its instruments come from wider palettes, with new FM leads, a sung vox lead, strings, acid bass, mallets and vibraphone.</li>
-      <li>The second drop grows: the hook's answers are re-sung, a harmony voice and a bell double come in, and the drums add a layer.</li>
-      <li>No more borrowed chords that fight the melody, and every hook lands its cadences.</li>
-      <li>The visuals answer the music. Each seed picks how: all the way through, at the big moments, swelling toward the end, or in pockets.</li>
-      <li>Two new scenes: rain on a night window, where every hi-hat adds a drop, and snowfall over a village whose windows light up with the melody.</li>
-      <li>Everything draws in Terminus Bold, the font you picked, and the palettes now vary from seed to seed.</li>
+      <li>Drops land harder. A deep sub-bass sits under every drop, the rest of the song steps back a few decibels so the drop arrives bigger than anything before it, and drops now run back to back or across a real breakdown, so a short break no longer stalls them.</li>
+      <li>Jungle is built on the Amen break, chopped and edited with stuttering fills, with chord stabs over it.</li>
+      <li>A ninth mood, dubstep: half-time drums and a wobble bass whose filter moves in time with the beat, changing speed through each bar.</li>
+      <li>29 scenes instead of 12, and each kind either always answers the music or never does. Kaleidoscope, spectrum, fireworks, lasers, ripples and the star chart answer it. Clouds, the lava lamp, lanterns, jellyfish, terrain, the galaxy and the moonlit ocean move on their own.</li>
+      <li>Shots change every six to eight seconds, no scene comes back until the others have had a turn, and calm music gets calm scenes.</li>
+      <li>Eleven kinds of transition in place of hard cuts: dissolves, wipes, diagonals, a radial burst, an iris, blinds, a checkerboard, a spiral, a melt, a decode and a fade through the ground.</li>
+      <li>31 palettes plus generated ones, including the rainbow and CMYK you asked for. Each piece gets a family: one for its calm parts, a sibling for its drops, and one for builds and breaks. Thunder ribbon plays in rainbow and satellite comet in CMYK.</li>
+      <li>The sunset's floor lines no longer blink out, the hard-to-read sailboat sea is gone, and the star chart fills in.</li>
     </ul>
     <ul class="legend" aria-label="Section colors">
       <li><i class="intro"></i>intro</li><li><i class="verse"></i>verse</li><li><i class="build"></i>build</li>
       <li><i class="drop"></i>drop</li><li><i class="break"></i>break</li><li><i class="outro"></i>outro</li>
     </ul>
-    <p>Under each video, a taller section means the picture answers the music more there. Tap it to jump. Reactions and notes save here and reach Mio through the shelf.</p>
-    <p>Every seed here is real. To sail one yourself, unzip <a href="downloads/{{ZIP}}">{{ZIP}}</a> onto your SD card so it lands in <code>apps/asciiodyssey</code>, start it from the Homebrew Channel, and type the seed in Settings with Mood on any and Length on medium, which are the defaults. You'll get this exact voyage.</p>
+    <p>Under each video, every block is one shot, colored by its section. Tall blocks are scenes that answer the music, short ones move on their own. Tap the strip to jump. Reactions and notes save here and reach Mio through the shelf.</p>
+    <p>{{INSTALL}} Seeds from the first round play different pieces now, because the moods and arrangements changed.</p>
   </header>
 {{PIECES}}
   <footer>Rendered on the PC by the same engine that runs on the Wii, so a seed looks and sounds the same in both places.</footer>
 </main>
 <script>
-  const KEY = 'ascii-odyssey-voyages';
+  const KEY = '{{PAGE}}';
   let state = {};
   try { state = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { state = {}; }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };

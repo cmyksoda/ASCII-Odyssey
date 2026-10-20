@@ -13,46 +13,56 @@ void frame_resolve(const Frame *f) {
     ascii_resolve(f->matcher, f->canvas, f->grid);
 }
 
-float frame_pulse(const Frame *f, Role role, float tau, float strength) {
-    float p = score_pulse(f->score, role, f->t, f->calm ? tau * 2.5f : tau);
-    return p * strength * (0.35f + 1.3f * f->react) * (f->calm ? 0.3f : 1.0f);
+Rgbf frame_dim(const Frame *f, Rgbf color, float k) {
+    Rgbf ground = rgbf(f->palette->bg);
+    return rgbf_add(ground, rgbf_scale(rgbf_add(color, rgbf_scale(ground, -1)), k));
 }
 
+float frame_pulse(const Frame *f, Role role, float tau, float strength) {
+    if (f->react <= 0) return 0;
+    float p = score_pulse(f->score, role, f->t, f->calm ? tau * 2.5f : tau);
+    return p * strength * 1.5f * f->react * (f->calm ? 0.3f : 1.0f);
+}
+
+// Still scenes move at a steady speed instead of the music's.
 float frame_travel(const Frame *f, float base, float with_energy) {
-    float start = f->t - f->local;
-    return base * f->local + with_energy * (score_energy_area(f->score, f->t) - score_energy_area(f->score, start));
+    float start = f->t - f->local, steady = with_energy * 0.6f * f->local;
+    float music = with_energy * (score_energy_area(f->score, f->t) - score_energy_area(f->score, start));
+    return base * f->local + mixf(steady, music, f->react);
 }
 
 float frame_surge(const Frame *f, Role role, float tau, float strength) {
+    if (f->react <= 0) return 0;
     if (f->calm) {
         tau *= 2.5f;
         strength *= 0.3f;
     }
+    strength *= f->react;
     return strength * (score_pulse_area(f->score, role, f->t, tau) - score_pulse_area(f->score, role, f->t - f->local, tau));
 }
 
-static void put_cell(Grid *g, int col, int row, int glyph, Rgbf color) {
+void put_cell(Grid *g, int col, int row, int glyph, Rgbf color) {
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
     *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
 }
 
-static void put_cell_under(Grid *g, int col, int row, int glyph, Rgbf color) {
+void put_cell_under(Grid *g, int col, int row, int glyph, Rgbf color) {
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
     Cell *c = grid_at(g, col, row);
     if (c->glyph == ' ') *c = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
 }
 
 // Scene units to grid cells.
-static int cell_col(const Grid *g, float x) {
+int cell_col(const Grid *g, float x) {
     return mfloor_i((x + g->aspect) / (2 * g->aspect) * (float)g->cols);
 }
 
-static int cell_row(const Grid *g, float y) {
+int cell_row(const Grid *g, float y) {
     return mfloor_i((1 - y) * 0.5f * (float)g->rows);
 }
 
 // A faint field of far stars, shared by the space scenes.
-static void dust_stars(const Frame *f, uint32_t salt, float drift, float level) {
+void dust_stars(const Frame *f, uint32_t salt, float drift, float level) {
     Grid *g = f->grid;
     int count = g->cols * g->rows / 22;
     for (int s = 0; s < count; s++) {
@@ -61,13 +71,13 @@ static void dust_stars(const Frame *f, uint32_t salt, float drift, float level) 
         float fx = hx * (float)g->cols - f->t * drift * (0.3f + hp);
         fx -= mfloor(fx / (float)g->cols) * (float)g->cols;
         float tw = 0.6f + 0.4f * msin(f->t * (0.8f + 2.5f * hp) + hp * TAU_F);
-        Rgbf color = rgbf_scale(palette_ramp(f->palette, 0.55f + 0.45f * hp), level * tw);
+        Rgbf color = frame_dim(f, palette_ramp(f->palette, 0.55f + 0.45f * hp), level * tw);
         put_cell_under(g, (int)fx, (int)(hy * (float)g->rows), hp > 0.92f ? '+' : '.', color);
     }
 }
 
 // Walks back through a role's notes from t toward t - span, newest first.
-static int recent_notes(const Score *s, Role role, float t, float span, const ScoreEvent **out, int max) {
+int recent_notes(const Score *s, Role role, float t, float span, const ScoreEvent **out, int max) {
     const int *index = s->by_role[role];
     int lo = 0, hi = s->role_count[role], count = 0;
     while (lo < hi) {
@@ -126,11 +136,11 @@ static void warp_draw(void *state, const Frame *f) {
         float trail = (speed + push * 0.6f) * w->streak * 0.35f;
         if (near > 0.55f && trail > 0.05f && !f->still) {
             float z1 = z + trail * near;
-            StrokePoint seg[2] = {{rx / z1 * 0.35f, ry / z1 * 0.35f, rgbf_scale(color, 0.45f)}, {sx, sy, color}};
+            StrokePoint seg[2] = {{rx / z1 * 0.35f, ry / z1 * 0.35f, frame_dim(f, color, 0.45f)}, {sx, sy, color}};
             stroke_draw(f->stroker, seg, 2, 0);
         }
         int glyph = near > 0.9f ? '@' : near > 0.75f ? '*' : near > 0.45f ? '+' : '.';
-        put_cell(g, cell_col(g, sx), cell_row(g, sy), glyph, rgbf_scale(color, 0.35f + near * 0.75f));
+        put_cell(g, cell_col(g, sx), cell_row(g, sy), glyph, frame_dim(f, color, 0.35f + near * 0.75f));
     }
     f->fx->glow = 0.45f;
 }
@@ -332,13 +342,13 @@ static void plasma_draw(void *state, const Frame *f) {
                 float along = matan2(gx, -gy), a = mabs(along) > PI_F / 2 ? PI_F - mabs(along) : mabs(along);
                 int glyph = a < 0.45f ? '|' : a < 1.12f ? ((gx > 0) == (gy > 0) ? '\\' : '/') : (band < 0.5f ? '-' : '~');
                 Rgbf color = flow_color(f->palette, level * 0.9f + f->local * p->cycle);
-                *cell = (Cell){(uint8_t)glyph, rgb_from_f(rgbf_scale(color, 0.75f + lift * 2)), 0};
+                *cell = (Cell){(uint8_t)glyph, rgb_from_f(frame_dim(f, color, 0.75f + lift * 2)), 0};
                 continue;
             }
             float ink = (p->look == 2 ? smoothstep(0.55f, 0.97f, level) : smoothstep(0.3f, 0.95f, level)) + lift;
             if (ink < 0.08f) continue;
             int glyph = ramp[clampi((int)(ink * 8.0f), 1, 7)];
-            Rgbf color = rgbf_scale(flow_color(f->palette, level * 0.8f + f->local * p->cycle), 0.55f + 0.45f * ink);
+            Rgbf color = frame_dim(f, flow_color(f->palette, level * 0.8f + f->local * p->cycle), 0.55f + 0.45f * ink);
             *cell = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
         }
     }
@@ -369,6 +379,11 @@ static float ridge(float x, float seed, float scale) {
 static void sunset_draw(void *state, const Frame *f) {
     Sunset *s = state;
     Grid *g = f->grid;
+    // Stars only in the sky: cleared from below the horizon before the floor's lines go down, so the dots those
+    // lines are drawn with stay.
+    dust_stars(f, 0x5eed, 0.0f, 0.8f);
+    for (int col = 0; col < g->cols; col++)
+        for (int row = cell_row(g, s->horizon) + 1; row < g->rows; row++) grid_at(g, col, row)->glyph = ' ';
     float kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
     float sun_y = s->horizon + s->sun_r * 0.55f;
     Rgbf top = palette_ramp(f->palette, 1.0f), bottom = palette_accent(f->palette, 1);
@@ -380,7 +395,7 @@ static void sunset_draw(void *state, const Frame *f) {
         float band = mfract(v * (float)s->stripes - f->local * 0.15f);
         float gap = v > 0.4f ? (v - 0.4f) * 1.1f : 0;
         if (band < gap) continue;
-        Rgbf color = rgbf_scale(rgbf_mix(top, bottom, saturate(v * 1.15f)), 0.8f + 0.2f * kick);
+        Rgbf color = frame_dim(f, rgbf_mix(top, bottom, saturate(v * 1.15f)), 0.8f + 0.2f * kick);
         int glyph = band < gap + 0.2f && gap > 0 ? '-' : '=';
         for (int col = 0; col < g->cols; col++) {
             float x = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect;
@@ -405,8 +420,8 @@ static void sunset_draw(void *state, const Frame *f) {
     float glow = 0.55f + 0.45f * kick;
     for (int k = -12; k <= 12; k++) {
         float spread = (float)k * 0.22f;
-        StrokePoint line[2] = {{spread * 0.05f, s->horizon - 0.01f, rgbf_scale(neon, 0.25f)},
-                               {spread * 4.5f, -1.4f, rgbf_scale(neon, glow)}};
+        StrokePoint line[2] = {{spread * 0.05f, s->horizon - 0.01f, frame_dim(f, neon, 0.25f)},
+                               {spread * 4.5f, -1.4f, frame_dim(f, neon, glow)}};
         stroke_draw(f->stroker, line, 2, 0);
     }
     float scroll = mfract(frame_travel(f, s->grid_speed * 0.5f, s->grid_speed));
@@ -414,15 +429,9 @@ static void sunset_draw(void *state, const Frame *f) {
         float z = (float)k + 1 - scroll, y = s->horizon - 0.9f / z;
         if (y < -1.05f || y > s->horizon - 0.01f) continue;
         float near = saturate(1.2f / z);
-        StrokePoint bar[2] = {{-g->aspect, y, rgbf_scale(neon, 0.2f + near * glow)}, {g->aspect, y, rgbf_scale(neon, 0.2f + near * glow)}};
+        StrokePoint bar[2] = {{-g->aspect, y, frame_dim(f, neon, 0.2f + near * glow)}, {g->aspect, y, frame_dim(f, neon, 0.2f + near * glow)}};
         stroke_draw(f->stroker, bar, 2, 0);
     }
-    dust_stars(f, 0x5eed, 0.0f, 0.8f);
-    for (int col = 0; col < g->cols; col++)
-        for (int row = cell_row(g, s->horizon) + 1; row < g->rows; row++) {
-            Cell *cell = grid_at(g, col, row);
-            if (cell->glyph == '.' || cell->glyph == '+') cell->glyph = ' ';
-        }
     f->fx->glow = 0.5f;
 }
 
@@ -475,8 +484,8 @@ static void solid(const Frame *f, const float (*v)[3], int nv, const int (*e)[2]
     for (int k = 0; k < ne; k++) {
         int a = e[k][0], b = e[k][1];
         float near_a = saturate(0.5f - depth[a] * 0.3f), near_b = saturate(0.5f - depth[b] * 0.3f);
-        StrokePoint seg[2] = {{px[a], py[a], rgbf_scale(rgbf_mix(far, color, near_a), 0.45f + 0.55f * near_a)},
-                              {px[b], py[b], rgbf_scale(rgbf_mix(far, color, near_b), 0.45f + 0.55f * near_b)}};
+        StrokePoint seg[2] = {{px[a], py[a], frame_dim(f, rgbf_mix(far, color, near_a), 0.45f + 0.55f * near_a)},
+                              {px[b], py[b], frame_dim(f, rgbf_mix(far, color, near_b), 0.45f + 0.55f * near_b)}};
         stroke_draw(f->stroker, seg, 2, 0);
     }
     for (int i = 0; i < nv && i < 12; i++)
@@ -561,7 +570,7 @@ static void aurora_draw(void *state, const Frame *f) {
             float glow = aurora_glow(a, x, mirror, t, swell, &above) * (0.55f - depth * 0.4f);
             float ripple = msin(x * 18 + depth * 40 - t * 2.2f);
             if (glow < 0.08f || ripple < -0.2f) continue;
-            Rgbf color = rgbf_scale(rgbf_mix(palette_ramp(f->palette, 0.5f), palette_accent(f->palette, 0), 0.3f), 0.5f + glow);
+            Rgbf color = frame_dim(f, rgbf_mix(palette_ramp(f->palette, 0.5f), palette_accent(f->palette, 0), 0.3f), 0.5f + glow);
             *grid_at(g, col, row) = (Cell){(uint8_t)(ripple > 0.6f ? '~' : '-'), rgb_from_f(color), 0};
         }
     }
@@ -643,7 +652,7 @@ static void sea_draw(void *state, const Frame *f) {
                 glyph = '~';
             } else if (wave > 0.45f && hash01((uint32_t)(row * 733 + col)) < 0.25f + depth * 0.5f) {
                 glyph = '-';
-                color = rgbf_scale(color, 0.7f);
+                color = frame_dim(f, color, 0.7f);
             }
             if (glints > 0.05f && wave > 0.9f && hash01((uint32_t)(row * 31 + col * 17) ^ (uint32_t)(f->t * 8)) < glints * 0.08f) {
                 glyph = '*';
@@ -700,77 +709,134 @@ static void nebula_draw(void *state, const Frame *f) {
 
 /* ---------- Constellations that light up with the melody ---------- */
 
-#define STARS 18
+#define STARS 24
+#define CLUSTERS 3
 
 typedef struct {
     float x[STARS], y[STARS];
     int8_t edge_a[STARS], edge_b[STARS];
     int edges;
+    float band_tilt, band_offset;
+    uint32_t salt;
 } Constellation;
 
 static void constellation_setup(void *state, Rng *r, const Frame *f) {
     Constellation *c = state;
     float aspect = f->grid->aspect;
-    for (int i = 0; i < STARS; i++) {
-        c->x[i] = rng_between(r, -0.85f, 0.85f) * aspect;
-        c->y[i] = rng_between(r, -0.75f, 0.75f);
-    }
-    // A spanning tree grown nearest-first: the shape of a hand-drawn star chart.
-    int in_tree[STARS] = {1};
+    // Three star figures spread across the sky, each a hand-drawn chart grown nearest-first within its own stars.
     c->edges = 0;
-    for (int n = 1; n < STARS; n++) {
-        float best = 1e9f;
-        int ba = 0, bb = 0;
-        for (int a = 0; a < STARS; a++)
-            for (int b = 0; b < STARS; b++)
-                if (in_tree[a] && !in_tree[b]) {
-                    float d = mhypot(c->x[a] - c->x[b], c->y[a] - c->y[b]);
-                    if (d < best) {
-                        best = d;
-                        ba = a;
-                        bb = b;
+    int per = STARS / CLUSTERS;
+    for (int k = 0; k < CLUSTERS; k++) {
+        float cx = ((float)k + 0.5f) / CLUSTERS * 1.6f * aspect - 0.8f * aspect + rng_between(r, -0.15f, 0.15f);
+        float cy = rng_between(r, -0.35f, 0.45f);
+        int first = k * per;
+        for (int i = first; i < first + per; i++) {
+            c->x[i] = cx + rng_between(r, -0.38f, 0.38f) * aspect * 0.6f;
+            c->y[i] = cy + rng_between(r, -0.4f, 0.4f);
+        }
+        int in_tree[STARS] = {0};
+        in_tree[first] = 1;
+        for (int n = 1; n < per; n++) {
+            float best = 1e9f;
+            int ba = first, bb = first;
+            for (int a = first; a < first + per; a++)
+                for (int b = first; b < first + per; b++)
+                    if (in_tree[a] && !in_tree[b]) {
+                        float d = mhypot(c->x[a] - c->x[b], c->y[a] - c->y[b]);
+                        if (d < best) {
+                            best = d;
+                            ba = a;
+                            bb = b;
+                        }
                     }
-                }
-        in_tree[bb] = 1;
-        c->edge_a[c->edges] = (int8_t)ba;
-        c->edge_b[c->edges++] = (int8_t)bb;
+            in_tree[bb] = 1;
+            c->edge_a[c->edges] = (int8_t)ba;
+            c->edge_b[c->edges++] = (int8_t)bb;
+        }
     }
+    c->band_tilt = rng_between(r, -0.6f, 0.6f);
+    c->band_offset = rng_between(r, -0.3f, 0.3f);
+    c->salt = rng_u32(r);
 }
 
+// A star chart drawing itself: the Milky Way across the sky, three figures whose lines grow in over the shot (faster
+// with every note), stars that flare at the notes that name them, and a shooting star now and then on the snare.
 static void constellation_draw(void *state, const Frame *f) {
     Constellation *c = state;
     Grid *g = f->grid;
-    dust_stars(f, 0xc0c0, 0.01f, 0.7f);
+    dust_stars(f, c->salt, 0.004f, 0.8f);
+    Rgbf faint = palette_ramp(f->palette, 0.35f), milk = palette_ramp(f->palette, 0.55f);
+    for (int row = 0; row < g->rows; row++) {
+        float y = 1 - ((float)row + 0.5f) / (float)g->rows * 2;
+        for (int col = 0; col < g->cols; col++) {
+            float x = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect;
+            float d = y - (x * c->band_tilt + c->band_offset), band = mexp(-d * d * 9.0f);
+            float dust = band * noise_fbm(x * 2.2f + (float)(c->salt % 53), y * 2.2f + f->t * 0.01f);
+            uint32_t id = (uint32_t)(row * 977 + col * 131) ^ c->salt;
+            if (dust > 0.42f && hash01(id) < (dust - 0.38f) * 2.2f) {
+                static const char specks[] = ".,'`.:";
+                int glyph = dust > 0.62f ? ':' : specks[hash_u32(id) % 6];
+                put_cell_under(g, col, row, glyph, rgbf_mix(faint, milk, saturate((dust - 0.42f) * 3)));
+            }
+        }
+    }
+    int notes = 0;
     float start = f->t - f->local;
-    int notes = score_count(f->score, ROLE_BELL, start, f->t) + score_count(f->score, ROLE_LEAD, start, f->t) +
-                score_count(f->score, ROLE_PLUCK, start, f->t);
-    // Each pair of melody notes draws one more line, and each line grows in over half a second.
-    float drawn = (float)notes * 0.5f + f->local * 0.08f;
+    static const Role sung[5] = {ROLE_LEAD, ROLE_BELL, ROLE_PLUCK, ROLE_ARP, ROLE_CHORD};
+    for (int v = 0; v < 5; v++) notes += score_count(f->score, sung[v], start, f->t);
+    // Every line is drawn by two thirds of the way through the shot; notes hurry it along.
+    float drawn = f->local / (f->length * 0.66f) * (float)c->edges * 0.7f + (float)notes * 0.25f * f->react;
+    Rgbf line = frame_dim(f, palette_ramp(f->palette, 0.75f), 0.65f);
     for (int e = 0; e < c->edges; e++) {
         float grow = saturate(drawn - (float)e);
         if (grow <= 0) break;
         int a = c->edge_a[e], b = c->edge_b[e];
         float bx = c->x[a] + (c->x[b] - c->x[a]) * grow, by = c->y[a] + (c->y[b] - c->y[a]) * grow;
-        Rgbf color = rgbf_scale(palette_ramp(f->palette, 0.7f), 0.6f);
-        StrokePoint line[2] = {{c->x[a], c->y[a], color}, {bx, by, color}};
-        stroke_draw(f->stroker, line, 2, 0);
+        StrokePoint seg[2] = {{c->x[a], c->y[a], line}, {bx, by, line}};
+        stroke_draw(f->stroker, seg, 2, 0);
     }
-    float ping = frame_pulse(f, ROLE_BELL, 0.5f, 1.0f) + frame_pulse(f, ROLE_PLUCK, 0.4f, 0.8f);
-    const ScoreEvent *last = score_last(f->score, ROLE_BELL, f->t);
-    int lit = last ? last->note % STARS : -1;
-    for (int i = 0; i < STARS; i++) {
-        float tw = 0.7f + 0.3f * msin(f->t * 1.7f + (float)i * 2.1f);
-        Rgbf color = rgbf_scale(palette_ramp(f->palette, 1.0f), tw);
-        int glyph = '+';
-        if (i == lit && ping > 0.1f) {
-            color = rgbf_mix(color, palette_accent(f->palette, 1), saturate(ping));
-            glyph = '*';
-            put_cell(g, cell_col(g, c->x[i]) - 1, cell_row(g, c->y[i]), '-', rgbf_scale(color, 0.5f));
-            put_cell(g, cell_col(g, c->x[i]) + 1, cell_row(g, c->y[i]), '-', rgbf_scale(color, 0.5f));
+    float flare[STARS] = {0};
+    for (int v = 0; v < 5 && f->react > 0; v++) {
+        const ScoreEvent *ev[16];
+        int n = recent_notes(f->score, sung[v], f->t, 0.9f, ev, 16);
+        for (int i = 0; i < n; i++) {
+            int star = (int)((unsigned)(ev[i]->note * 7 + v * 5) % STARS);
+            flare[star] = mmax(flare[star], ev[i]->velocity * mexp(-(f->t - ev[i]->time) / 0.35f));
         }
-        put_cell(g, cell_col(g, c->x[i]), cell_row(g, c->y[i]), glyph, color);
     }
-    f->fx->glow = 0.55f;
+    float kick = frame_pulse(f, ROLE_KICK, 0.2f, 0.4f);
+    Rgbf white = palette_ramp(f->palette, 1.0f), gold = palette_accent(f->palette, 1);
+    for (int i = 0; i < STARS; i++) {
+        float tw = (0.65f + 0.35f * msin(f->t * 1.7f + (float)i * 2.1f)) * (1 + kick);
+        int col = cell_col(g, c->x[i]), row = cell_row(g, c->y[i]);
+        Rgbf color = rgbf_mix(frame_dim(f, white, tw), gold, saturate(flare[i] * 1.5f));
+        put_cell(g, col, row, flare[i] > 0.25f ? '*' : '+', color);
+        if (flare[i] > 0.15f) {
+            Rgbf ray = frame_dim(f, color, 0.4f + flare[i] * 0.6f);
+            put_cell(g, col - 1, row, '-', ray);
+            put_cell(g, col + 1, row, '-', ray);
+            if (flare[i] > 0.45f) {
+                put_cell(g, col, row - 1, '|', ray);
+                put_cell(g, col, row + 1, '|', ray);
+            }
+        }
+    }
+    if (f->react > 0) {
+        const ScoreEvent *hits[8];
+        int n = recent_notes(f->score, ROLE_SNARE, f->t, 0.7f, hits, 8);
+        for (int i = 0; i < n; i++) {
+            uint32_t id = (uint32_t)(hits[i]->time * 1000.0f) ^ c->salt;
+            if (hash01(id) > 0.3f) continue;
+            float age = f->t - hits[i]->time, x0 = (hash01(id + 1) * 1.4f - 0.4f) * g->aspect, y0 = 0.4f + hash01(id + 2) * 0.5f;
+            for (int k = 0; k < 6; k++) {
+                float at = age - (float)k * 0.03f;
+                if (at < 0) continue;
+                float x = x0 - at * 1.6f, y = y0 - at * 0.7f;
+                put_cell(g, cell_col(g, x), cell_row(g, y), k ? (k < 3 ? '-' : '.') : '*', frame_dim(f, white, (1 - age / 0.7f) * (1 - (float)k * 0.15f)));
+            }
+        }
+    }
+    f->fx->glow = 0.6f;
 }
 
 /* ---------- Cracktro: copper bars behind a sine scroller ---------- */
@@ -799,7 +865,7 @@ static void cracktro_draw(void *state, const Frame *f) {
         float layer = 1 + (float)(id % 3), fx = hash01(id) * (float)g->cols - f->local * layer * 6;
         fx -= mfloor(fx / (float)g->cols) * (float)g->cols;
         put_cell(g, (int)fx, (int)(hash01(id + 1) * (float)g->rows), layer > 2 ? '-' : '.',
-                 rgbf_scale(palette_ramp(f->palette, 0.4f + layer * 0.2f), 0.4f + layer * 0.2f));
+                 frame_dim(f, palette_ramp(f->palette, 0.4f + layer * 0.2f), 0.4f + layer * 0.2f));
     }
     float kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
     for (int b = 0; b < k->bars; b++) {
@@ -810,7 +876,7 @@ static void cracktro_draw(void *state, const Frame *f) {
             if (row < 0 || row >= g->rows) continue;
             float shade = 1 - (float)(d < 0 ? -d : d) * 0.3f;
             for (int col = 0; col < g->cols; col++)
-                put_cell(g, col, row, d == 0 ? '=' : '-', rgbf_scale(color, shade * (0.55f + 0.3f * kick)));
+                put_cell(g, col, row, d == 0 ? '=' : '-', frame_dim(f, color, shade * (0.55f + 0.3f * kick)));
         }
     }
     const FigletFont *font = figlet_font((FigletId)k->font);
@@ -868,7 +934,66 @@ static void rain_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // An out-of-focus light: brightest in the middle and fading to nothing at its rim, with no edge for the matcher to trace.
-static void bokeh(Canvas *c, float x, float y, float radius, float level, Rgbf color) {
+// The finest grid has 5-pixel cells.
+#define CORNERS_MAX ((FB_W / 5 + 1) * (FB_H / 12 + 1))
+
+void canvas_from_corners(const Frame *f, CornerFn fn, const void *ctx) {
+    static float ink[CORNERS_MAX];
+    static Rgbf color[CORNERS_MAX];
+    const Grid *g = f->grid;
+    Canvas *c = f->canvas;
+    int w = g->cols + 1, h = g->rows + 1;
+    if (w * h > CORNERS_MAX) return;
+    for (int row = 0; row < h; row++)
+        for (int col = 0; col < w; col++)
+            fn(ctx, f, (float)col / (float)g->cols * 2 * g->aspect - g->aspect, 1 - (float)row / (float)g->rows * 2,
+               &ink[row * w + col], &color[row * w + col]);
+    // Cells with no ink at any corner are skipped whole, and each cell takes one color: the resolve averages the
+    // colors of a cell's samples anyway.
+    for (int row = 0; row < g->rows; row++)
+        for (int col = 0; col < g->cols; col++) {
+            int k = row * w + col;
+            float k00 = ink[k], k10 = ink[k + 1], k01 = ink[k + w], k11 = ink[k + w + 1];
+            if (k00 <= 0.01f && k10 <= 0.01f && k01 <= 0.01f && k11 <= 0.01f) continue;
+            Rgbf tint = rgbf_scale(rgbf_add(rgbf_add(color[k], color[k + 1]), rgbf_add(color[k + w], color[k + w + 1])), 0.25f);
+            for (int y = 0; y < 4; y++) {
+                float v = ((float)y + 0.5f) / 4, left = mixf(k00, k01, v), right = mixf(k10, k11, v);
+                for (int x = 0; x < 2; x++) {
+                    float level = mixf(left, right, ((float)x + 0.5f) / 2);
+                    if (level > 0.01f) canvas_max(c, col * 2 + x, row * 4 + y, level, tint);
+                }
+            }
+        }
+}
+
+void moon_disc(const Frame *f, float x, float y, float radius, Rgbf color, uint32_t salt, int behind) {
+    Grid *g = f->grid;
+    float reach = radius * 1.7f;
+    int c0 = cell_col(g, x - reach), c1 = cell_col(g, x + reach), r0 = cell_row(g, y + reach), r1 = cell_row(g, y - reach);
+    for (int row = r0; row <= r1; row++)
+        for (int col = c0; col <= c1; col++) {
+            float cx = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect, cy = 1 - ((float)row + 0.5f) / (float)g->rows * 2;
+            float d = mhypot(cx - x, cy - y) / radius;
+            uint32_t id = (uint32_t)(row * 977 + col * 131) ^ salt;
+            if (d < 0.9f) {
+                // The face: mostly bright fill, with a few darker crater marks.
+                float crater = noise_value(cx * 9 + (float)(salt % 61), cy * 9);
+                int glyph = crater > 0.72f ? 'o' : crater > 0.62f ? ':' : '#';
+                (behind ? put_cell_under : put_cell)(g, col, row, glyph, frame_dim(f, color, crater > 0.62f ? 0.75f : 1.0f - d * 0.15f));
+            } else if (d < 1.7f && hash01(id) < 0.35f * (1.7f - d)) {
+                put_cell_under(g, col, row, '.', frame_dim(f, color, 0.45f * (1.7f - d)));
+            }
+        }
+    if (behind) return;
+    StrokePoint rim[48];
+    for (int i = 0; i < 48; i++) {
+        float a = (float)i / 48.0f * TAU_F;
+        rim[i] = (StrokePoint){x + mcos(a) * radius * 0.95f, y + msin(a) * radius * 0.95f, color};
+    }
+    stroke_draw(f->stroker, rim, 48, 1);
+}
+
+void bokeh(Canvas *c, float x, float y, float radius, float level, Rgbf color) {
     int i0 = (int)((x - radius + c->aspect) / c->sx), i1 = (int)((x + radius + c->aspect) / c->sx) + 1;
     int j0 = (int)((1 - (y + radius)) / c->sy), j1 = (int)((1 - (y - radius)) / c->sy) + 1;
     for (int j = j0 < 0 ? 0 : j0; j <= j1 && j < c->h; j++)
@@ -879,12 +1004,13 @@ static void bokeh(Canvas *c, float x, float y, float radius, float level, Rgbf c
 }
 
 // One drop on the glass: a bead with its wet trail above it.
-static void rain_drop(Grid *g, float x, float y, float trail, Rgbf color) {
+static void rain_drop(const Frame *f, float x, float y, float trail, Rgbf color) {
+    Grid *g = f->grid;
     int col = cell_col(g, x), row = cell_row(g, y), length = (int)(trail * (float)g->rows * 0.5f);
     put_cell(g, col, row, 'o', color);
     for (int k = 1; k <= length; k++) {
         float fade = 1 - (float)k / (float)(length + 1);
-        put_cell(g, col, row - k, k == 1 ? '|' : k < length ? ':' : '.', rgbf_scale(color, 0.25f + 0.6f * fade));
+        put_cell(g, col, row - k, k == 1 ? '|' : k < length ? ':' : '.', frame_dim(f, color, 0.25f + 0.6f * fade));
     }
 }
 
@@ -913,7 +1039,7 @@ static void rain_draw(void *state, const Frame *f) {
         if (hash01(id + 5) > 0.25f + 0.6f * f->energy) continue;
         float age = f->t - (float)k * spacing, speed = 0.12f + 0.3f * hash01(id + 2);
         float x = (hash01(id) * 2 - 1) * g->aspect, y = 1.05f - hash01(id + 1) * 0.5f - speed * age;
-        if (y > -1.1f) rain_drop(g, x, y, mmin(age * speed, 0.35f), wet);
+        if (y > -1.1f) rain_drop(f, x, y, mmin(age * speed, 0.35f), wet);
     }
     const ScoreEvent *hats[32];
     int n = recent_notes(f->score, ROLE_HAT, f->t, 4.0f, hats, 32);
@@ -921,7 +1047,7 @@ static void rain_draw(void *state, const Frame *f) {
         uint32_t id = (uint32_t)(hats[i]->time * 1000.0f) * 2246822519u + w->salt;
         float age = f->t - hats[i]->time, speed = 0.25f + 0.25f * hash01(id + 1);
         float x = (hash01(id) * 2 - 1) * g->aspect, y = 0.95f - hash01(id + 2) * 0.4f - speed * age;
-        rain_drop(g, x, y, mmin(age * speed, 0.3f), rgbf_mix(wet, palette_accent(f->palette, 1), 0.3f));
+        rain_drop(f, x, y, mmin(age * speed, 0.3f), rgbf_mix(wet, palette_accent(f->palette, 1), 0.3f));
     }
     // The window's cross bars stand in front of everything.
     if (w->pane) {
@@ -961,7 +1087,8 @@ static void snow_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // A cottage: a snow-capped roof of slashes over plain walls, with two windows the caller lights.
-static void cottage(Grid *g, int x, int w, int h, int ground, const float lit[2], Rgbf wall, Rgbf warm, Rgbf snow) {
+static void cottage(const Frame *f, int x, int w, int h, int ground, const float lit[2], Rgbf wall, Rgbf warm, Rgbf snow) {
+    Grid *g = f->grid;
     int top = ground - h;
     for (int k = 0;; k++) {
         int y = top - 1 - k, l = x + k, r = x + w - 1 - k;
@@ -980,7 +1107,7 @@ static void cottage(Grid *g, int x, int w, int h, int ground, const float lit[2]
     }
     int row = top + (h - 1) / 2;
     for (int k = 0; k < 2; k++)
-        put_cell(g, k ? x + w - 3 : x + 2, row, '#', rgbf_mix(rgbf_scale(wall, 0.5f), warm, lit[k]));
+        put_cell(g, k ? x + w - 3 : x + 2, row, '#', rgbf_mix(frame_dim(f, wall, 0.5f), warm, lit[k]));
 }
 
 static void snow_draw(void *state, const Frame *f) {
@@ -1015,18 +1142,18 @@ static void snow_draw(void *state, const Frame *f) {
         }
     }
     Rgbf wall = palette_ramp(f->palette, 0.6f), warm = palette_accent(f->palette, 1), snow = palette_ramp(f->palette, 0.95f);
-    for (int i = 0; i < s->houses; i++) cottage(g, s->x[i], s->w[i], s->h[i], s->ground, lit + 2 * i, wall, warm, snow);
+    for (int i = 0; i < s->houses; i++) cottage(f, s->x[i], s->w[i], s->h[i], s->ground, lit + 2 * i, wall, warm, snow);
     for (int x = 0; x < g->cols; x++) {
         put_cell(g, x, s->ground, hash01((uint32_t)x * 977u + s->salt) < 0.3f ? '~' : '_', snow);
         for (int y = s->ground + 1; y < g->rows; y++)
-            if (hash01((uint32_t)(y * 131 + x) ^ s->salt) < 0.08f) put_cell(g, x, y, '.', rgbf_scale(snow, 0.6f));
+            if (hash01((uint32_t)(y * 131 + x) ^ s->salt) < 0.08f) put_cell(g, x, y, '.', frame_dim(f, snow, 0.6f));
     }
     // Three depths of flakes drift down and sway; a kick sends a little gust through them.
     float travel = frame_travel(f, 0.6f, 0.6f), gust = frame_pulse(f, ROLE_KICK, 0.4f, 0.04f);
     for (int layer = 0; layer < 3; layer++) {
         int count = g->cols * g->rows / (60 - layer * 15);
         float speed = 0.05f + 0.07f * (float)layer;
-        Rgbf flake = rgbf_scale(snow, 0.45f + 0.25f * (float)layer);
+        Rgbf flake = frame_dim(f, snow, 0.45f + 0.25f * (float)layer);
         for (int k = 0; k < count; k++) {
             uint32_t id = s->salt + (uint32_t)(layer * 100003 + k) * 2654435761u;
             float y = 1.05f - mfract(hash01(id + 1) + travel * speed / 2.2f) * 2.2f;
@@ -1044,17 +1171,37 @@ static void snow_draw(void *state, const Frame *f) {
 }
 
 const SceneKind scene_kinds[] = {
-    {"warp", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_AMBIENT | M_DUBSTEP, 0.0f, 1.0f, warp_setup, warp_draw},
-    {"tunnel", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_DUB | M_DUBSTEP, 0.5f, 1.0f, tunnel_setup, tunnel_draw},
-    {"plasma", M_KEYGEN | M_DUB | M_TRANCE | M_JUNGLE | M_LOFI | M_DUBSTEP, 0.3f, 1.0f, plasma_setup, plasma_draw},
-    {"sunset", M_SYNTHWAVE, 0.3f, 1.0f, sunset_setup, sunset_draw},
-    {"solids", M_KEYGEN | M_SYNTHWAVE | M_DUB | M_TRANCE | M_DUBSTEP, 0.2f, 1.0f, solids_setup, solids_draw},
-    {"aurora", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.0f, 0.8f, aurora_setup, aurora_draw},
-    {"sea", M_AMBIENT | M_LOFI | M_MUSICBOX | M_DUB | M_SYNTHWAVE | M_JUNGLE, 0.0f, 0.75f, sea_setup, sea_draw},
-    {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_JUNGLE | M_DUBSTEP, 0.0f, 0.8f, nebula_setup, nebula_draw},
-    {"constellations", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.0f, 0.7f, constellation_setup, constellation_draw},
-    {"cracktro", M_KEYGEN, 0.4f, 1.0f, cracktro_setup, cracktro_draw},
-    {"rain", M_LOFI | M_DUB | M_AMBIENT | M_JUNGLE, 0.0f, 0.85f, rain_setup, rain_draw},
-    {"snow", M_MUSICBOX | M_AMBIENT | M_LOFI, 0.0f, 0.75f, snow_setup, snow_draw},
+    {"warp", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_AMBIENT | M_DUBSTEP, 0.75f, 1, warp_setup, warp_draw},
+    {"tunnel", M_KEYGEN | M_SYNTHWAVE | M_TRANCE | M_JUNGLE | M_DUB | M_DUBSTEP, 0.85f, 1, tunnel_setup, tunnel_draw},
+    {"plasma", M_KEYGEN | M_DUB | M_TRANCE | M_JUNGLE | M_LOFI | M_DUBSTEP, 0.6f, 1, plasma_setup, plasma_draw},
+    {"sunset", M_SYNTHWAVE, 0.5f, 0, sunset_setup, sunset_draw},
+    {"solids", M_KEYGEN | M_SYNTHWAVE | M_DUB | M_TRANCE | M_DUBSTEP, 0.6f, 1, solids_setup, solids_draw},
+    {"aurora", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.25f, 0, aurora_setup, aurora_draw},
+    {"sea", 0, 0.3f, 0, sea_setup, sea_draw},
+    {"nebula", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_JUNGLE | M_DUBSTEP, 0.3f, 0, nebula_setup, nebula_draw},
+    {"constellations", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.35f, 1, constellation_setup, constellation_draw},
+    {"cracktro", M_KEYGEN, 0.8f, 1, cracktro_setup, cracktro_draw},
+    {"rain", M_LOFI | M_DUB | M_AMBIENT | M_JUNGLE, 0.4f, 1, rain_setup, rain_draw},
+    {"snow", M_MUSICBOX | M_AMBIENT | M_LOFI, 0.2f, 1, snow_setup, snow_draw},
+    {"kaleidoscope", ALL_MOODS, 0.7f, 1, kaleidoscope_setup, kaleidoscope_draw},
+    {"spectrum", ALL_MOODS & ~M_AMBIENT, 0.7f, 1, spectrum_setup, spectrum_draw},
+    {"ripples", ALL_MOODS, 0.45f, 1, ripples_setup, ripples_draw},
+    {"fireworks", ALL_MOODS & ~(M_DUB | M_AMBIENT), 0.75f, 1, fireworks_setup, fireworks_draw},
+    {"lasers", M_TRANCE | M_DUBSTEP | M_SYNTHWAVE | M_KEYGEN | M_JUNGLE, 0.9f, 1, lasers_setup, lasers_draw},
+    {"lissajous", ALL_MOODS, 0.5f, 1, lissajous_setup, lissajous_draw},
+    {"skyline", M_LOFI | M_SYNTHWAVE | M_DUB | M_JUNGLE | M_DUBSTEP, 0.45f, 1, skyline_setup, skyline_draw},
+    {"digital rain", M_KEYGEN | M_DUBSTEP | M_JUNGLE | M_TRANCE | M_SYNTHWAVE | M_DUB, 0.7f, 1, digital_rain_setup,
+     digital_rain_draw},
+    {"checker", M_KEYGEN | M_TRANCE | M_SYNTHWAVE | M_DUBSTEP | M_JUNGLE, 0.85f, 1, checker_setup, checker_draw},
+    {"petals", M_AMBIENT | M_MUSICBOX | M_LOFI, 0.25f, 0, petals_setup, petals_draw},
+    {"lava", M_LOFI | M_DUB | M_AMBIENT | M_SYNTHWAVE | M_TRANCE | M_KEYGEN | M_DUBSTEP, 0.35f, 0, lava_setup, lava_draw},
+    {"clouds", M_AMBIENT | M_MUSICBOX | M_LOFI | M_DUB, 0.15f, 0, clouds_setup, clouds_draw},
+    {"lanterns", M_MUSICBOX | M_AMBIENT | M_LOFI, 0.2f, 0, lanterns_setup, lanterns_draw},
+    {"jellyfish", M_AMBIENT | M_DUB | M_TRANCE | M_LOFI | M_DUBSTEP, 0.3f, 0, jellyfish_setup, jellyfish_draw},
+    {"terrain", M_SYNTHWAVE | M_AMBIENT | M_TRANCE | M_DUB | M_KEYGEN | M_DUBSTEP, 0.45f, 0, terrain_setup, terrain_draw},
+    {"galaxy", M_AMBIENT | M_TRANCE | M_DUB | M_MUSICBOX | M_DUBSTEP | M_JUNGLE | M_KEYGEN, 0.35f, 0, galaxy_setup,
+     galaxy_draw},
+    {"fireflies", M_LOFI | M_AMBIENT | M_MUSICBOX, 0.2f, 0, fireflies_setup, fireflies_draw},
+    {"ocean", M_AMBIENT | M_LOFI | M_DUB | M_MUSICBOX | M_SYNTHWAVE, 0.25f, 0, ocean_setup, ocean_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);

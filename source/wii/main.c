@@ -86,7 +86,11 @@ static const Tour TOURS[] = {
      "4.7:up,5.0:confirm"},
     // Start on the first press, then the tracker view, then the info view.
     {"overlays", 20.0, {1.6, 9.0, 15.0}, 3, 0, "1.0:confirm,6.0:one,12.0:two"},
+    // Every scene in turn over a real piece, three music seconds each, with its own timings and a shot.
+    {"scenes", 140.0, {0}, 0, 1, "1.0:confirm"},
 };
+
+#define SCENE_SECONDS 3.0
 
 // Presses a tour's scripted buttons as their moments come, one per frame, the way a person with a remote would.
 static unsigned scripted(const char **cursor, double wall) {
@@ -204,6 +208,8 @@ int main(int argc, char **argv) {
         if (argv[i] && !strncmp(argv[i], "seed=", 5)) seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
         for (int m = 0; argv[i] && !strncmp(argv[i], "mood=", 5) && m < MOOD_COUNT; m++)
             if (!strcmp(argv[i] + 5, mood_names[m])) config.settings.mood = m;
+        // A quiet run still mixes every voice, so its audio timings hold; only the console's output is turned down.
+        if (argv[i] && !strncmp(argv[i], "volume=", 7)) config.settings.volume = atoi(argv[i] + 7) < 0 ? 0 : atoi(argv[i] + 7) % 11;
     }
     App *app = app_create(&config);
     if (!app) return 1;
@@ -221,6 +227,7 @@ int main(int argc, char **argv) {
     // The tour's own clock stops while a shot is sending, so its script and shots keep their spacing.
     double stalled = 0;
     Stats stats = {0};
+    int scene = -1;
     for (;;) {
         Input in;
         input_poll(&in);
@@ -288,6 +295,32 @@ int main(int argc, char **argv) {
                       !after_shot && retraces > video_interval(), step);
             after_shot = 0;
             last = now;
+            if (!strcmp(tour->name, "scenes")) {
+                int want = playing ? (int)(clock.music / SCENE_SECONDS) : -1;
+                while (want >= 0 && want < scene_kind_count && !scene_kinds[want].moods) want++;
+                if (want != scene && want >= 0) {
+                    if (scene >= 0) {
+                        beacon_log("scene %s", scene_kinds[scene].name);
+                        stats_report(&stats);
+                    }
+                    if (want >= scene_kind_count) break;
+                    piece_force_scene(piece, scene_kinds[want].name);
+                    scene = want;
+                    shot = 0;
+                }
+                if (scene >= 0 && !shot && clock.music >= (double)scene * SCENE_SECONDS + 2.0) {
+                    int w, h;
+                    const void *xfb = video_xfb(&w, &h);
+                    beacon_shot(scene_kinds[scene].name, xfb, w, h);
+                    shot = 1;
+                    after_shot = 1;
+                    u64 sent = gettime();
+                    stalled += (double)ticks_to_microsecs(sent - now) / 1e6;
+                    last = sent;
+                }
+                if (wall - stalled >= tour->length) break;
+                continue;
+            }
             if (stats.frames == 120) stats_report(&stats);
             double mark = tour->music_shots ? clock.music : wall - stalled;
             if (shot < tour->shot_count && mark >= tour->shots[shot]) {

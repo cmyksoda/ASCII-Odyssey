@@ -72,8 +72,8 @@ int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const
     if (score_build(&p->score, &p->comp) != 0) return -1;
     Rng r;
     rng_init(&r, hash, "visuals");
-    palette_pick(&r, p->comp.info.mood, &p->colors);
-    p->palette = &p->colors;
+    palette_family(&r, p->comp.info.mood, p->colors);
+    p->palette = &p->colors[0];
     int chunky = p->comp.info.mood == MOOD_KEYGEN && rng_chance(&r, 50);
     int design = chunky ? 8 : 6, height = chunky ? 16 : 12;
     if (grid_init(&p->grid, vp, design, height) != 0 || grid_init(&p->scratch, vp, design, height) != 0) return -1;
@@ -84,7 +84,8 @@ int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const
     ascii_prepare(&p->matcher, p->grid.face, &style);
     Frame proto = {.score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid,
                    .stroker = &p->stroker, .matcher = &p->matcher, .fx = &p->fx};
-    direction_plan(&p->direction, &p->score, &r, &proto);
+    const Palette *family[3] = {&p->colors[0], &p->colors[1], &p->colors[2]};
+    direction_plan(&p->direction, &p->score, &r, &proto, family);
     plan_reactivity(p, &r);
     layout_title(p);
     return 0;
@@ -113,6 +114,17 @@ int piece_force_scene(Piece *p, const char *name) {
         scene_kinds[kind].setup(p->direction.shots[i].state, &r, &proto);
     }
     return 0;
+}
+
+int piece_force_palette(Piece *p, const char *name) {
+    for (int i = 0; i < palette_curated_count(); i++) {
+        Palette pal;
+        palette_curated(i, &pal);
+        if (strcmp(pal.name, name)) continue;
+        for (int k = 0; k < 3; k++) p->colors[k] = pal;
+        return 0;
+    }
+    return -1;
 }
 
 double piece_length(const Piece *p) {
@@ -149,22 +161,21 @@ static void title_card(Piece *p, float t) {
 
 void piece_draw(Piece *p, double t, Screen *out, int calm, int still, const float *scope, int scope_frames) {
     fx_reset(&p->fx, p->palette->bg);
-    Frame f = {.t = (float)t, .energy = score_energy(&p->score, (float)t), .react = reactivity_at(p, (float)t),
+    Frame f = {.t = (float)t, .energy = score_energy(&p->score, (float)t), .section_react = reactivity_at(p, (float)t),
                .score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid, .stroker = &p->stroker,
                .matcher = &p->matcher, .fx = &p->fx, .calm = calm, .still = still, .scope = scope, .scope_frames = scope_frames};
     direction_draw(&p->direction, &f, &p->scratch);
     title_card(p, (float)t);
-    // The whole picture answers the beat as strongly as the moment allows: glow and brightness on the kick, a lift on
-    // the snare. The thump of motion and the lift go when the viewer has asked for stillness or calm.
-    float kick = score_pulse(&p->score, ROLE_KICK, (float)t, 0.16f), snare = score_pulse(&p->score, ROLE_SNARE, (float)t, 0.2f);
+    // A reactive scene's whole picture also breathes with the beat: a little glow on the kick and a nudge of motion.
+    // The scenes themselves carry the real answer; this only ties them to the frame.
+    float kick = score_pulse(&p->score, ROLE_KICK, (float)t, 0.16f);
     float answer = f.react * (calm ? 0.3f : 1.0f);
-    p->fx.glow += answer * (0.3f * kick + 0.12f * snare);
-    if (!still) p->fx.shake_y += answer * kick * 1.5f;
-    if (!calm) p->fx.flash += answer * snare * 0.035f;
-    if (p->palette->light) p->fx.glow = 0;
+    p->fx.glow += answer * 0.25f * kick;
+    if (!still) p->fx.shake_y += answer * kick * 1.0f;
+    if (f.palette->light) p->fx.glow = 0;
     // Fade in from black at the start and out into the tail at the end.
     float end = (float)p->comp.info.length;
-    p->fx.gain = smoothstep(0.0f, 1.2f, (float)t) * (1 - smoothstep(end + 1.0f, end + 5.0f, (float)t)) * (1 + answer * 0.16f * kick);
+    p->fx.gain = smoothstep(0.0f, 1.2f, (float)t) * (1 - smoothstep(end + 1.0f, end + 5.0f, (float)t)) * (1 + answer * 0.1f * kick);
     out->scene = &p->grid;
     out->ui = NULL;
     out->fx = p->fx;

@@ -3,49 +3,99 @@
 
 #include "mathx.h"
 
+#include <stdio.h>
+#include <string.h>
+
 #define H(x) {(uint8_t)((x) >> 16), (uint8_t)((x) >> 8), (uint8_t)(x)}
 
-const Palette palettes[] = {
+enum {
+    KEYGEN = 1 << MOOD_KEYGEN,
+    AMBIENT = 1 << MOOD_AMBIENT,
+    SYNTHWAVE = 1 << MOOD_SYNTHWAVE,
+    LOFI = 1 << MOOD_LOFI,
+    TRANCE = 1 << MOOD_TRANCE,
+    JUNGLE = 1 << MOOD_JUNGLE,
+    MUSICBOX = 1 << MOOD_MUSICBOX,
+    DUB = 1 << MOOD_DUB,
+    DUBSTEP = 1 << MOOD_DUBSTEP,
+    EVERY = (1 << MOOD_COUNT) - 1
+};
+
+typedef struct {
+    const char *name;
+    Rgb bg, ramp[RAMP_STEPS], accent[3];
+    int light;
+    // The moods it suits best; any mood can still draw it now and then.
+    unsigned moods;
+    // Multi-hued palettes keep their hues: turning them would only muddle them.
+    int fixed;
+} Curated;
+
+static const Curated CURATED[] = {
     {"midnight amber", H(0x07060f), {H(0x2a1b3d), H(0x5a2d5e), H(0xa8436f), H(0xe8735e), H(0xffb468), H(0xffe7b8)},
-     {H(0xff6a8a), H(0xffd08a), H(0x8ad7ff)}, 0},
+     {H(0xff6a8a), H(0xffd08a), H(0x8ad7ff)}, 0, SYNTHWAVE | LOFI | DUB, 0},
     {"phosphor", H(0x020a06), {H(0x0b2a17), H(0x145a2c), H(0x1f8f45), H(0x3ccf6e), H(0x8ef5a8), H(0xe1ffe9)},
-     {H(0xb8ff6a), H(0xffffff), H(0x4fd0a0)}, 0},
+     {H(0xb8ff6a), H(0xffffff), H(0x4fd0a0)}, 0, KEYGEN | JUNGLE | DUB | DUBSTEP, 0},
     {"outrun", H(0x0b0420), {H(0x2b0b4d), H(0x5e1a8a), H(0xb02aa8), H(0xff4fa0), H(0xff9e6a), H(0xffe08a)},
-     {H(0x3df2ff), H(0xff3d81), H(0xfff1c4)}, 0},
+     {H(0x3df2ff), H(0xff3d81), H(0xfff1c4)}, 0, SYNTHWAVE | TRANCE | KEYGEN | DUBSTEP, 0},
     {"ice", H(0x050b14), {H(0x0d2238), H(0x17405f), H(0x2a6f96), H(0x58a8cc), H(0xa6dcef), H(0xeffaff)},
-     {H(0x9ad1ff), H(0xffffff), H(0xc5b3ff)}, 0},
+     {H(0x9ad1ff), H(0xffffff), H(0xc5b3ff)}, 0, AMBIENT | TRANCE | MUSICBOX | DUB, 0},
     {"ember", H(0x0d0503), {H(0x2c0d07), H(0x63190b), H(0xa33212), H(0xe2621c), H(0xffa443), H(0xffe39a)},
-     {H(0xfff1d6), H(0xff5a3c), H(0xffcd6b)}, 0},
+     {H(0xfff1d6), H(0xff5a3c), H(0xffcd6b)}, 0, SYNTHWAVE | JUNGLE | DUBSTEP, 0},
     {"aurora", H(0x030812), {H(0x0a2233), H(0x0f4a4a), H(0x1f8a6a), H(0x4ccf8a), H(0xa6f0a0), H(0xe8ffe0)},
-     {H(0xc38cff), H(0x6fe3ff), H(0xffffff)}, 0},
+     {H(0xc38cff), H(0x6fe3ff), H(0xffffff)}, 0, AMBIENT | TRANCE | MUSICBOX, 0},
     {"sakura", H(0x120810), {H(0x3a1430), H(0x6e2850), H(0xb44a7a), H(0xf07fa5), H(0xffbfd2), H(0xfff0f4)},
-     {H(0xffe3a0), H(0x9ad8ff), H(0xffffff)}, 0},
+     {H(0xffe3a0), H(0x9ad8ff), H(0xffffff)}, 0, AMBIENT | LOFI | MUSICBOX, 0},
     {"commodore", H(0x2b2163), {H(0x403590), H(0x6c5eb5), H(0x8b7fd1), H(0xa9a0e6), H(0xcfc8f7), H(0xffffff)},
-     {H(0xb8c76f), H(0xe09a6c), H(0x70a4b2)}, 0},
+     {H(0xb8c76f), H(0xe09a6c), H(0x70a4b2)}, 0, KEYGEN, 1},
     {"dusk tape", H(0x14100e), {H(0x2b221c), H(0x4f3b2e), H(0x7c5b44), H(0xb8865c), H(0xe2b88a), H(0xfbe6c8)},
-     {H(0xf2a48c), H(0x9cc4b8), H(0xffd68a)}, 0},
+     {H(0xf2a48c), H(0x9cc4b8), H(0xffd68a)}, 0, LOFI | DUB, 0},
     {"snow", H(0xe9eef5), {H(0xcfd8e6), H(0x9fb0cc), H(0x6c82a8), H(0x445b85), H(0x24375e), H(0x0f1b36)},
-     {H(0xd23f5d), H(0x2f7fd1), H(0xe0a42a)}, 1},
+     {H(0xd23f5d), H(0x2f7fd1), H(0xe0a42a)}, 1, AMBIENT | MUSICBOX, 0},
     {"deep sea", H(0x01060c), {H(0x062031), H(0x0a3b54), H(0x0f6a84), H(0x22a2b0), H(0x6fd8d0), H(0xd4fff6)},
-     {H(0xffd38a), H(0x8ab4ff), H(0xffffff)}, 0},
+     {H(0xffd38a), H(0x8ab4ff), H(0xffffff)}, 0, AMBIENT | DUB | JUNGLE, 0},
     {"violet storm", H(0x08051a), {H(0x1d1240), H(0x3a2177), H(0x6236b3), H(0x9a5fe6), H(0xc9a3ff), H(0xf1e6ff)},
-     {H(0xffdf6a), H(0x6af0ff), H(0xff7ab8)}, 0},
+     {H(0xffdf6a), H(0x6af0ff), H(0xff7ab8)}, 0, TRANCE | SYNTHWAVE | DUBSTEP | KEYGEN, 0},
+    {"rainbow", H(0x0c0816), {H(0x3b0f6b), H(0x2f4bff), H(0x00c2ff), H(0x2bdc6b), H(0xffd23f), H(0xff6b6b)},
+     {H(0xff3d81), H(0xffffff), H(0x00ffd0)}, 0, EVERY, 1},
+    {"cmyk", H(0xf5f3ee), {H(0xd4ecf4), H(0x79cde8), H(0x00a0d6), H(0xe6007e), H(0x5a1b6e), H(0x141414)},
+     {H(0xe6007e), H(0x00a0d6), H(0xffc800)}, 1, EVERY, 1},
+    {"vaporwave", H(0x1a0b2e), {H(0x3d1a5c), H(0x7a2c8f), H(0xc74ab0), H(0xff7ac6), H(0x8ef0ff), H(0xf2fbff)},
+     {H(0x00f0ff), H(0xff9de2), H(0xfffd82)}, 0, SYNTHWAVE | LOFI | TRANCE, 1},
+    {"pocket green", H(0x0f1a0f), {H(0x1f3a1f), H(0x306230), H(0x4f8a2f), H(0x8bac0f), H(0xb6d23c), H(0xe0f8d0)},
+     {H(0x9bbc0f), H(0xe0f8d0), H(0x8bac0f)}, 0, KEYGEN, 1},
+    {"noir", H(0x0a0a0a), {H(0x1e1e1e), H(0x3a3a3a), H(0x666666), H(0x9a9a9a), H(0xcfcfcf), H(0xffffff)},
+     {H(0xe3242b), H(0xffffff), H(0x8a8a8a)}, 0, DUB | DUBSTEP | JUNGLE | LOFI, 1},
+    {"forest", H(0x06100a), {H(0x0f2a18), H(0x1e4d2b), H(0x2f7a3a), H(0x5aa84a), H(0xa8d36a), H(0xeef7c8)},
+     {H(0xffd166), H(0xff8fab), H(0x9fe2ff)}, 0, AMBIENT | LOFI | MUSICBOX | JUNGLE, 0},
+    {"sunrise", H(0x1a0f1f), {H(0x4a1d3f), H(0x8a2f4f), H(0xd9534f), H(0xf28c54), H(0xffc56b), H(0xfff2c4)},
+     {H(0x6ee7ff), H(0xffffff), H(0xff9ac1)}, 0, SYNTHWAVE | TRANCE | LOFI | MUSICBOX, 0},
+    {"mint", H(0x04120f), {H(0x0b2e28), H(0x12584b), H(0x1c8a74), H(0x3ec9a7), H(0x9ef0d5), H(0xeffff9)},
+     {H(0xff9ac1), H(0xffe28a), H(0xffffff)}, 0, AMBIENT | TRANCE | MUSICBOX | KEYGEN, 0},
+    {"lavender", H(0x120d1f), {H(0x2b2147), H(0x4b3a7a), H(0x7a63b8), H(0xa993e6), H(0xd2c6ff), H(0xf6f2ff)},
+     {H(0xffd1e8), H(0xb8f2e6), H(0xfff3b0)}, 0, AMBIENT | MUSICBOX | LOFI, 0},
+    {"verdigris", H(0x0b1110), {H(0x1c2b28), H(0x2f4d47), H(0x3f7a6e), H(0xb0683f), H(0xe39a5c), H(0xf7d9b5)},
+     {H(0x6fe3cf), H(0xffb37a), H(0xfff1df)}, 0, DUB | LOFI | JUNGLE, 1},
+    {"blood moon", H(0x120406), {H(0x2f080d), H(0x5c0f18), H(0x93172a), H(0xd1344a), H(0xff7a6b), H(0xffd2c4)},
+     {H(0xffb000), H(0xffe9d6), H(0xff3d55)}, 0, DUBSTEP | JUNGLE | SYNTHWAVE, 0},
+    {"citrus", H(0x0f1205), {H(0x263010), H(0x4f5f12), H(0x8aa61a), H(0xd9d92b), H(0xffb627), H(0xfff5c2)},
+     {H(0xff5e5b), H(0x7bdff2), H(0xffffff)}, 0, KEYGEN | TRANCE | JUNGLE, 0},
+    {"ultraviolet", H(0x0a0518), {H(0x1d0d45), H(0x3b1a8f), H(0x6a2be0), H(0xa855ff), H(0xe08cff), H(0xfbe8ff)},
+     {H(0x39ff14), H(0x00f5ff), H(0xffffff)}, 0, TRANCE | DUBSTEP | KEYGEN | SYNTHWAVE, 0},
+    {"matcha", H(0x0e110a), {H(0x22291a), H(0x3d4a2a), H(0x66803f), H(0x99b35c), H(0xcfe0a0), H(0xf7fbe8)},
+     {H(0xf2a7b5), H(0xf5e6c8), H(0xffffff)}, 0, LOFI | AMBIENT | MUSICBOX, 0},
+    {"neon tokyo", H(0x08060f), {H(0x1f0f3a), H(0x4b1078), H(0xc2187a), H(0xff4f9a), H(0xffb0d8), H(0xffffff)},
+     {H(0x00e7ff), H(0xf9f871), H(0x7cff6b)}, 0, SYNTHWAVE | DUBSTEP | KEYGEN | TRANCE, 1},
+    {"autumn", H(0x110a06), {H(0x2b160c), H(0x5a2a12), H(0x96481a), H(0xd77a2b), H(0xf2b35a), H(0xfde7c0)},
+     {H(0xb5d99c), H(0xffd6a5), H(0xc76b98)}, 0, LOFI | MUSICBOX | DUB, 0},
+    {"sherbet", H(0x140a12), {H(0x3a1a33), H(0x6b2d57), H(0xb84a7a), H(0xff8fa3), H(0xffd6a5), H(0xfffbe0)},
+     {H(0xa0e7e5), H(0xb4f8c8), H(0xfbe7c6)}, 0, LOFI | MUSICBOX | SYNTHWAVE, 1},
+    {"teal and orange", H(0x050b10), {H(0x0c2230), H(0x154a5e), H(0x1f7f8c), H(0x3fb8b0), H(0xf2a65a), H(0xfff1dc)},
+     {H(0xff6b35), H(0xffffff), H(0x8ce1ff)}, 0, TRANCE | DUB | DUBSTEP | AMBIENT, 1},
+    {"ocean sunset", H(0x0b0d1f), {H(0x1d1b45), H(0x3c2a6e), H(0xa2416b), H(0xe9765b), H(0xf9c46b), H(0xfff2cf)},
+     {H(0x5ee2ff), H(0xffffff), H(0xffa7c4)}, 0, SYNTHWAVE | AMBIENT | LOFI, 1},
 };
-const int palette_count = (int)(sizeof palettes / sizeof palettes[0]);
-
-enum { AMBER, PHOSPHOR, OUTRUN, ICE, EMBER, AURORA, SAKURA, COMMODORE, DUSK, SNOW, DEEP, STORM, COUNT };
-
-static const int WEIGHTS[MOOD_COUNT][COUNT] = {
-    [MOOD_SYNTHWAVE] = {[OUTRUN] = 40, [AMBER] = 25, [STORM] = 20, [EMBER] = 15},
-    [MOOD_KEYGEN] = {[COMMODORE] = 30, [PHOSPHOR] = 25, [OUTRUN] = 15, [ICE] = 15, [STORM] = 15},
-    [MOOD_AMBIENT] = {[ICE] = 25, [AURORA] = 25, [DEEP] = 25, [SAKURA] = 15, [SNOW] = 10},
-    [MOOD_LOFI] = {[DUSK] = 40, [AMBER] = 25, [SAKURA] = 20, [DEEP] = 15},
-    [MOOD_TRANCE] = {[STORM] = 30, [ICE] = 25, [OUTRUN] = 20, [AURORA] = 25},
-    [MOOD_JUNGLE] = {[PHOSPHOR] = 30, [EMBER] = 25, [DEEP] = 25, [STORM] = 20},
-    [MOOD_MUSICBOX] = {[SAKURA] = 30, [SNOW] = 25, [ICE] = 25, [AURORA] = 20},
-    [MOOD_DUB] = {[DEEP] = 35, [PHOSPHOR] = 20, [ICE] = 25, [DUSK] = 20},
-    [MOOD_DUBSTEP] = {[EMBER] = 25, [STORM] = 25, [PHOSPHOR] = 20, [OUTRUN] = 15, [DEEP] = 15},
-};
+#define CURATED_COUNT ((int)(sizeof CURATED / sizeof CURATED[0]))
 
 Rgbf palette_ramp(const Palette *p, float v) {
     v = saturate(v) * (RAMP_STEPS - 1);
@@ -58,20 +108,128 @@ Rgbf palette_accent(const Palette *p, int i) {
     return rgbf(p->accent[((i % 3) + 3) % 3]);
 }
 
+static void from_curated(const Curated *c, Palette *out) {
+    memset(out, 0, sizeof *out);
+    snprintf(out->name, sizeof out->name, "%s", c->name);
+    out->bg = c->bg;
+    memcpy(out->ramp, c->ramp, sizeof out->ramp);
+    memcpy(out->accent, c->accent, sizeof out->accent);
+    out->light = c->light;
+}
+
+int palette_curated_count(void) {
+    return CURATED_COUNT;
+}
+
+void palette_curated(int index, Palette *out) {
+    from_curated(&CURATED[((index % CURATED_COUNT) + CURATED_COUNT) % CURATED_COUNT], out);
+}
+
 // Turns a color around the gray axis, which keeps a palette's colors in the same relation to each other.
-static Rgb drift(Rgb c, float c_a, float s_a) {
+static Rgb drift(Rgb c, float degrees) {
+    float a = degrees * PI_F / 180.0f, c_a = mcos(a), s_a = msin(a);
     float k = (1 - c_a) / 3, s = s_a * 0.57735f, r = c.r, g = c.g, b = c.b;
     Rgbf out = {(c_a + k) * r + (k - s) * g + (k + s) * b, (k + s) * r + (c_a + k) * g + (k - s) * b,
                 (k - s) * r + (k + s) * g + (c_a + k) * b};
     return rgb_from_f(out);
 }
 
-void palette_pick(Rng *r, Mood mood, Palette *out) {
-    int m = mood >= 0 && mood < MOOD_COUNT ? mood : MOOD_SYNTHWAVE, weights[COUNT];
-    for (int i = 0; i < COUNT; i++) weights[i] = WEIGHTS[m][i] + 4;
-    *out = palettes[rng_weighted(r, weights, COUNT)];
-    float angle = rng_between(r, -25.0f, 25.0f) * PI_F / 180.0f, c_a = mcos(angle), s_a = msin(angle);
-    out->bg = drift(out->bg, c_a, s_a);
-    for (int i = 0; i < RAMP_STEPS; i++) out->ramp[i] = drift(out->ramp[i], c_a, s_a);
-    for (int i = 0; i < 3; i++) out->accent[i] = drift(out->accent[i], c_a, s_a);
+static void turn(Palette *p, float degrees) {
+    p->bg = drift(p->bg, degrees);
+    for (int i = 0; i < RAMP_STEPS; i++) p->ramp[i] = drift(p->ramp[i], degrees);
+    for (int i = 0; i < 3; i++) p->accent[i] = drift(p->accent[i], degrees);
+}
+
+/* ---------- Generated palettes, built in OKLCH so their ramps brighten evenly ---------- */
+
+static float encode_srgb(float x) {
+    if (x <= 0) return 0;
+    if (x >= 1) return 255;
+    return 255 * (x <= 0.0031308f ? 12.92f * x : 1.055f * mexp2(mlog2(x) / 2.4f) - 0.055f);
+}
+
+static Rgb oklch(float lightness, float chroma, float hue) {
+    float a = chroma * mcos(hue * PI_F / 180.0f), b = chroma * msin(hue * PI_F / 180.0f);
+    float l = lightness + 0.3963377774f * a + 0.2158037573f * b, m = lightness - 0.1055613458f * a - 0.0638541728f * b;
+    float s = lightness - 0.0894841775f * a - 1.2914855480f * b;
+    l = l * l * l;
+    m = m * m * m;
+    s = s * s * s;
+    Rgbf c = {encode_srgb(4.0767416621f * l - 3.3077115913f * m + 0.2309699292f * s),
+              encode_srgb(-1.2684380046f * l + 2.6097574011f * m - 0.3413193965f * s),
+              encode_srgb(-0.0041960863f * l - 0.7034186147f * m + 1.7076147010f * s)};
+    return rgb_from_f(c);
+}
+
+typedef struct {
+    float hue, sweep, chroma;
+    int scheme;
+} Recipe;
+
+static Recipe recipe(Rng *r) {
+    return (Recipe){rng_between(r, 0, 360), rng_between(r, -90, 90), rng_between(r, 0.09f, 0.17f), rng_range(r, 0, 4)};
+}
+
+static void generate(Recipe k, Palette *out) {
+    static const char *const hues[12] = {"rose", "coral", "amber", "gold", "lime", "jade",
+                                         "teal", "azure", "cobalt", "indigo", "violet", "orchid"};
+    static const char *const moods[4] = {"glow", "drift", "bloom", "haze"};
+    float hue = mfract(k.hue / 360.0f) * 360.0f, sweep = k.sweep, chroma = k.chroma;
+    int scheme = k.scheme;
+    memset(out, 0, sizeof *out);
+    snprintf(out->name, sizeof out->name, "%s %s", hues[(int)(mfract((hue + 15) / 360.0f) * 12) % 12], moods[scheme]);
+    out->bg = oklch(0.14f, 0.035f, hue);
+    for (int i = 0; i < RAMP_STEPS; i++) {
+        float t = (float)i / (RAMP_STEPS - 1);
+        out->ramp[i] = oklch(0.27f + 0.68f * t, chroma * (0.45f + 0.75f * msin(t * PI_F)) * (1 - 0.6f * t * t), hue + sweep * t);
+    }
+    // Accents sit across the wheel: the complement, or a triad, or the two sides of a split.
+    static const float offsets[4][3] = {{180, 150, 210}, {120, 240, 180}, {150, 210, 30}, {90, 180, 270}};
+    for (int i = 0; i < 3; i++) out->accent[i] = oklch(0.8f, 0.14f, hue + offsets[scheme][i]);
+}
+
+static int pick_curated(Rng *r, Mood mood) {
+    int weights[CURATED_COUNT];
+    for (int i = 0; i < CURATED_COUNT; i++) {
+        int suits = mood >= 0 && mood < MOOD_COUNT && (CURATED[i].moods & (1u << mood));
+        weights[i] = CURATED[i].moods == EVERY ? 6 : suits ? 10 : 1;
+    }
+    return rng_weighted(r, weights, CURATED_COUNT);
+}
+
+static float swing(Rng *r, float lo, float hi) {
+    return (rng_chance(r, 50) ? 1 : -1) * rng_between(r, lo, hi);
+}
+
+void palette_family(Rng *r, Mood mood, Palette out[3]) {
+    int curated = rng_chance(r, 65), index = -1;
+    Recipe k = {0};
+    if (curated) {
+        index = pick_curated(r, mood);
+        from_curated(&CURATED[index], &out[0]);
+        if (!CURATED[index].fixed) turn(&out[0], rng_between(r, -25, 25));
+    } else {
+        k = recipe(r);
+        generate(k, &out[0]);
+    }
+    // The drops get a sibling: another palette the mood suits, or this one moved well round the wheel.
+    out[1] = out[0];
+    if (rng_chance(r, curated && CURATED[index].fixed ? 50 : 40)) {
+        from_curated(&CURATED[pick_curated(r, mood)], &out[1]);
+    } else if (curated && !CURATED[index].fixed) {
+        turn(&out[1], swing(r, 35, 80));
+    } else if (!curated) {
+        Recipe drop = k;
+        drop.hue += swing(r, 35, 80);
+        generate(drop, &out[1]);
+    }
+    // Builds and breaks lean a little the other way.
+    out[2] = out[0];
+    if (!curated) {
+        Recipe lean = k;
+        lean.hue += swing(r, 15, 35);
+        generate(lean, &out[2]);
+    } else if (!CURATED[index].fixed) {
+        turn(&out[2], swing(r, 15, 35));
+    }
 }

@@ -18,14 +18,14 @@ typedef struct {
     Stroker stroker;
     AsciiMatcher matcher;
     FrameFx fx;
-    // The piece's own copy of its palette, drifted for its seed.
-    Palette colors;
+    // The piece's palette family (calm parts, drops, builds and breaks), and the first of them, for its title.
+    Palette colors[3];
     const Palette *palette;
     const FigletFont *art_font;
     char art[FIGLET_MAX_HEIGHT * PIECE_ART_W];
     int art_w, art_h;
-    // How strongly each section's picture answers the music, and the seed's shape for it: all the way through,
-    // at the big moments, swelling, or in pockets.
+    // The backup reactivity plan, per section, for when the direction is set to follow it instead of each scene's own
+    // nature: all the way through, at the big moments, swelling, or in pockets.
     float react[MAX_SECTIONS];
     int react_shape;
 } Piece;
@@ -37,5 +37,7 @@ void piece_draw(Piece *p, double t, Screen *out, int calm, int still, const floa
 double piece_length(const Piece *p);
 // Recasts every shot as the named scene, for looking at one scene against real music; -1 when there's no such scene.
 int piece_force_scene(Piece *p, const char *name);
+// Paints every shot with the named hand-made palette; -1 when there's no such palette.
+int piece_force_palette(Piece *p, const char *name);
 
 #endif

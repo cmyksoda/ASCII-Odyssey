@@ -241,22 +241,26 @@ static int piece_video(Piece *p, const char *path, int fps, int scale, int wide)
     return rc;
 }
 
-// What the voyage page shows about a piece: its facts, sections with their reactivity, and its shots.
+// What the voyage page shows about a piece: its facts, its palettes, its sections, and its shots with their scenes.
 static void piece_info(const Piece *p, const char *path) {
-    static const char *const shapes[4] = {"reacts all the way through", "reacts at the big moments", "reactions swell",
-                                          "reacts in pockets"};
     FILE *f = fopen(path, "w");
     if (!f) return;
     const SongInfo *info = &p->comp.info;
     fprintf(f, "{\"title\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, ", info->title,
             mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length);
-    fprintf(f, "\"palette\": \"%s\", \"reactivity\": \"%s\", \"sections\": [", p->palette->name, shapes[p->react_shape]);
+    fprintf(f, "\"palettes\": [");
+    for (int i = 0; i < 3; i++) fprintf(f, "%s\"%s\"", i ? ", " : "", p->direction.palettes[i]->name);
+    fprintf(f, "], \"sections\": [");
     for (int s = 0; s < info->section_count; s++)
-        fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"react\": %.2f}", s ? ", " : "",
-                section_names[info->sections[s].kind], info->sections[s].start, info->sections[s].end, p->react[s]);
+        fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f}", s ? ", " : "", section_names[info->sections[s].kind],
+                info->sections[s].start, info->sections[s].end);
     fprintf(f, "], \"shots\": [");
-    for (int i = 0; i < p->direction.count; i++)
-        fprintf(f, "%s\"%s\"", i ? ", " : "", scene_kinds[p->direction.shots[i].kind].name);
+    for (int i = 0; i < p->direction.count; i++) {
+        const Shot *s = &p->direction.shots[i];
+        fprintf(f, "%s{\"scene\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"reactive\": %d, \"palette\": \"%s\", \"entrance\": \"%s\"}",
+                i ? ", " : "", scene_kinds[s->kind].name, s->start, s->end, scene_kinds[s->kind].reactive,
+                p->direction.palettes[s->palette]->name, entrance_names[s->entrance]);
+    }
     fprintf(f, "]}\n");
     fclose(f);
 }
@@ -282,11 +286,89 @@ static void scripted_press(const char *list, int index, Input *in) {
         if ((int)strlen(names[k].name) == n && !strncmp(list, names[k].name, (size_t)n)) in->pressed |= names[k].bit;
 }
 
+static double now_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1e6;
+}
+
+static double time_frame(Piece *p, double t, double *worst) {
+    Screen screen = {0};
+    double t0 = now_ms();
+    piece_draw(p, t, &screen, 0, 0, NULL, 0);
+    double ms = now_ms() - t0;
+    if (ms > *worst) *worst = ms;
+    return ms;
+}
+
+// What each scene costs to draw on this machine, held and in transition, scaled to the Wii by rain's known cost there,
+// so a scene that would crowd the Wii's frame shows up before it ever reaches the console.
+static void bench(Piece *p, double rain_on_wii) {
+    double cost[64] = {0}, worst[64] = {0};
+    int rain = -1;
+    for (int k = 0; k < scene_kind_count && k < 64; k++) {
+        if (!scene_kinds[k].moods) continue;
+        if (!strcmp(scene_kinds[k].name, "rain")) rain = k;
+        piece_force_scene(p, scene_kinds[k].name);
+        // The quickest of three passes, since this machine's other work only ever adds time.
+        cost[k] = 1e9;
+        for (int pass = 0; pass < 3; pass++) {
+            double sum = 0;
+            int frames = 0;
+            for (int i = 0; i < p->direction.count; i++) {
+                const Shot *s = &p->direction.shots[i];
+                for (int f = 0; f < 24; f++) {
+                    double t = s->start + s->fade + (s->end - s->start - s->fade) * (f + 0.5) / 24;
+                    if (t >= p->score.length) break;
+                    sum += time_frame(p, t, &worst[k]);
+                    frames++;
+                }
+            }
+            if (frames && sum / frames < cost[k]) cost[k] = sum / frames;
+        }
+    }
+    double scale = rain >= 0 && cost[rain] > 0 ? rain_on_wii / cost[rain] : 0;
+    int a = -1, b = -1;
+    printf("scene            pc ms  worst   wii ms (est.)\n");
+    for (int k = 0; k < scene_kind_count && k < 64; k++) {
+        if (!scene_kinds[k].moods) continue;
+        printf("%-14s %7.3f %6.3f   %5.1f\n", scene_kinds[k].name, cost[k], worst[k], cost[k] * scale);
+        if (a < 0 || cost[k] > cost[a]) {
+            b = a;
+            a = k;
+        } else if (b < 0 || cost[k] > cost[b]) {
+            b = k;
+        }
+    }
+    // The dearest transition: the two dearest scenes taking turns, timed only while one blends into the other.
+    piece_force_scene(p, scene_kinds[a].name);
+    Rng r;
+    rng_init(&r, 7, "bench");
+    Frame proto = {.score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid, .stroker = &p->stroker,
+                   .matcher = &p->matcher, .fx = &p->fx};
+    for (int i = 1; i < p->direction.count; i += 2) {
+        p->direction.shots[i].kind = b;
+        scene_kinds[b].setup(p->direction.shots[i].state, &r, &proto);
+    }
+    double blend = 0, blend_worst = 0;
+    int frames = 0;
+    for (int i = 1; i < p->direction.count; i++) {
+        const Shot *s = &p->direction.shots[i];
+        for (int f = 0; f < 8 && s->fade > 0; f++) {
+            blend += time_frame(p, s->start + s->fade * (f + 0.5) / 8, &blend_worst);
+            frames++;
+        }
+    }
+    blend /= frames ? frames : 1;
+    printf("%s into %s, blending: %.3f ms, worst %.3f   %5.1f\n", scene_kinds[a].name, scene_kinds[b].name, blend, blend_worst,
+           blend * scale);
+}
+
 static int piece_main(int argc, char **argv) {
-    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL, *scene = NULL;
+    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL, *scene = NULL, *palette = NULL;
     Mood mood = MOOD_ANY;
     LengthPref length = LENGTH_MEDIUM;
-    int wide = 0, fps = 30, scale = 2, count = 0;
+    int wide = 0, fps = 30, scale = 2, count = 0, benchmark = 0;
     double times[64];
     for (int i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "--seed") && i + 1 < argc)
@@ -301,6 +383,8 @@ static int piece_main(int argc, char **argv) {
             info_path = argv[++i];
         else if (!strcmp(argv[i], "--scene") && i + 1 < argc)
             scene = argv[++i];
+        else if (!strcmp(argv[i], "--palette") && i + 1 < argc)
+            palette = argv[++i];
         else if (!strcmp(argv[i], "--times") && i + 1 < argc)
             count = parse_times(argv[++i], times, 64);
         else if (!strcmp(argv[i], "--fps") && i + 1 < argc)
@@ -309,6 +393,8 @@ static int piece_main(int argc, char **argv) {
             scale = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--wide"))
             wide = 1;
+        else if (!strcmp(argv[i], "--bench"))
+            benchmark = 1;
         else if (!strcmp(argv[i], "--short"))
             length = LENGTH_SHORT;
         else if (!strcmp(argv[i], "--long"))
@@ -323,14 +409,20 @@ static int piece_main(int argc, char **argv) {
         fprintf(stderr, "no scene called %s\n", scene);
         return 1;
     }
+    if (palette && piece_force_palette(&p, palette) != 0) {
+        fprintf(stderr, "no palette called %s\n", palette);
+        return 1;
+    }
     if (info_path) piece_info(&p, info_path);
     const SongInfo *info = &p.comp.info;
     printf("\"%s\": %s, %s %s, %d bpm, %.0f s, palette %s, grid %dx%d\n", info->title, mood_names[info->mood],
            note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length, p.palette->name, p.grid.cols,
            p.grid.rows);
-    for (int i = 0; i < p.direction.count; i++)
-        printf("  shot %2d %6.1f-%6.1f s  %-8s enters by %d\n", i, p.direction.shots[i].start, p.direction.shots[i].end,
-               scene_kinds[p.direction.shots[i].kind].name, p.direction.shots[i].entrance);
+    for (int i = 0; i < p.direction.count; i++) {
+        const Shot *s = &p.direction.shots[i];
+        printf("  shot %2d %6.1f-%6.1f s  %-14s %-8s %-9s %s\n", i, s->start, s->end, scene_kinds[s->kind].name,
+               scene_kinds[s->kind].reactive ? "reactive" : "still", entrance_names[s->entrance], p.direction.palettes[s->palette]->name);
+    }
     if (sheet) {
         if (!count) {
             for (int i = 0; i < p.direction.count && count < 12; i++)
@@ -353,6 +445,7 @@ static int piece_main(int argc, char **argv) {
         image_free(&out);
     }
     if (video && piece_video(&p, video, fps, scale, wide) != 0) fprintf(stderr, "video failed\n");
+    if (benchmark) bench(&p, 6.0);
     piece_free(&p);
     return 0;
 }

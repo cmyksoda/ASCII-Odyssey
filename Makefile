@@ -8,7 +8,7 @@ endif
 .DEFAULT_GOAL := all
 
 APP := asciiodyssey
-VERSION := 0.1.0
+VERSION := 0.2.0
 CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
 # fp-contract off keeps every float op IEEE-rounded, so seeds match the PC tool exactly.
 COMMON_CFLAGS := -O2 -std=gnu11 -Wall -Wextra -Werror -ffp-contract=off -fno-strict-aliasing -MMD -MP

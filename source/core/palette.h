@@ -8,7 +8,7 @@
 #define RAMP_STEPS 6
 
 typedef struct {
-    const char *name;
+    char name[24];
     Rgb bg;
     // From barely-there to brightest.
     Rgb ramp[RAMP_STEPS];
@@ -17,12 +17,13 @@ typedef struct {
     int light;
 } Palette;
 
-extern const Palette palettes[];
-extern const int palette_count;
-
 Rgbf palette_ramp(const Palette *p, float v);
 Rgbf palette_accent(const Palette *p, int i);
-// Any palette can paint any mood, the mood only tipping the odds, and each seed drifts its hues a little.
-void palette_pick(Rng *r, Mood mood, Palette *out);
+// A piece's three palettes: one for its calm parts, a sibling for its drops, and one for its builds and breaks.
+// Each is hand-made or generated, and any can appear in any mood; the mood only tips the odds.
+void palette_family(Rng *r, Mood mood, Palette out[3]);
+// How many hand-made palettes there are, and one of them by index, for looking at them all.
+int palette_curated_count(void);
+void palette_curated(int index, Palette *out);
 
 #endif
