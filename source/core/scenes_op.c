@@ -37,7 +37,7 @@ static int slope_glyph(float dx, float dy) {
 /* ---------- Vortex ---------- */
 
 typedef struct {
-    int sectors;
+    int sectors, rays;
     float rings, twist, spin, speed;
 } Vortex;
 
@@ -50,6 +50,8 @@ void vortex_setup(void *state, Rng *r, const Frame *f) {
     v->twist = 2.0f * (float)rng_range(r, 0, 3);
     v->spin = rng_between(r, 0.08f, 0.2f) * (rng_chance(r, 50) ? 1 : -1);
     v->speed = rng_between(r, 0.6f, 1.1f);
+    // Sometimes a sunburst of rays crossed by thin zooming rings, in place of the checkerboard.
+    v->rays = rng_chance(r, 35);
     (void)f;
 }
 
@@ -70,7 +72,8 @@ void vortex_draw(void *state, const Frame *f) {
             if (r < 0.04f) continue;
             float around = (matan2(y, x) + turn) / TAU_F * (float)v->sectors;
             float out = mlog2(r) * v->rings - zoom + around * v->twist / (float)v->sectors;
-            int parity = (mfloor_i(out) + mfloor_i(around)) & 1, edge = mfract(out) < 0.12f || mfract(around) < 0.12f;
+            int parity = v->rays ? (mfloor_i(around) & 1) && (mfloor_i(out) & 3) : (mfloor_i(out) + mfloor_i(around)) & 1;
+            int edge = mfract(out) < 0.12f || mfract(around) < 0.12f;
             float fade = smoothstep(0.04f, 0.3f, r) * contrast;
             if (parity)
                 put_cell(g, col, row, edge ? '+' : '#', frame_dim(f, inks[0], fade * (0.85f + 0.3f * kick)));
@@ -83,8 +86,11 @@ void vortex_draw(void *state, const Frame *f) {
 
 /* ---------- Hypnotic spiral ---------- */
 
+// An even spiral, a logarithmic one that looks the same at every size, or a rose of rings rippled into petals.
+enum { SPIRAL_EVEN, SPIRAL_LOG, SPIRAL_ROSE, SPIRAL_STYLES };
+
 typedef struct {
-    int arms, colors;
+    int arms, colors, style;
     float tight, speed;
 } Spiral;
 
@@ -94,6 +100,7 @@ void spiral_setup(void *state, Rng *r, const Frame *f) {
     s->colors = rng_chance(r, 50) ? 2 : 3;
     s->tight = rng_between(r, 3.0f, 6.0f);
     s->speed = rng_between(r, 0.5f, 1.0f) * (rng_chance(r, 50) ? 1 : -1);
+    s->style = rng_range(r, 0, SPIRAL_STYLES);
     (void)f;
 }
 
@@ -112,7 +119,13 @@ void spiral_draw(void *state, const Frame *f) {
         float y = cell_y(g, row);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), r = mhypot(x, y);
-            float band = r * s->tight + matan2(y, x) / TAU_F * (float)s->arms - flow;
+            float a = matan2(y, x), band;
+            if (s->style == SPIRAL_LOG)
+                band = mlog2(r + 0.01f) * s->tight * 0.6f + a / TAU_F * (float)s->arms - flow;
+            else if (s->style == SPIRAL_ROSE)
+                band = r * s->tight + 0.35f * msin(a * (float)(s->arms + 3)) - flow;
+            else
+                band = r * s->tight + a / TAU_F * (float)s->arms - flow;
             int k = mfloor_i(band);
             float level = msin(mfract(band) * PI_F) * smoothstep(0.0f, 0.12f, r);
             int i = (int)(level * 7.99f);
@@ -239,8 +252,12 @@ void mirror_draw(void *state, const Frame *f) {
 
 /* ---------- Moire ---------- */
 
+// Two rippling sets of rings, two gratings of straight lines slowly turning across each other, or one of each.
+enum { MOIRE_RINGS, MOIRE_GRATINGS, MOIRE_MIXED, MOIRE_STYLES };
+
 typedef struct {
     float density, speed, phase[4];
+    int style;
 } Moire;
 
 void moire_setup(void *state, Rng *r, const Frame *f) {
@@ -248,11 +265,20 @@ void moire_setup(void *state, Rng *r, const Frame *f) {
     m->density = rng_between(r, 7.0f, 11.0f);
     m->speed = rng_between(r, 0.6f, 1.2f);
     for (int k = 0; k < 4; k++) m->phase[k] = rng_between(r, 0, TAU_F);
+    m->style = rng_range(r, 0, MOIRE_STYLES);
     (void)f;
 }
 
-// Two sets of rings rippling out from wandering centers: where they cross, interference fringes swing and shimmer the
-// way op art does. Kicks send both sets of rings racing outward.
+// How many rings (or lines) out from its origin the point lies, for one of the two overlapping sets.
+static float moire_field(const Moire *m, int second, float x, float y, float cx, float cy, float t) {
+    int ring = m->style == MOIRE_RINGS || (m->style == MOIRE_MIXED && !second);
+    if (ring) return mhypot(x - cx, y - cy) * m->density;
+    float a = second ? -t * 0.07f + m->phase[2] : t * 0.1f + m->phase[0];
+    return (x * mcos(a) + y * msin(a)) * m->density;
+}
+
+// Two overlapping sets of rings or lines: where they cross, interference fringes swing and shimmer the way op art
+// does. Kicks send both sets racing outward.
 void moire_draw(void *state, const Frame *f) {
     Moire *m = state;
     Grid *g = f->grid;
@@ -266,7 +292,7 @@ void moire_draw(void *state, const Frame *f) {
         float y = cell_y(g, row);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col);
-            int a = mfloor_i(mhypot(x - ax, y - ay) * m->density - flow), b = mfloor_i(mhypot(x - bx, y - by) * m->density - flow);
+            int a = mfloor_i(moire_field(m, 0, x, y, ax, ay, t) - flow), b = mfloor_i(moire_field(m, 1, x, y, bx, by, t) - flow);
             if ((a + b) & 1)
                 put_cell(g, col, row, '#', frame_dim(f, inks[0], 0.9f * contrast));
             else if (a & 1)
