@@ -792,8 +792,9 @@ static void constellation_setup(void *state, Rng *r, const Frame *f) {
 // The sky turns about a pole above the top of the screen, a little over half a degree a second.
 #define SKY_POLE 2.2f
 
-static void sky_turn(float angle, float x, float y, float *ox, float *oy) {
-    float s = msin(angle), co = mcos(angle), dy = y - SKY_POLE;
+// Turns a point about the pole by the angle whose sine and cosine are given.
+static void sky_turn(float s, float co, float x, float y, float *ox, float *oy) {
+    float dy = y - SKY_POLE;
     *ox = x * co - dy * s;
     *oy = SKY_POLE + x * s + dy * co;
 }
@@ -805,15 +806,15 @@ static void constellation_draw(void *state, const Frame *f) {
     Constellation *c = state;
     Grid *g = f->grid;
     dust_stars(f, c->salt, 0.004f, 0.8f);
-    float turn = f->local * 0.011f * (c->salt & 1 ? 1.0f : -1.0f);
+    float turn = f->local * 0.011f * (c->salt & 1 ? 1.0f : -1.0f), ts = msin(turn), tc = mcos(turn);
     float sx[STARS], sy[STARS];
-    for (int i = 0; i < STARS; i++) sky_turn(turn, c->x[i], c->y[i], &sx[i], &sy[i]);
+    for (int i = 0; i < STARS; i++) sky_turn(ts, tc, c->x[i], c->y[i], &sx[i], &sy[i]);
     Rgbf faint = palette_ramp(f->palette, 0.35f), milk = palette_ramp(f->palette, 0.55f);
     for (int row = 0; row < g->rows; row++) {
         float sy_row = 1 - ((float)row + 0.5f) / (float)g->rows * 2;
         for (int col = 0; col < g->cols; col++) {
             float x, y;
-            sky_turn(-turn, ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect, sy_row, &x, &y);
+            sky_turn(-ts, tc, ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect, sy_row, &x, &y);
             float d = y - (x * c->band_tilt + c->band_offset), band = mexp(-d * d * 9.0f);
             float dust = band * noise_fbm(x * 2.2f + (float)(c->salt % 53), y * 2.2f + f->t * 0.01f);
             uint32_t id = (uint32_t)(row * 977 + col * 131) ^ c->salt;
