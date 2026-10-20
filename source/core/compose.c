@@ -680,6 +680,18 @@ static void make_instruments(Composer *c) {
         sub->ducked = 2;
         sub->send_reverb = sub->send_delay = 0;
     }
+    // Dubstep's second, dirtier bass is made last and from a stream of its own, so the rest of a piece is unchanged.
+    if (c->mood == MOOD_DUBSTEP && s->instrument_count < MAX_INSTRUMENTS) {
+        Rng dirty_rng;
+        rng_init(&dirty_rng, c->salt, "dirty bass");
+        Instrument *dirty = &s->instruments[s->instrument_count];
+        if (synth_instrument(dirty, VOICE_BASS_WOBBLE, &dirty_rng, (float)s->bpm) == 0) {
+            c->slot[SL_KEYS] = ++s->instrument_count;
+            dirty->growl = 1;
+            dirty->resonance += 0.6f;
+            dirty->volume *= 0.6f;
+        }
+    }
     // Dubstep's snare is darkened above about 4.6 kHz, so its noise doesn't hiss over drops the growl should own.
     if (c->mood == MOOD_DUBSTEP && c->slot[SL_SNARE]) s->instruments[c->slot[SL_SNARE] - 1].cutoff = 0.75f;
 }
@@ -996,8 +1008,9 @@ static int bass_note(const Chord *ch) {
     return n;
 }
 
-// Wobble bass a bar at a time: notes (r root, o octave, f fifth, m the scale's second, x a cut) and the wobble's
-// rate for each beat (h half notes, q quarters, e eighths, t eighth triplets, s sixteenths, - still).
+// Wobble bass a bar at a time: notes (r root, o octave, f fifth, m t u the scale's second, third and fourth, b the
+// step below, x a cut, v V ^ glides, - a glide going on) and the wobble's rate for each beat (h half notes, q quarters,
+// e eighths, t eighth triplets, s sixteenths, - still).
 typedef struct {
     const char *notes, *rates;
 } Wobble;
@@ -1013,7 +1026,11 @@ static const Wobble WOBBLES_MORE[] = {
     {"r.......m...r...", "teqe"}, {"r.r.r.r.r.......", "s-eq"}, {"r...r...........", "ee--"}, {"o...o...r...r...", "qqss"}};
 // Phrase endings: rolls, a dead stop for half a bar, and a run that speeds up into the next downbeat.
 static const Wobble FILLS_MORE[] = {{"r.......x.......", "ss--"}, {"rrrrrrrrrrrrrrrr", "eest"}, {"o.o.o.o.r.r.r.r.", "ssss"},
-                                    {"r.r.r.r.x...o...", "tt-s"}};
+                                    {"r.r.r.r.x...o...", "tt-s"}, {"r.r.r.r.o...V---", "ssq-"}, {"o.o.o.o.v...^---", "sss-"}};
+// Riffs that move: climbing and falling through the scale, jumping octaves, and diving home.
+static const Wobble RIFFS[] = {{"r...t...u...o...", "eeqq"}, {"o...u...t...r...", "qqee"}, {"r.r.b...r.r.u...", "sses"},
+                               {"o.......V---r...", "qq-e"}, {"r...^---o...v...", "e-qs"}, {"r.t.u.t.r...o...", "ssqe"},
+                               {"r...b...r...f...", "tete"}, {"o.o.v...o.o.v...", "ssss"}};
 
 static int wobble_rate(char code) {
     switch (code) {
@@ -1026,21 +1043,34 @@ static int wobble_rate(char code) {
     }
 }
 
-static void wobble_bar(Composer *c, int bar, const Wobble *w, int vol) {
+static void wobble_bar(Composer *c, int bar, const Wobble *w, Slot slot, int vol) {
     const Chord *ch = chord_at(c, bar, 0);
     int root = bass_note(ch) + 12;
     for (int row = 0; row < c->rows_per_bar; row++) {
-        int rate = wobble_rate(w->rates[row / 4]), n = -1;
+        int rate = wobble_rate(w->rates[row / 4]), n = -1, fx = FX_WOBBLE, param = rate;
+        // Glides land exactly on their note: a quick dive to the root within the row, or a slow one, or a rise to
+        // the octave, over the beat the following rows carry on.
         switch (w->notes[row]) {
         case 'r': n = root; break;
         case 'o': n = root + 12; break;
         case 'f': n = root + 7; break;
         case 'm': n = key_step(c->key, root, 1); break;
-        case 'x': put(c, bar, row, CH_BASS, NOTE_CUT, SL_BASS, 0, FX_NONE, 0); continue;
+        case 't': n = key_step(c->key, root, 2); break;
+        case 'u': n = key_step(c->key, root, 3); break;
+        case 'b': n = key_step(c->key, root, -1); break;
+        case 'v': n = root, fx = FX_TONE_PORTA, param = 0x27; break;
+        case 'V': n = root, fx = FX_TONE_PORTA, param = 0x0a; break;
+        case '^': n = root + 12, fx = FX_TONE_PORTA, param = 0x0a; break;
+        case '-': {
+            PatternCell *cell = cell_at(c, bar, row, CH_BASS);
+            if (cell && !cell->note) cell->effect = FX_TONE_PORTA, cell->param = 0;
+            continue;
+        }
+        case 'x': put(c, bar, row, CH_BASS, NOTE_CUT, slot, 0, FX_NONE, 0); continue;
         default: break;
         }
         if (n >= 0) {
-            put(c, bar, row, CH_BASS, n, SL_BASS, vol, FX_WOBBLE, rate);
+            put(c, bar, row, CH_BASS, n, slot, vol, fx, param);
         } else if (row % 4 == 0) {
             // A held note changes its wobble on the beat.
             PatternCell *cell = cell_at(c, bar, row, CH_BASS);
@@ -1069,9 +1099,11 @@ static void wobble_bass(Composer *c, int bar) {
             w = &WOBBLES[groove(c, slot % 2 ? G_BASS_CALM : G_BASS, bar)];
         } else {
             uint32_t h = hash_u32(c->salt + (uint32_t)(c->section_of[bar] * 131 + phrase * 3 + slot % 2) * 104729u);
-            w = h % 4 ? &WOBBLES_MORE[(h / 4) % COUNT(WOBBLES_MORE)] : &WOBBLES[(h / 4) % COUNT(WOBBLES)];
+            w = h % 2 ? &RIFFS[(h / 2) % COUNT(RIFFS)] : &WOBBLES_MORE[(h / 2) % COUNT(WOBBLES_MORE)];
         }
-        wobble_bar(c, bar, w, k == SECTION_DROP ? 58 : 46);
+        // Every other phrase of a drop hands the riff to a second, dirtier bass, the way brostep trades growls.
+        Slot voice = k == SECTION_DROP && phrase % 2 && c->slot[SL_KEYS] ? SL_KEYS : SL_BASS;
+        wobble_bar(c, bar, w, voice, k == SECTION_DROP ? 58 : 46);
         break;
     }
     case SECTION_BUILD: {
@@ -1079,13 +1111,13 @@ static void wobble_bass(Composer *c, int bar) {
         static const Wobble climb[4] = {{"r...............", "qqqq"}, {"r...............", "eeee"},
                                         {"r.......r.......", "ssss"}, {"r.......x.......", "ss--"}};
         int stage = section_last_bar(c, bar) ? 3 : pos * 3 / len;
-        wobble_bar(c, bar, &climb[stage], 44 + stage * 4);
+        wobble_bar(c, bar, &climb[stage], SL_BASS, 44 + stage * 4);
         break;
     }
     case SECTION_INTRO:
         if (pos >= len / 2) {
             static const Wobble tease = {"r...............", "hhhh"};
-            wobble_bar(c, bar, &tease, 34);
+            wobble_bar(c, bar, &tease, SL_BASS, 34);
         }
         break;
     default:
