@@ -165,7 +165,7 @@ int figlet_render(const FigletFont *f, const char *text, char *out, int max_w) {
 }
 
 int figlet_width(const FigletFont *f, const char *text) {
-    static char scratch[FIGLET_MAX_HEIGHT * 512];
+    char scratch[FIGLET_MAX_HEIGHT * 512];
     return figlet_render(f, text, scratch, 512);
 }
 
@@ -193,22 +193,21 @@ const char *figlet_name(FigletId id) {
     return id >= 0 && id < FIGLET_FONTS ? names[id] : "none";
 }
 
-static char wrap_rows[FIGLET_MAX_HEIGHT * 512];
-
-// A line of text rendered into wrap_rows, or -1 when it's wider than max_w.
-static int wrap_line(const FigletFont *f, const char *text, int max_w) {
-    int w = figlet_render(f, text, wrap_rows, 512);
+// A line of text rendered into rows, or -1 when it's wider than max_w.
+static int wrap_line(const FigletFont *f, const char *text, int max_w, char *rows) {
+    int w = figlet_render(f, text, rows, 512);
     return w > max_w ? -1 : w;
 }
 
 static int wrap_place(const FigletFont *f, const char *text, int max_w, int max_h, char *out, int stride,
                       FigletLayout *lay) {
-    int w = wrap_line(f, text, max_w), tall = f->height, top = lay->lines ? lay->height + 1 : 0;
+    char rows[FIGLET_MAX_HEIGHT * 512];
+    int w = wrap_line(f, text, max_w, rows), tall = f->height, top = lay->lines ? lay->height + 1 : 0;
     if (w <= 0 || lay->lines == FIGLET_LINES) return -1;
     for (int blank = 1; blank && tall > 1; tall -= blank)
-        for (int x = 0; x < w; x++) blank &= wrap_rows[(tall - 1) * 512 + x] == ' ';
+        for (int x = 0; x < w; x++) blank &= rows[(tall - 1) * 512 + x] == ' ';
     if (top + tall > max_h) return -1;
-    for (int y = 0; y < tall; y++) memcpy(out + (top + y) * stride, wrap_rows + y * 512, (size_t)w);
+    for (int y = 0; y < tall; y++) memcpy(out + (top + y) * stride, rows + y * 512, (size_t)w);
     lay->top[lay->lines] = top, lay->wide[lay->lines] = w, lay->tall[lay->lines] = tall;
     lay->lines++;
     lay->height = top + tall;
@@ -218,7 +217,7 @@ static int wrap_place(const FigletFont *f, const char *text, int max_w, int max_
 
 int figlet_wrap(const FigletFont *f, const char *text, int max_w, int max_h, int split, char *out, int stride,
                 FigletLayout *layout) {
-    char line[128] = "", trial[128];
+    char line[128] = "", trial[128], rows[FIGLET_MAX_HEIGHT * 512];
     memset(layout, 0, sizeof *layout);
     if (max_w > stride) return -1;
     memset(out, ' ', (size_t)stride * (size_t)max_h);
@@ -230,7 +229,7 @@ int figlet_wrap(const FigletFont *f, const char *text, int max_w, int max_h, int
         // A word joins the line, with the spaces before it, while the line still fits; otherwise it starts the next.
         if (line[0]) {
             snprintf(trial, sizeof trial, "%s%.*s", line, end, s);
-            if (wrap_line(f, trial, max_w) >= 0) {
+            if (wrap_line(f, trial, max_w, rows) >= 0) {
                 memcpy(line, trial, sizeof line);
                 s += end;
                 continue;
@@ -240,7 +239,7 @@ int figlet_wrap(const FigletFont *f, const char *text, int max_w, int max_h, int
         }
         int keep = end - gap;
         snprintf(trial, sizeof trial, "%.*s", keep, s + gap);
-        while (wrap_line(f, trial, max_w) < 0) {
+        while (wrap_line(f, trial, max_w, rows) < 0) {
             if (!split || keep == 1) return -1;
             trial[--keep] = 0;
         }

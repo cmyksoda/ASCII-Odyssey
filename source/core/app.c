@@ -102,6 +102,8 @@ struct App {
 void app_boot(void) {
     mathx_init();
     noise_init();
+    // Loaded up front, so a voyage composing in the background never loads a face the screen is reading.
+    for (int id = 0; id < FIGLET_FONTS; id++) figlet_font((FigletId)id);
 }
 
 const Viewport *app_viewport(const App *a) {

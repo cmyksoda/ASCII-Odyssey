@@ -5,26 +5,20 @@
 
 #include <stdlib.h>
 
-static int owner_id;
-static int *owners;
-static int owners_size;
-
 int stroker_init(Stroker *s, Grid *g) {
     s->grid = g;
     s->aspect = g->aspect;
+    s->owner = 0;
     s->best = malloc(sizeof(float) * g->cols * g->rows);
-    if (!s->best) return -1;
-    if (owners_size < g->cols * g->rows) {
-        free(owners);
-        owners = calloc((size_t)g->cols * g->rows, sizeof(int));
-        owners_size = owners ? g->cols * g->rows : 0;
-    }
-    return owners ? 0 : -1;
+    s->owners = calloc((size_t)g->cols * g->rows, sizeof(int));
+    return s->best && s->owners ? 0 : -1;
 }
 
 void stroker_free(Stroker *s) {
     free(s->best);
+    free(s->owners);
     s->best = NULL;
+    s->owners = NULL;
 }
 
 #define GENTLE 1.15f
@@ -50,8 +44,8 @@ static void plot(Stroker *s, int col, int row, float off, float tx, float ty, fl
     Grid *g = s->grid;
     if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
     int k = row * g->cols + col;
-    if (owners[k] == owner_id && off >= s->best[k]) return;
-    owners[k] = owner_id;
+    if (s->owners[k] == s->owner && off >= s->best[k]) return;
+    s->owners[k] = s->owner;
     s->best[k] = off;
     g->cells[k] = (Cell){(uint8_t)pick(tx, ty, bend_x, fy), rgb_from_f(color), 0};
 }
@@ -84,7 +78,7 @@ static void segment(Stroker *s, const StrokePoint *a, const StrokePoint *b, floa
 
 void stroke_draw(Stroker *s, const StrokePoint *p, int count, int closed) {
     if (count < 2) return;
-    owner_id++;
+    s->owner++;
     int segments = closed ? count : count - 1;
     for (int i = 0; i < segments; i++) {
         const StrokePoint *a = &p[i], *b = &p[(i + 1) % count];

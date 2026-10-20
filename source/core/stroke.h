@@ -12,6 +12,7 @@ typedef struct {
     float aspect;
     // Cells the current stroke has claimed, and how close to their center it passed.
     float *best;
+    int *owners, owner;
 } Stroker;
 
 typedef struct {
