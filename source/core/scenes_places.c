@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Quiet places to rest the eyes: a koi pond, a night train's window, a campfire, an hourglass, birds flying home, a
-// ringed planet and a rainy street. None of them answer the music.
+// ringed planet, a rainy street and palms at dusk. None of them answer the music.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"

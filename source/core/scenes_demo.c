@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The demoscene's classics in text: fire, the twister, rotozoom, vector balls, a torus and a spirograph.
+// The demoscene's classics in text: fire, the twister, rotozoom, vector balls, a torus, a spirograph, a julia set and
+// a slit-scan star gate.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
