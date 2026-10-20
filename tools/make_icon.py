@@ -32,7 +32,8 @@ def stamp(im, mask, center_x, center_y, color):
 
 
 # The rainbow palette's stops, in the diagonal bands it paints on screen.
-SPECTRUM = [(255, 59, 78), (255, 138, 31), (255, 224, 58), (76, 240, 106), (43, 214, 255), (80, 112, 255), (180, 85, 255)]
+SPECTRUM = [(255, 59, 78), (255, 138, 31), (255, 224, 58), (76, 240, 106), (43, 214, 255), (80, 112, 255),
+            (180, 85, 255)]
 
 
 def rainbow(width, height):
@@ -75,8 +76,8 @@ def main():
         draw.line([(0, y), (W, y)], fill=(int(6 + 14 * t), int(7 + 9 * t), int(16 + 30 * t)))
     rng = random.Random(7)
     # Stars keep to the sky around the lettering: the label, the title and the thread under it.
-    lettering = [(W // 2 - 32, 1, W // 2 + 32, 15), (W // 2 - 60, 16, W // 2 + 60, 40), (W // 2 - 40, 41, W // 2 + 40, 47),
-                 (W - 26, 1, W - 1, 17)]
+    lettering = [(W // 2 - 32, 1, W // 2 + 32, 15), (W // 2 - 60, 16, W // 2 + 60, 40),
+                 (W // 2 - 40, 41, W // 2 + 40, 47), (W - 26, 1, W - 1, 17)]
     placed = 0
     while placed < 22:
         x, y = rng.randrange(W), rng.randrange(H)

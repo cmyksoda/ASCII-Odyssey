@@ -121,7 +121,8 @@ def bdf_face(fonts, cw, ch, design_w, weight):
 
 def render_face(source, cw, ch, design_w, weight):
     kind, value = source
-    hires = outline_face(value, cw, ch, design_w, weight) if kind == 'outline' else bdf_face(value, cw, ch, design_w, weight)
+    hires = (outline_face(value, cw, ch, design_w, weight) if kind == 'outline'
+             else bdf_face(value, cw, ch, design_w, weight))
     glyphs, shapes = [], []
     for hi in hires:
         if hi.width != cw * SUPER:

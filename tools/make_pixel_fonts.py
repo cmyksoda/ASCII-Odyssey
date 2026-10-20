@@ -69,7 +69,8 @@ def wire(art):
             elif across or down:
                 row += '+' if across and down else '-' if across else '|'
             else:
-                row += '/' if on(y - 1, x + 1) or on(y + 1, x - 1) else '\\' if on(y - 1, x - 1) or on(y + 1, x + 1) else 'o'
+                row += ('/' if on(y - 1, x + 1) or on(y + 1, x - 1)
+                        else '\\' if on(y - 1, x - 1) or on(y + 1, x + 1) else 'o')
         rows.append(row + ' ')
     return rows
 

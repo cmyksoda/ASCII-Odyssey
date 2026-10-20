@@ -18,6 +18,7 @@ static inline float svf_low(Svf *f, float v0) {
     f->ic2 = 2 * v2 - f->ic2;
     return v2;
 }
+
 static inline float svf_band(Svf *f, float v0) {
     float v3 = v0 - f->ic2;
     float v1 = f->a1 * f->ic1 + f->a2 * v3;
@@ -26,6 +27,7 @@ static inline float svf_band(Svf *f, float v0) {
     f->ic2 = 2 * v2 - f->ic2;
     return v1;
 }
+
 static inline float svf_high(Svf *f, float v0) {
     float v3 = v0 - f->ic2;
     float v1 = f->a1 * f->ic1 + f->a2 * v3;
@@ -34,6 +36,7 @@ static inline float svf_high(Svf *f, float v0) {
     f->ic2 = 2 * v2 - f->ic2;
     return v0 - f->k * v1 - v2;
 }
+
 // The 0..1 cutoff knob instruments use, mapped exponentially from 30 Hz to about 19 kHz.
 float knob_hz(float knob);
 
