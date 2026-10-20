@@ -46,7 +46,14 @@ static int single_mood(const SceneKind *s) {
 // considered, and the window widens only when nothing fits. Within the window the mood's own scenes come first, then
 // those it shows now and then, then stand-ins from other moods. Drops take scenes that answer the music, two of the
 // Wii's heaviest scenes never meet in a transition, and a scene comes back only when nothing else is left.
-static int choose_scene(Rng *r, Mood mood, const Section *sec, const int *uses, const int *rolled, int previous) {
+// How hard a piece drives, as a share of its sections' energy, for choosing how intense its scenes may be. Synthwave
+// cruises: its drops are its loudest moments, but at its tempo they want scenes a notch calmer than a trance drop's.
+static float scene_drive(const SongInfo *info) {
+    if (info->mood != MOOD_SYNTHWAVE) return 1.0f;
+    return clampf(0.72f + (float)(info->bpm - 95) * 0.0057f, 0.72f, 0.85f);
+}
+
+static int choose_scene(Rng *r, Mood mood, const Section *sec, float target, const int *uses, const int *rolled, int previous) {
     static const struct {
         float window;
         int repeats;
@@ -57,7 +64,7 @@ static int choose_scene(Rng *r, Mood mood, const Section *sec, const int *uses, 
         for (int k = 0; k < scene_kind_count; k++) {
             const SceneKind *s = &scene_kinds[k];
             int weight = s->weights[mood];
-            float off = mabs(s->intensity - sec->energy);
+            float off = mabs(s->intensity - target);
             if (k == previous || !scene_in_use(s) || off > passes[pass].window || (!weight && single_mood(s))) continue;
             if (uses[k] && !passes[pass].repeats) continue;
             if (previous >= 0 && s->heavy && scene_kinds[previous].heavy) continue;
@@ -157,7 +164,7 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
     for (int k = 0; k < scene_kind_count; k++) rolled[k] = rng_chance(r, 35);
     Entrance last = ENTER_CUT;
     int used[ENTRANCES] = {0};
-    float bar = (float)info->bar_seconds;
+    float bar = (float)info->bar_seconds, drive = scene_drive(info);
     for (int s = 0; s < info->section_count && d->count < MAX_SHOTS; s++) {
         const Section *sec = &info->sections[s];
         int pieces = shot_count(sec, bar);
@@ -165,7 +172,8 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
             Shot *shot = &d->shots[d->count];
             shot->start = (float)sec->start + (float)(p * sec->bars / pieces) * bar;
             shot->end = (float)sec->start + (float)((p + 1) * sec->bars / pieces) * bar;
-            shot->kind = choose_scene(r, mood, sec, uses, rolled, previous);
+            shot->target = sec->energy * drive;
+            shot->kind = choose_scene(r, mood, sec, shot->target, uses, rolled, previous);
             shot->palette = palette_for(sec->kind, sec->kind == SECTION_DROP ? drop_shots++ : 0);
             shot->direction = rng_range(r, 0, 4);
             if (sec->kind == SECTION_DROP && p == 0 && edm(mood)) {

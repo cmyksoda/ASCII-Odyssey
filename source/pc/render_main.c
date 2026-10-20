@@ -258,9 +258,9 @@ static void piece_info(const Piece *p, const char *path) {
     for (int i = 0; i < p->direction.count; i++) {
         const Shot *s = &p->direction.shots[i];
         fprintf(f, "%s{\"scene\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"reactive\": %d, \"heavy\": %d, \"intensity\": %.2f, "
-                   "\"palette\": \"%s\", \"entrance\": \"%s\", \"fade\": %.2f}",
+                   "\"target\": %.2f, \"palette\": \"%s\", \"entrance\": \"%s\", \"fade\": %.2f}",
                 i ? ", " : "", scene_kinds[s->kind].name, s->start, s->end, scene_kinds[s->kind].reactive, scene_kinds[s->kind].heavy,
-                scene_kinds[s->kind].intensity, p->direction.palettes[s->palette]->name, entrance_names[s->entrance], s->fade);
+                scene_kinds[s->kind].intensity, s->target, p->direction.palettes[s->palette]->name, entrance_names[s->entrance], s->fade);
     }
     fprintf(f, "]}\n");
     fclose(f);

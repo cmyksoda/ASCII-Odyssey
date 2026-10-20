@@ -45,6 +45,8 @@ typedef struct {
     // Which of the piece's palettes the shot paints with, and which way a wipe travels (0 right, 1 left, 2 down, 3 up).
     int palette, direction;
     float start, end, fade;
+    // The intensity the director aimed for: the section's energy, scaled by how hard the piece drives.
+    float target;
     Entrance entrance;
     _Alignas(8) unsigned char state[SCENE_STATE];
 } Shot;
