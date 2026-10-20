@@ -294,7 +294,10 @@ static void setting_step(App *a, int row, int dir) {
     Settings *s = &a->config.settings;
     switch (row) {
     case ROW_SEED: s->seed_mode = (SeedMode)wrap((int)s->seed_mode + dir, s->typed_seed[0] ? SEED_MODES : SEED_TYPED); break;
-    case ROW_MOOD: s->mood = wrap(s->mood + 1 + dir, MOOD_COUNT + 1) - 1; break;
+    case ROW_MOOD:
+        do s->mood = wrap(s->mood + 1 + dir, MOOD_COUNT + 1) - 1;
+        while (s->mood >= 0 && !mood_offered((Mood)s->mood));
+        break;
     case ROW_LENGTH: s->length = (LengthPref)wrap((int)s->length + dir, 3); break;
     case ROW_AFTER: s->after = (AfterPiece)wrap((int)s->after + dir, AFTER_MODES); break;
     case ROW_VOLUME: s->volume = s->volume + dir < 0 ? 0 : s->volume + dir > VOLUME_STEPS ? VOLUME_STEPS : s->volume + dir; break;

@@ -103,6 +103,8 @@ typedef struct {
     int contour;
     float leap_cost, contour_pull;
     int groove[G_COUNT][2], half_bar;
+    // Hashed for choices that mustn't move the random stream, so adding them leaves every other part as it was.
+    uint32_t salt;
 } Composer;
 
 /* ---------- Writing into patterns ---------- */
@@ -979,6 +981,15 @@ typedef struct {
 static const Wobble WOBBLES[] = {{"r.......r.......", "qqee"}, {"r...r...r...o...", "eets"}, {"r.......f...r...", "tttq"},
                                  {"r.r.r.r.o...r...", "ssqe"}, {"r.......x.r.....", "hhes"}, {"r...m...r...o...", "eeee"}};
 static const Wobble WOBBLE_FILLS[] = {{"r.r.r.r.r.r.r.r.", "ssss"}, {"o...r...o...r...", "ttss"}, {"r.......o.r.o.r.", "qqss"}};
+// More bars for the phrases after the first: long growls that speed up, dotted and triplet rhythms, stutters, and
+// held notes that stop wobbling to breathe.
+static const Wobble WOBBLES_MORE[] = {
+    {"r...............", "hhqq"}, {"r.......r.r.....", "eeqs"}, {"r..r..r..r..r...", "tttt"}, {"r.....r.....r...", "qeqe"},
+    {"o.......r.......", "sseq"}, {"r...x...r...x...", "eeee"}, {"r.r.....o.o.....", "sstt"}, {"r...........f...", "qqqs"},
+    {"r.......m...r...", "teqe"}, {"r.r.r.r.r.......", "s-eq"}, {"r...r...........", "ee--"}, {"o...o...r...r...", "qqss"}};
+// Phrase endings: rolls, a dead stop for half a bar, and a run that speeds up into the next downbeat.
+static const Wobble FILLS_MORE[] = {{"r.......x.......", "ss--"}, {"rrrrrrrrrrrrrrrr", "eest"}, {"o.o.o.o.r.r.r.r.", "ssss"},
+                                    {"r.r.r.r.x...o...", "tt-s"}};
 
 static int wobble_rate(char code) {
     switch (code) {
@@ -1023,7 +1034,19 @@ static void wobble_bass(Composer *c, int bar) {
     switch (k) {
     case SECTION_DROP:
     case SECTION_VERSE: {
-        const Wobble *w = pos % 4 == 3 ? &WOBBLE_FILLS[groove(c, G_FILL, bar)] : &WOBBLES[groove(c, pos % 2 ? G_BASS_CALM : G_BASS, bar)];
+        // A section's first phrase states the piece's own groove; every phrase after it deals new bars, so the
+        // wobble keeps changing instead of going round the same two.
+        int phrase = pos / 4, slot = pos % 4;
+        const Wobble *w;
+        if (slot == 3) {
+            uint32_t h = hash_u32(c->salt + (uint32_t)(c->section_of[bar] * 131 + phrase) * 7919u);
+            w = phrase && h % 3 ? &FILLS_MORE[(h / 3) % COUNT(FILLS_MORE)] : &WOBBLE_FILLS[groove(c, G_FILL, bar)];
+        } else if (!phrase) {
+            w = &WOBBLES[groove(c, slot % 2 ? G_BASS_CALM : G_BASS, bar)];
+        } else {
+            uint32_t h = hash_u32(c->salt + (uint32_t)(c->section_of[bar] * 131 + phrase * 3 + slot % 2) * 104729u);
+            w = h % 4 ? &WOBBLES_MORE[(h / 4) % COUNT(WOBBLES_MORE)] : &WOBBLES[(h / 4) % COUNT(WOBBLES)];
+        }
         wobble_bar(c, bar, w, k == SECTION_DROP ? 58 : 46);
         break;
     }
@@ -1664,13 +1687,13 @@ static void hook_in_drop(Composer *c, int b, const Melody *m, int second) {
         }
         break;
     case MOOD_DUBSTEP:
-        // The first drop belongs to the bass; the second lets a lead and its harmony ride over it.
-        if (second) {
-            play_melody(c, b, m, CH_LEAD, SL_LEAD, 40, 0, 0);
+        // The lead sings the hook over the wobble in both drops, with a bell an octave up the first time and a
+        // harmony under it the second.
+        play_melody(c, b, m, CH_LEAD, SL_LEAD, second ? 40 : 36, 0, 0);
+        if (second)
             play_melody(c, b, &harmony, CH_ECHO, SL_LEAD, 26, 0, 0);
-        } else {
-            play_melody(c, b, m, CH_BELL, SL_BELL, 24, 1, 0);
-        }
+        else
+            play_melody(c, b, m, CH_BELL, SL_BELL, 20, 1, 0);
         break;
     case MOOD_KEYGEN:
         play_melody(c, b, m, CH_LEAD, SL_LEAD, 46, 0, 0);
@@ -1873,11 +1896,22 @@ static void ending(Composer *c) {
 
 /* ---------- The whole piece ---------- */
 
+int mood_offered(Mood m) {
+    return m != MOOD_JUNGLE;
+}
+
 static Mood pick_mood(Rng *r) {
     static const int weights[MOOD_COUNT] = {[MOOD_KEYGEN] = 11, [MOOD_AMBIENT] = 11, [MOOD_SYNTHWAVE] = 11,
                                             [MOOD_LOFI] = 11,   [MOOD_TRANCE] = 11,  [MOOD_JUNGLE] = 11,
                                             [MOOD_MUSICBOX] = 11, [MOOD_DUB] = 11,   [MOOD_DUBSTEP] = 12};
-    return (Mood)rng_weighted(r, weights, MOOD_COUNT);
+    Mood m = (Mood)rng_weighted(r, weights, MOOD_COUNT);
+    // Jungle is retired. A seed that lands on it rolls again among the rest, so every other seed keeps its piece.
+    if (!mood_offered(m)) {
+        int rest[MOOD_COUNT];
+        for (int i = 0; i < MOOD_COUNT; i++) rest[i] = mood_offered((Mood)i) ? weights[i] : 0;
+        m = (Mood)rng_weighted(r, rest, MOOD_COUNT);
+    }
+    return m;
 }
 
 // The back half changes just two or three textures, never the kick or bass, so the piece develops instead of
@@ -2049,6 +2083,7 @@ int compose(uint64_t seed, const char *title, Mood mood, LengthPref length, Comp
         return -1;
     }
     rng_init(&c->rng, seed, "compose");
+    c->salt = hash_u32((uint32_t)seed ^ (uint32_t)(seed >> 32));
     if (mood < 0 || mood >= MOOD_COUNT) mood = pick_mood(&c->rng);
     const MoodSpec *spec = &MOODS[mood];
     SongInfo *info = &out->info;

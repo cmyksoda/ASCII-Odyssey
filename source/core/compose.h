@@ -60,6 +60,8 @@ typedef struct {
 } Composition;
 
 extern const char *const mood_names[MOOD_COUNT];
+// Whether a mood is still on offer: a retired one is neither rolled nor listed in Settings.
+int mood_offered(Mood m);
 extern const char *const section_names[SECTION_KINDS];
 
 int compose(uint64_t seed, const char *title, Mood mood, LengthPref length, Composition *out);
