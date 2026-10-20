@@ -99,8 +99,8 @@ void moon_disc(const Frame *f, float x, float y, float radius, Rgbf color, uint3
 
 /* Scenes that live in their own files, listed in the table in scenes.c. */
 
-#define SCENE(name)                                                                                                     \
-    void name##_setup(void *state, Rng *r, const Frame *f);                                                             \
+#define SCENE(name)                                                                                                    \
+    void name##_setup(void *state, Rng *r, const Frame *f);                                                            \
     void name##_draw(void *state, const Frame *f);
 SCENE(kaleidoscope)
 SCENE(spectrum)

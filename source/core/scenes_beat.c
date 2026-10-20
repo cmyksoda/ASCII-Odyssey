@@ -45,7 +45,8 @@ void kaleidoscope_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // How much of the reflected pattern lies at (u, v) in the mirrored wedge, from 0 to about 1.
-static float kaleido_pattern(const Kaleidoscope *k, float u, float v, float radius, float a, float wedge, float zoom, float t) {
+static float kaleido_pattern(const Kaleidoscope *k, float u, float v, float radius, float a, float wedge, float zoom,
+                             float t) {
     switch (k->style) {
     case KALEIDO_STRIPES: {
         float warp = msin(u * 9 + t * 2.2f) * msin(v * 5 - t * 1.3f);
@@ -57,7 +58,8 @@ static float kaleido_pattern(const Kaleidoscope *k, float u, float v, float radi
         return parity ? 0.55f + 0.45f * smoothstep(0.0f, 0.2f, edge) : 0.12f;
     }
     case KALEIDO_RINGS: {
-        float da = mhypot(u - 0.6f - 0.3f * msin(t * 0.7f), v - 0.25f), db = mhypot(u - 1.1f, v + 0.3f * mcos(t * 0.5f));
+        float da = mhypot(u - 0.6f - 0.3f * msin(t * 0.7f), v - 0.25f),
+              db = mhypot(u - 1.1f, v + 0.3f * mcos(t * 0.5f));
         return smoothstep(0.2f, 0.9f, (0.5f + 0.5f * mcos(da * 13 - t * 3)) * (0.5f + 0.5f * mcos(db * 9 + t * 2)) * 2);
     }
     case KALEIDO_SHARDS: {
@@ -118,7 +120,8 @@ void kaleidoscope_draw(void *state, const Frame *f) {
             int i = (int)(level * 6.99f);
             if (i <= 0) continue;
             float hue = mfract(radius * 0.6f + shift);
-            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * level), palette_accent(f->palette, (int)(hue * 3)), 0.45f * (1 - level * 0.5f));
+            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * level),
+                                  palette_accent(f->palette, (int)(hue * 3)), 0.45f * (1 - level * 0.5f));
             if (rings > 0.3f) color = rgbf_mix(color, palette_ramp(f->palette, 1.0f), rings * 0.8f);
             if (contrast < 1) color = frame_dim(f, color, contrast);
             *grid_at(g, col, row) = (Cell){(uint8_t)ramp[i], rgb_from_f(color), 0};
@@ -130,7 +133,8 @@ void kaleidoscope_draw(void *state, const Frame *f) {
         float at = 0.82f * (float)j / (float)k->tiers;
         for (int i = 0; i < 48; i++) {
             float b = (float)i / 48 * TAU_F;
-            ring[i] = (StrokePoint){mcos(b) * at, msin(b) * at, frame_dim(f, palette_ramp(f->palette, 0.45f), contrast)};
+            ring[i] =
+                (StrokePoint){mcos(b) * at, msin(b) * at, frame_dim(f, palette_ramp(f->palette, 0.45f), contrast)};
         }
         stroke_draw(f->stroker, ring, 48, 1);
     }
@@ -199,9 +203,12 @@ void spectrum_draw(void *state, const Frame *f) {
             int col = b * s->width + k + (g->cols - bars * s->width) / 2;
             for (int h = 0; h < top; h++) {
                 float v = (float)h / (float)height;
-                Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.45f + 0.55f * v), palette_accent(f->palette, b * 3 / bars), v * v * 0.6f);
+                Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.45f + 0.55f * v),
+                                      palette_accent(f->palette, b * 3 / bars), v * v * 0.6f);
                 put_cell(g, col, base - 1 - h, h % 2 ? '=' : '#', color);
-                if (s->mirror && h < g->rows - base) put_cell(g, col, base + h, h % 2 ? '.' : ':', frame_dim(f, color, 0.35f * (1 - (float)h / (float)(g->rows - base))));
+                if (s->mirror && h < g->rows - base)
+                    put_cell(g, col, base + h, h % 2 ? '.' : ':',
+                             frame_dim(f, color, 0.35f * (1 - (float)h / (float)(g->rows - base))));
             }
             if (cap > top) put_cell(g, col, base - 1 - cap, '_', palette_accent(f->palette, 1));
         }
@@ -256,7 +263,9 @@ void ripples_draw(void *state, const Frame *f) {
             float y = roles[k] == ROLE_KICK ? p->cy : hash01(id + 1) * 1.4f - 0.7f;
             float radius = age * p->speed * (roles[k] == ROLE_HAT ? 0.4f : 0.8f) + 0.03f;
             float fade = mexp(-age / (roles[k] == ROLE_HAT ? 0.25f : 0.8f)) * notes[i]->velocity * frame_bright(f);
-            Rgbf color = frame_dim(f, roles[k] == ROLE_KICK ? palette_ramp(f->palette, 0.95f) : palette_accent(f->palette, k), 0.3f + fade);
+            Rgbf color =
+                frame_dim(f, roles[k] == ROLE_KICK ? palette_ramp(f->palette, 0.95f) : palette_accent(f->palette, k),
+                          0.3f + fade);
             if (fade > 0.05f) ring(f, x, y, radius, color);
             if (fade > 0.25f && roles[k] != ROLE_HAT) ring(f, x, y, radius * 0.6f, frame_dim(f, color, 0.5f));
         }
@@ -280,7 +289,8 @@ void ripples_draw(void *state, const Frame *f) {
         uint32_t id = (uint32_t)slot * 2654435761u ^ p->salt;
         float x = (hash01(id) * 1.8f - 0.9f) * g->aspect, y = hash01(id + 1) * 1.6f - 0.8f;
         float fade = mexp(-age / 1.0f) * 0.35f;
-        if (fade > 0.04f) ring(f, x, y, age * p->speed * 0.35f + 0.02f, frame_dim(f, palette_ramp(f->palette, 0.6f), fade + 0.15f));
+        if (fade > 0.04f)
+            ring(f, x, y, age * p->speed * 0.35f + 0.02f, frame_dim(f, palette_ramp(f->palette, 0.6f), fade + 0.15f));
     }
     f->fx->glow = 0.55f;
 }
@@ -304,7 +314,8 @@ void fireworks_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // One shell: sparks fly out, slow, fall and fade, each trailing a short tail of embers.
-static void burst(const Frame *f, const Fireworks *w, float bx, float by, float age, uint32_t id, float flare, float size) {
+static void burst(const Frame *f, const Fireworks *w, float bx, float by, float age, uint32_t id, float flare,
+                  float size) {
     Grid *g = f->grid;
     Rgbf color = palette_accent(f->palette, (int)(id % 3)), second = palette_accent(f->palette, (int)(id % 3) + 1);
     Rgbf white = palette_ramp(f->palette, 1.0f);
@@ -318,9 +329,11 @@ static void burst(const Frame *f, const Fireworks *w, float bx, float by, float 
         for (int k = 0; k < 4; k++) {
             float at = mmax(0, age - (float)k * 0.07f), reach = speed * (1 - mexp(-at * 2.4f));
             float x = bx + mcos(a) * reach * g->aspect * 0.75f, y = by + msin(a) * reach - w->gravity * at * at;
-            float bright = (k ? 0.55f / (float)(k + 1) : 1.0f) * (0.2f + life) * (1 + flare) * (0.4f + 0.6f * frame_bright(f));
+            float bright =
+                (k ? 0.55f / (float)(k + 1) : 1.0f) * (0.2f + life) * (1 + flare) * (0.4f + 0.6f * frame_bright(f));
             int glyph = k ? (k == 1 ? '+' : '.') : age < 0.3f ? '*' : life > 0.45f ? '*' : '+';
-            if (bright > 0.06f) (k ? put_cell_under : put_cell)(g, cell_col(g, x), cell_row(g, y), glyph, frame_dim(f, c, bright));
+            if (bright > 0.06f)
+                (k ? put_cell_under : put_cell)(g, cell_col(g, x), cell_row(g, y), glyph, frame_dim(f, c, bright));
         }
     }
     // The flash at the heart of the burst.
@@ -331,7 +344,8 @@ static void rocket(const Frame *f, float x, float y) {
     Grid *g = f->grid;
     put_cell(g, cell_col(g, x), cell_row(g, y), '|', palette_ramp(f->palette, 1.0f));
     for (int t = 1; t < 4; t++)
-        put_cell_under(g, cell_col(g, x), cell_row(g, y) + t, t == 1 ? ':' : '.', frame_dim(f, palette_accent(f->palette, 1), 0.8f / (float)t));
+        put_cell_under(g, cell_col(g, x), cell_row(g, y) + t, t == 1 ? ':' : '.',
+                       frame_dim(f, palette_accent(f->palette, 1), 0.8f / (float)t));
 }
 
 // Rockets climb so that they burst exactly on the snares and claps, the score telling them when; every kick makes the
@@ -358,8 +372,10 @@ void fireworks_draw(void *state, const Frame *f) {
     float bar = f->score->beat * (float)f->score->info->beats_per_bar;
     for (int b = (int)mfloor((f->t + w->rise) / bar); b >= 0 && (float)b * bar > f->t - 2.8f; b--) {
         float when = (float)b * bar, age = f->t - when;
-        if (score_count(f->score, ROLE_SNARE, when - bar, when + bar) + score_count(f->score, ROLE_PERC, when - bar, when + bar) +
-                score_count(f->score, ROLE_CRASH, when - bar, when + bar) > 0)
+        if (score_count(f->score, ROLE_SNARE, when - bar, when + bar) +
+                score_count(f->score, ROLE_PERC, when - bar, when + bar) +
+                score_count(f->score, ROLE_CRASH, when - bar, when + bar) >
+            0)
             continue;
         uint32_t id = ((uint32_t)b * 2654435761u) ^ w->salt ^ 0xb0b0u;
         float bx = (hash01(id) * 1.4f - 0.7f) * g->aspect, by = 0.2f + hash01(id + 3) * 0.45f;
@@ -370,7 +386,8 @@ void fireworks_draw(void *state, const Frame *f) {
         StrokePoint pts[48];
         for (int i = 0; i < 48; i++) {
             float x = -g->aspect + (float)i / 47.0f * 2 * g->aspect;
-            pts[i] = (StrokePoint){x, -0.82f + 0.1f * noise_fbm(x * 0.8f + (float)(w->salt % 97), 2), palette_ramp(f->palette, 0.35f)};
+            pts[i] = (StrokePoint){x, -0.82f + 0.1f * noise_fbm(x * 0.8f + (float)(w->salt % 97), 2),
+                                   palette_ramp(f->palette, 0.35f)};
         }
         stroke_draw(f->stroker, pts, 48, 0);
     }
@@ -405,18 +422,21 @@ void lasers_draw(void *state, const Frame *f) {
     for (int i = 0; i < l->emitters; i++) {
         float ex = ((float)i + 0.5f) / (float)l->emitters * 2 * g->aspect * 0.8f - g->aspect * 0.8f;
         for (int b = 0; b < 3; b++) {
-            float a = (float)(b - 1) * 0.35f * spread + l->sweep * msin(f->local * l->rate + l->phase[i] + jump) + (l->from_top ? PI_F : 0);
+            float a = (float)(b - 1) * 0.35f * spread + l->sweep * msin(f->local * l->rate + l->phase[i] + jump) +
+                      (l->from_top ? PI_F : 0);
             float dx = msin(a), dy = mcos(a);
             Rgbf color = frame_dim(f, palette_accent(f->palette, i + bar), 0.55f + 0.6f * kick);
             StrokePoint beam[2] = {{ex, ey, color}, {ex + dx * 3, ey + dy * 3, frame_dim(f, color, 0.4f)}};
             stroke_draw(f->stroker, beam, 2, 0);
         }
-        put_cell(g, cell_col(g, ex), cell_row(g, ey * 0.97f), 'O', frame_dim(f, palette_ramp(f->palette, 1.0f), 0.6f + 0.6f * kick));
+        put_cell(g, cell_col(g, ex), cell_row(g, ey * 0.97f), 'O',
+                 frame_dim(f, palette_ramp(f->palette, 1.0f), 0.6f + 0.6f * kick));
     }
     // Haze the beams light up: a drift of faint specks that brightens with the kick.
     for (int s = 0; s < g->cols * g->rows / 18; s++) {
         uint32_t id = (uint32_t)s * 2246822519u;
-        int col = (int)(hash01(id) * (float)g->cols), row = (int)(mfract(hash01(id + 1) + f->t * 0.02f) * (float)g->rows);
+        int col = (int)(hash01(id) * (float)g->cols),
+            row = (int)(mfract(hash01(id + 1) + f->t * 0.02f) * (float)g->rows);
         put_cell_under(g, col, row, '.', frame_dim(f, palette_ramp(f->palette, 0.5f), 0.25f + 0.4f * kick));
     }
     f->fx->glow = 0.7f;
@@ -462,9 +482,13 @@ void lissajous_draw(void *state, const Frame *f) {
     float kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
     float delta = f->local * s->drift + frame_surge(f, ROLE_BASS, 0.3f, 0.8f);
     for (int k = s->trails; k >= 0; k--) {
-        Figure fg = {ratios[kind][0], ratios[kind][1], delta - (float)k * 0.06f, s->size * g->aspect * (1 + 0.12f * kick),
+        Figure fg = {ratios[kind][0],
+                     ratios[kind][1],
+                     delta - (float)k * 0.06f,
+                     s->size * g->aspect * (1 + 0.12f * kick),
                      s->size * (1 + 0.12f * kick),
-                     frame_dim(f, k ? palette_ramp(f->palette, 0.5f) : palette_ramp(f->palette, 1.0f), k ? 0.7f / (float)(k + 1) : 1.0f)};
+                     frame_dim(f, k ? palette_ramp(f->palette, 0.5f) : palette_ramp(f->palette, 1.0f),
+                               k ? 0.7f / (float)(k + 1) : 1.0f)};
         stroke_curve(f->stroker, figure_at, &fg, 220, 1);
     }
     f->fx->glow = 0.75f;
@@ -498,14 +522,19 @@ void skyline_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     // The street sits a few rows up, clear of the edge a television's overscan can crop.
     int street = g->rows - 5;
+
     dust_stars(f, s->salt, 0.003f, 0.6f);
     moon_disc(f, g->aspect * 0.55f, 0.62f, 0.12f, palette_ramp(f->palette, 0.9f), s->salt, 0);
+
     float flight = mfract(f->t / 26 + hash01(s->salt + 5));
     if (flight < 0.5f) {
-        float x = -g->aspect + flight * 2 * 2.2f * g->aspect - 0.1f * g->aspect, y = 0.78f + 0.08f * hash01(s->salt + 6);
+        float x = -g->aspect + flight * 2 * 2.2f * g->aspect - 0.1f * g->aspect,
+              y = 0.78f + 0.08f * hash01(s->salt + 6);
         int blink = mfract(f->t * 1.1f) < 0.15f;
-        put_cell(g, cell_col(g, x), cell_row(g, y), blink ? '*' : '.', blink ? palette_accent(f->palette, 0) : palette_ramp(f->palette, 0.6f));
+        put_cell(g, cell_col(g, x), cell_row(g, y), blink ? '*' : '.',
+                 blink ? palette_accent(f->palette, 0) : palette_ramp(f->palette, 0.6f));
     }
+
     float lit[24] = {0};
     for (int role = ROLE_BASS; role < ROLE_FX; role++) {
         const ScoreEvent *notes[24];
@@ -515,6 +544,7 @@ void skyline_draw(void *state, const Frame *f) {
             lit[b] = mmax(lit[b], notes[i]->velocity * mexp(-(f->t - notes[i]->time) / 0.7f) * frame_bright(f));
         }
     }
+
     float kick = frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
     Rgbf wall = palette_ramp(f->palette, 0.28f), warm = palette_accent(f->palette, 1);
     for (int b = 0; b < s->count; b++) {
@@ -531,21 +561,25 @@ void skyline_draw(void *state, const Frame *f) {
                     uint32_t id = (uint32_t)(x * 131 + y * 977) ^ s->salt;
                     float h = hash01(id), mood = hash01(id ^ (uint32_t)mfloor(f->t / 40 + h * 40) * 2654435761u);
                     float on = mood < 0.18f ? 0.6f : h < 0.18f + lit[b] * 0.7f ? lit[b] : 0;
-                    put_cell(g, x, y, on > 0.3f ? '#' : '.', on > 0 ? rgbf_mix(wall, warm, saturate(on * 1.4f)) : frame_dim(f, wall, 0.7f));
+                    put_cell(g, x, y, on > 0.3f ? '#' : '.',
+                             on > 0 ? rgbf_mix(wall, warm, saturate(on * 1.4f)) : frame_dim(f, wall, 0.7f));
                 } else {
                     put_cell(g, x, y, ' ', wall);
                 }
             }
+
         if (s->h[b] > g->rows * 2 / 5) {
             int blink = kick > 0.2f || mfract(f->t * 0.5f + (float)b * 0.37f) < 0.12f;
             put_cell(g, s->x[b] + s->w[b] / 2, top - 1, blink ? '*' : '.', palette_accent(f->palette, 0));
         }
     }
+
     // The street: headlights leading and taillights trailing, one lane each way, then the far curb.
     for (int col = 0; col < g->cols; col++) {
         put_cell(g, col, street, '_', wall);
         put_cell(g, col, street + 3, '-', frame_dim(f, wall, 0.6f));
     }
+
     Rgbf head = palette_ramp(f->palette, 1.0f), tail = palette_accent(f->palette, 0);
     for (int lane = 0; lane < 2; lane++) {
         int dir = lane ? -1 : 1;
@@ -556,9 +590,11 @@ void skyline_draw(void *state, const Frame *f) {
             int front = (int)(dir > 0 ? along : (float)g->cols - along);
             put_cell(g, front, street + 1 + lane, 'o', head);
             for (int k = 1; k <= 3; k++)
-                put_cell(g, front - dir * k, street + 1 + lane, k == 3 ? '.' : '=', frame_dim(f, k == 3 ? tail : wall, k == 3 ? 1.0f : 1.6f));
+                put_cell(g, front - dir * k, street + 1 + lane, k == 3 ? '.' : '=',
+                         frame_dim(f, k == 3 ? tail : wall, k == 3 ? 1.0f : 1.6f));
         }
     }
+
     f->fx->glow = 0.5f;
 }
 
@@ -587,7 +623,8 @@ static void rain_column(const Frame *f, int col, float head, int length, float t
         if (row < 0 || row >= g->rows) continue;
         uint32_t roll = hash_u32(id + (uint32_t)row * 97u + (uint32_t)(t * (k ? 6.0f : 14.0f)));
         float fade = 1 - (float)k / (float)length;
-        put_cell(g, col, row, GLYPHS[roll % (sizeof GLYPHS - 1)], k ? frame_dim(f, body, 0.15f + 0.85f * fade * fade) : lead);
+        put_cell(g, col, row, GLYPHS[roll % (sizeof GLYPHS - 1)],
+                 k ? frame_dim(f, body, 0.15f + 0.85f * fade * fade) : lead);
     }
 }
 
@@ -597,11 +634,13 @@ void digital_rain_draw(void *state, const Frame *f) {
     DigitalRain *d = state;
     Grid *g = f->grid;
     float kick = frame_pulse(f, ROLE_KICK, 0.15f, 1.0f), speed = d->speed * (0.6f + 0.6f * f->energy);
-    Rgbf body = palette_ramp(f->palette, 0.75f), lead = rgbf_mix(palette_ramp(f->palette, 1.0f), palette_accent(f->palette, 1), kick);
+    Rgbf body = palette_ramp(f->palette, 0.75f),
+         lead = rgbf_mix(palette_ramp(f->palette, 1.0f), palette_accent(f->palette, 1), kick);
     for (int col = 0; col < g->cols; col++) {
         uint32_t id = d->salt + (uint32_t)col * 2654435761u;
         if (hash01(id) > d->density) continue;
-        float span = (float)g->rows * 2.2f, offset = hash01(id + 1) * span, rate = speed * (0.6f + 0.8f * hash01(id + 2));
+        float span = (float)g->rows * 2.2f, offset = hash01(id + 1) * span,
+              rate = speed * (0.6f + 0.8f * hash01(id + 2));
         float head = mfract((offset + f->local * rate) / span) * span;
         rain_column(f, col, head, 6 + (int)(hash01(id + 3) * 14), f->t, id, lead, body);
     }
@@ -611,8 +650,8 @@ void digital_rain_draw(void *state, const Frame *f) {
         for (int i = 0; i < n; i++) {
             int col = (int)((float)(notes[i]->note % 48) / 48.0f * (float)g->cols + hash01((uint32_t)i) * 3);
             float head = (f->t - notes[i]->time) * speed * 1.4f;
-            rain_column(f, col, head, 10, f->t, (uint32_t)notes[i]->note * 7919u, frame_dim(f, palette_accent(f->palette, role), 1.2f),
-                        palette_accent(f->palette, role));
+            rain_column(f, col, head, 10, f->t, (uint32_t)notes[i]->note * 7919u,
+                        frame_dim(f, palette_accent(f->palette, role), 1.2f), palette_accent(f->palette, role));
         }
     }
     f->fx->glow = 0.55f + 0.3f * kick;
@@ -679,14 +718,16 @@ void checker_draw(void *state, const Frame *f) {
             int edge = floor_tile(c->style, x + 0.12f, z) != parity || floor_tile(c->style, x - 0.12f, z) != parity ||
                        floor_tile(c->style, x, z + 0.12f) != parity || floor_tile(c->style, x, z - 0.12f) != parity;
             int glyph = fog > 0.5f ? (edge ? '+' : '#') : fog > 0.22f ? (edge ? '.' : '=') : '.';
-            Rgbf color = rgbf_mix(frame_dim(f, tile, fog * (0.75f + 0.45f * kick) * contrast), glow, (1 - fog) * 0.35f * contrast);
+            Rgbf color = rgbf_mix(frame_dim(f, tile, fog * (0.75f + 0.45f * kick) * contrast), glow,
+                                  (1 - fog) * 0.35f * contrast);
             *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
         }
     }
     // The horizon line, bright and pulsing, tilting as the floor banks.
     for (int col = 0; col < g->cols; col++) {
         float sx = cell_x(g, col);
-        put_cell(g, col, cell_row(g, c->horizon - sx * bs / bc), '=', frame_dim(f, glow, (0.7f + 0.4f * kick) * contrast));
+        put_cell(g, col, cell_row(g, c->horizon - sx * bs / bc), '=',
+                 frame_dim(f, glow, (0.7f + 0.4f * kick) * contrast));
     }
     f->fx->glow = 0.55f;
 }

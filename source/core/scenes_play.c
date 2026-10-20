@@ -50,14 +50,17 @@ void platformer_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     float scroll = frame_travel(f, p->speed, p->speed * 0.6f);
     int floor_row = g->rows - 4, hx = g->cols / 3;
-    Rgbf sky = palette_ramp(f->palette, 0.3f), ground = palette_ramp(f->palette, 0.55f), grass = palette_accent(f->palette, 2);
-    Rgbf coin = palette_accent(f->palette, 1), hero = palette_accent(f->palette, 0), ink = palette_ramp(f->palette, 0.9f);
+    Rgbf sky = palette_ramp(f->palette, 0.3f), ground = palette_ramp(f->palette, 0.55f),
+         grass = palette_accent(f->palette, 2);
+    Rgbf coin = palette_accent(f->palette, 1), hero = palette_accent(f->palette, 0),
+         ink = palette_ramp(f->palette, 0.9f);
     // Clouds and far hills scroll slower, for depth, and grow with the screen so a tall one never stands empty.
     float tall = (float)g->rows / 30.0f;
     for (int k = 0; k < 8; k++) {
         uint32_t id = p->salt ^ (uint32_t)k * 40503u;
         float span = (float)g->cols + 16;
-        int x = (int)(mfract(hash01(id) - scroll * 0.25f / span) * span) - 8, y = 2 + (int)(hash01(id + 3) * (float)(floor_row / 2));
+        int x = (int)(mfract(hash01(id) - scroll * 0.25f / span) * span) - 8,
+            y = 2 + (int)(hash01(id + 3) * (float)(floor_row / 2));
         text_at(g, x, y, " .--. ", frame_dim(f, sky, 0.9f));
         text_at(g, x, y + 1, "(    )", frame_dim(f, sky, 0.9f));
         text_at(g, x + 1, y + 2, "`--'", frame_dim(f, sky, 0.9f));
@@ -65,7 +68,8 @@ void platformer_draw(void *state, const Frame *f) {
     for (int col = 0; col < g->cols; col++) {
         float wx = (float)col + scroll * 0.5f;
         int hill = (int)((3 + 2.5f * msin(wx * 0.07f + (float)(p->salt % 31)) + 1.5f * msin(wx * 0.19f)) * tall);
-        for (int y = 0; y < hill; y++) put_cell_under(g, col, floor_row - 2 - y, y == hill - 1 ? '^' : ':', frame_dim(f, ground, 0.55f));
+        for (int y = 0; y < hill; y++)
+            put_cell_under(g, col, floor_row - 2 - y, y == hill - 1 ? '^' : ':', frame_dim(f, ground, 0.55f));
     }
     // The ground itself, with question blocks over some flat stretches and coins over every leap. The hero takes
     // each coin as it reaches it, leaving a sparkle for a moment.
@@ -74,7 +78,8 @@ void platformer_draw(void *state, const Frame *f) {
         int wc = (int)(scroll + (float)col), h = ground_at(p, wc), s = wc / STRETCH, at = wc % STRETCH;
         if (h >= 0) {
             for (int y = floor_row - h; y < g->rows; y++)
-                put_cell(g, col, y, y == floor_row - h ? '=' : ((y + wc) % 2 ? '#' : 'H'), y == floor_row - h ? grass : ground);
+                put_cell(g, col, y, y == floor_row - h ? '=' : ((y + wc) % 2 ? '#' : 'H'),
+                         y == floor_row - h ? grass : ground);
         }
         int kind = stretch_kind(p, s);
         if (kind == 0 && s >= 2 && hash_u32(p->salt + (uint32_t)s) % 3 == 0 && at >= 5 && at < 8)
@@ -138,14 +143,17 @@ void race_draw(void *state, const Frame *f) {
     float travel = frame_travel(f, p->speed, p->speed * 0.8f);
     int horizon = (int)((float)g->rows * 0.42f), depth_rows = g->rows - horizon;
     float curve = msin(travel * 0.004f + (float)(p->salt % 17)) * p->bend;
-    Rgbf far = palette_ramp(f->palette, 0.25f), road = palette_ramp(f->palette, 0.4f), line = palette_ramp(f->palette, 0.95f);
-    Rgbf kerb_a = palette_accent(f->palette, 0), kerb_b = palette_ramp(f->palette, 0.85f), grass = palette_accent(f->palette, 2);
+    Rgbf far = palette_ramp(f->palette, 0.25f), road = palette_ramp(f->palette, 0.4f),
+         line = palette_ramp(f->palette, 0.95f);
+    Rgbf kerb_a = palette_accent(f->palette, 0), kerb_b = palette_ramp(f->palette, 0.85f),
+         grass = palette_accent(f->palette, 2);
     dust_stars(f, p->salt, curve * 2, 0.5f);
     // Mountains on the horizon slide against the bend.
     for (int col = 0; col < g->cols; col++) {
         float wx = (float)col * 0.09f - curve * 6 + (float)(p->salt % 23);
         int h = (int)(2 + 2.2f * (0.5f + 0.5f * msin(wx)) + 1.6f * (0.5f + 0.5f * msin(wx * 2.7f + 1)));
-        for (int y = 0; y < h; y++) put_cell(g, col, horizon - 1 - y, y == h - 1 ? '^' : '/', frame_dim(f, far, 0.6f + 0.1f * (float)y));
+        for (int y = 0; y < h; y++)
+            put_cell(g, col, horizon - 1 - y, y == h - 1 ? '^' : '/', frame_dim(f, far, 0.6f + 0.1f * (float)y));
     }
     for (int row = horizon; row < g->rows; row++) {
         float near = (float)(row - horizon + 1) / (float)depth_rows, z = 1 / near;
@@ -161,12 +169,14 @@ void race_draw(void *state, const Frame *f) {
                 Rgbf color = kerb ? (stripe ? kerb_a : kerb_b) : lane ? line : road;
                 if (c != ' ') put_cell(g, col, row, c, frame_dim(f, color, 0.55f + 0.45f * near));
             } else {
-                put_cell(g, col, row, stripe ? ',' : '.', frame_dim(f, grass, (stripe ? 0.55f : 0.35f) * (0.5f + 0.5f * near)));
+                put_cell(g, col, row, stripe ? ',' : '.',
+                         frame_dim(f, grass, (stripe ? 0.55f : 0.35f) * (0.5f + 0.5f * near)));
             }
         }
     }
     // The car, leaning into the bend, jolted by the kick.
-    int bump = frame_pulse(f, ROLE_KICK, 0.12f, 1.0f) > 0.55f, cx = g->cols / 2 - 4 + (int)(curve * 6), cy = g->rows - 4 - bump;
+    int bump = frame_pulse(f, ROLE_KICK, 0.12f, 1.0f) > 0.55f, cx = g->cols / 2 - 4 + (int)(curve * 6),
+        cy = g->rows - 4 - bump;
     static const char *const CAR[3] = {"  ____  ", " /|__|\\ ", "[o]--[o]"};
     Rgbf body = palette_accent(f->palette, 1);
     for (int line = 0; line < 3; line++) text_at(g, cx, cy + line, CAR[line], body);
@@ -248,6 +258,7 @@ void tetris_draw(void *state, const Frame *f) {
     garbage(&w, t, game);
     float clock = f->t - f->local, beat = f->score->beat, clear_at = -9;
     int piece = 0, rot = 0, x = 3, y = 0, falling = 0;
+
     for (int n = 0; n < 200; n++) {
         piece = (int)(hash_u32(t->salt + (uint32_t)n * 2654435761u) % 7);
         int target_y;
@@ -256,15 +267,19 @@ void tetris_draw(void *state, const Frame *f) {
             garbage(&w, t, ++game);
             continue;
         }
-        float step = beat / (score_energy(f->score, clock) > 0.8f ? 8.0f : 4.0f), lands = clock + step * (float)(target_y + 1);
+        float step = beat / (score_energy(f->score, clock) > 0.8f ? 8.0f : 4.0f),
+              lands = clock + step * (float)(target_y + 1);
         if (f->t < lands) {
             y = (int)((f->t - clock) / step);
             falling = 1;
             break;
         }
+
         uint16_t m = PIECES[piece][rot];
         for (int i = 0; i < 16; i++)
-            if ((m & (0x8000 >> i)) && target_y + i / 4 >= 0) w.cell[target_y + i / 4][x + i % 4] = (uint8_t)(1 + piece);
+            if ((m & (0x8000 >> i)) && target_y + i / 4 >= 0)
+                w.cell[target_y + i / 4][x + i % 4] = (uint8_t)(1 + piece);
+
         int cleared = 0;
         for (int row = WELL_H - 1; row >= 0; row--) {
             int full = 1;
@@ -277,6 +292,7 @@ void tetris_draw(void *state, const Frame *f) {
         if (cleared) lines += cleared, clear_at = lands, clearing_rows = cleared;
         clock = lands + step;
     }
+
     int left = g->cols / 2 - WELL_W - 2, top = (g->rows - WELL_H) / 2 - 1;
     Rgbf wall = palette_ramp(f->palette, 0.5f), ink = palette_ramp(f->palette, 0.95f);
     for (int row = 0; row < WELL_H; row++) {
@@ -293,22 +309,28 @@ void tetris_draw(void *state, const Frame *f) {
             }
         }
     }
+
     if (falling) {
         uint16_t m = PIECES[piece][rot];
         for (int i = 0; i < 16; i++)
-            if ((m & (0x8000 >> i)) && y + i / 4 >= 0) text_at(g, left + 2 + (x + i % 4) * 2, top + y + i / 4, "[]", ink);
+            if ((m & (0x8000 >> i)) && y + i / 4 >= 0)
+                text_at(g, left + 2 + (x + i % 4) * 2, top + y + i / 4, "[]", ink);
     }
+
     char floor_line[2 * WELL_W + 5];
     memset(floor_line, '=', sizeof floor_line - 1);
-    floor_line[0] = '<', floor_line[1] = '!', floor_line[sizeof floor_line - 3] = '!', floor_line[sizeof floor_line - 2] = '>';
+    floor_line[0] = '<', floor_line[1] = '!', floor_line[sizeof floor_line - 3] = '!',
+    floor_line[sizeof floor_line - 2] = '>';
     floor_line[sizeof floor_line - 1] = 0;
     text_at(g, left, top + WELL_H, floor_line, wall);
     for (int c = 0; c < WELL_W; c++) text_at(g, left + 2 + c * 2, top + WELL_H + 1, "\\/", frame_dim(f, wall, 0.7f));
+
     char text[24];
     snprintf(text, sizeof text, "LINES %3d", lines);
     text_at(g, left + 2 * WELL_W + 6, top + 2, text, ink);
     snprintf(text, sizeof text, "LEVEL %3d", 1 + lines / 10 + game);
     text_at(g, left + 2 * WELL_W + 6, top + 4, text, ink);
+
     // A clear lights the well for a moment, gently when the viewer asked for calm.
     float flash = clear_at > 0 ? mmax(0, 1 - (f->t - clear_at) / 0.4f) * frame_bright(f) : 0;
     f->fx->glow = 0.4f + 0.3f * flash * (float)(clearing_rows > 1 ? 1 : 0.6f);
@@ -356,7 +378,8 @@ void snake_draw(void *state, const Frame *f) {
     }
     int length = 6 + eaten * 2;
     if (length > n / 4) length = n / 4;
-    Rgbf border = palette_ramp(f->palette, 0.5f), body = palette_accent(f->palette, 2), apple = palette_accent(f->palette, 0);
+    Rgbf border = palette_ramp(f->palette, 0.5f), body = palette_accent(f->palette, 2),
+         apple = palette_accent(f->palette, 0);
     Rgbf ink = palette_ramp(f->palette, 0.95f);
     for (int x = -1; x <= w; x++) {
         put_cell(g, left + x, top - 1, '#', border);
@@ -377,7 +400,11 @@ void snake_draw(void *state, const Frame *f) {
     for (int k = length - 1; k >= 0; k--) {
         int x, y;
         snake_cell(head - k, w, h, &x, &y);
-        put_cell(g, left + x, top + y, k == 0 ? 'O' : k % 4 == 0 ? '=' : 'o', k == 0 ? ink : frame_dim(f, body, 1 - 0.4f * (float)k / (float)length));
+        put_cell(g, left + x, top + y,
+                 k == 0       ? 'O'
+                 : k % 4 == 0 ? '='
+                              : 'o',
+                 k == 0 ? ink : frame_dim(f, body, 1 - 0.4f * (float)k / (float)length));
     }
     char text[48];
     snprintf(text, sizeof text, "SNAKE   SCORE %04d   LENGTH %d", eaten * 10, length);
@@ -412,8 +439,10 @@ void overworld_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     float cx = frame_travel(f, o->speed, 0) + 20, cy = overworld_road(o, cx);
     int tiles_w = g->cols / 2, tiles_h = g->rows;
-    Rgbf water = palette_accent(f->palette, 2), sand = palette_ramp(f->palette, 0.75f), grass = palette_ramp(f->palette, 0.5f);
-    Rgbf wood = palette_accent(f->palette, 1), rock = palette_ramp(f->palette, 0.85f), road = palette_ramp(f->palette, 0.95f);
+    Rgbf water = palette_accent(f->palette, 2), sand = palette_ramp(f->palette, 0.75f),
+         grass = palette_ramp(f->palette, 0.5f);
+    Rgbf wood = palette_accent(f->palette, 1), rock = palette_ramp(f->palette, 0.85f),
+         road = palette_ramp(f->palette, 0.95f);
     for (int ty = 0; ty < tiles_h; ty++)
         for (int tx = 0; tx < tiles_w; tx++) {
             float wx = cx + (float)(tx - tiles_w / 2), wy = cy + (float)(ty - tiles_h / 2) * 0.5f;
@@ -515,7 +544,8 @@ void asteroids_draw(void *state, const Frame *f) {
         aim = matan2(by[target], bx[target]);
         if (f->t < arrive) {
             float u = (f->t - fired) / (arrive - fired);
-            StrokePoint p[2] = {{bx[target] * u, by[target] * u, bullet}, {bx[target] * (u + 0.04f), by[target] * (u + 0.04f), bullet}};
+            StrokePoint p[2] = {{bx[target] * u, by[target] * u, bullet},
+                                {bx[target] * (u + 0.04f), by[target] * (u + 0.04f), bullet}};
             stroke_draw(f->stroker, p, 2, 0);
         } else {
             burst[target] = arrive;
@@ -531,8 +561,8 @@ void asteroids_draw(void *state, const Frame *f) {
         if (age >= 0 && age < 0.6f) {
             for (int s = 0; s < 8; s++) {
                 float ang = (float)s / 8 * TAU_F + (float)k, r = 0.05f + age * 0.6f;
-                put_cell(g, cell_col(g, hit_x[k] + mcos(ang) * r), cell_row(g, hit_y[k] + msin(ang) * r), s & 1 ? '.' : '*',
-                         frame_dim(f, spark, 1 - age / 0.6f));
+                put_cell(g, cell_col(g, hit_x[k] + mcos(ang) * r), cell_row(g, hit_y[k] + msin(ang) * r),
+                         s & 1 ? '.' : '*', frame_dim(f, spark, 1 - age / 0.6f));
             }
             if (age < 0.35f) continue;
         }
@@ -541,7 +571,8 @@ void asteroids_draw(void *state, const Frame *f) {
         StrokePoint outline[9];
         float turn = f->t * a->spin * (k & 1 ? 1 : -1);
         for (int v = 0; v < 9; v++) {
-            float ang = (float)v / 9 * TAU_F + turn, r = size * (0.7f + 0.3f * hash01(a->salt + (uint32_t)(k * 17 + v)));
+            float ang = (float)v / 9 * TAU_F + turn,
+                  r = size * (0.7f + 0.3f * hash01(a->salt + (uint32_t)(k * 17 + v)));
             outline[v] = (StrokePoint){x + mcos(ang) * r, y + msin(ang) * r, rock};
         }
         stroke_draw(f->stroker, outline, 9, 1);
@@ -588,7 +619,8 @@ static float breakout_x(const Breakout *b, float cols, float t) {
 void breakout_draw(void *state, const Frame *f) {
     Breakout *b = state;
     Grid *g = f->grid;
-    int wall_top = 3, paddle_row = g->rows - 2, brick_w = (g->cols - 4) / BRICK_COLS, left = (g->cols - brick_w * BRICK_COLS) / 2;
+    int wall_top = 3, paddle_row = g->rows - 2, brick_w = (g->cols - 4) / BRICK_COLS,
+        left = (g->cols - brick_w * BRICK_COLS) / 2;
     float period = f->score->beat * 2, start = f->t - f->local, court = (float)(brick_w * BRICK_COLS - 1);
     uint8_t gone[BRICK_ROWS][BRICK_COLS] = {{0}};
     int level = 1, score = 0, apex_row = wall_top + BRICK_ROWS, left_bricks = BRICK_ROWS * BRICK_COLS;
@@ -618,11 +650,13 @@ void breakout_draw(void *state, const Frame *f) {
             if (gone[r][c]) continue;
             Rgbf color = palette_accent(f->palette, r % 3);
             if (r >= 3) color = rgbf_mix(color, ink, 0.25f);
-            for (int k = 0; k < brick_w; k++) put_cell(g, left + c * brick_w + k, wall_top + r, k == 0 ? '[' : k == brick_w - 1 ? ']' : '=', color);
+            for (int k = 0; k < brick_w; k++)
+                put_cell(g, left + c * brick_w + k, wall_top + r, k == 0 ? '[' : k == brick_w - 1 ? ']' : '=', color);
         }
     for (int col = 0; col < g->cols; col++) put_cell(g, col, wall_top - 1, '-', frame_ink);
     float phase = mfract(f->local / period), rise = 1 - mabs(phase * 2 - 1);
-    float bx = (float)left + breakout_x(b, court, f->t), by = (float)(paddle_row - 1) - rise * (float)(paddle_row - 1 - apex_row);
+    float bx = (float)left + breakout_x(b, court, f->t),
+          by = (float)(paddle_row - 1) - rise * (float)(paddle_row - 1 - apex_row);
     put_cell(g, (int)(bx + 0.5f), (int)(by + 0.5f), 'O', ink);
     // The paddle meets the ball at the bottom of every fall, flashing on the kick.
     float hit = frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
@@ -697,7 +731,8 @@ void scope_draw(void *state, const Frame *f) {
             else if (mabs((float)(row - prev)) == 1)
                 put_cell(g, col, row, row < prev ? '/' : '\\', wave_ink);
             else
-                for (int y = prev < row ? prev : row; y <= (prev < row ? row : prev); y++) put_cell(g, col, y, '|', wave_ink);
+                for (int y = prev < row ? prev : row; y <= (prev < row ? row : prev); y++)
+                    put_cell(g, col, y, '|', wave_ink);
             prev = row;
         }
     }
@@ -727,7 +762,8 @@ void lighthouse_draw(void *state, const Frame *f) {
     dust_stars(f, l->salt, 0.03f, 0.6f);
     int horizon = (int)((float)g->rows * 0.55f), tower_h = (int)((float)g->rows * 0.42f);
     int tower_x = l->right ? g->cols - 12 : 6, lamp_row = horizon - tower_h + 1;
-    Rgbf sea = palette_accent(f->palette, 2), stripe_a = palette_ramp(f->palette, 0.9f), stripe_b = palette_accent(f->palette, 0);
+    Rgbf sea = palette_accent(f->palette, 2), stripe_a = palette_ramp(f->palette, 0.9f),
+         stripe_b = palette_accent(f->palette, 0);
     Rgbf rock = palette_ramp(f->palette, 0.3f), beam = palette_ramp(f->palette, 1.0f);
     for (int row = horizon; row < g->rows; row++) {
         float near = (float)(row - horizon + 1) / (float)(g->rows - horizon);
@@ -749,7 +785,12 @@ void lighthouse_draw(void *state, const Frame *f) {
     }
     for (int y = lamp_row + 1; y < horizon; y++) {
         int half = 1 + (y - lamp_row) / 6;
-        for (int x = -half; x <= half + 2; x++) put_cell(g, tower_x + 2 + x - 1, y, x == -half ? '/' : x == half + 2 ? '\\' : '#', ((y / 2) & 1) ? stripe_a : stripe_b);
+        for (int x = -half; x <= half + 2; x++)
+            put_cell(g, tower_x + 2 + x - 1, y,
+                     x == -half      ? '/'
+                     : x == half + 2 ? '\\'
+                                     : '#',
+                     ((y / 2) & 1) ? stripe_a : stripe_b);
     }
     text_at(g, tower_x, lamp_row - 1, "_/^\\_", stripe_a);
     text_at(g, tower_x, lamp_row, "|[*]|", beam);
@@ -778,12 +819,14 @@ void drums_draw(void *state, const Frame *f) {
     DrumMachine *d = state;
     Grid *g = f->grid;
     static const char *const LABELS[4] = {"KICK ", "SNARE", "HATS ", "PERC "};
-    static const Role ROWS[4][2] = {{ROLE_KICK, ROLE_KICK}, {ROLE_SNARE, ROLE_SNARE}, {ROLE_HAT, ROLE_HAT}, {ROLE_PERC, ROLE_CRASH}};
+    static const Role ROWS[4][2] = {
+        {ROLE_KICK, ROLE_KICK}, {ROLE_SNARE, ROLE_SNARE}, {ROLE_HAT, ROLE_HAT}, {ROLE_PERC, ROLE_CRASH}};
     const SongInfo *info = f->score->info;
     int steps = info->rows_per_bar, cell_w = (g->cols - 10) / steps > 4 ? 4 : 3;
     float bar = (float)info->bar_seconds, step = bar / (float)steps, bar_start = mfloor(f->t / bar) * bar;
     int now = (int)((f->t - bar_start) / step), left = (g->cols - 7 - steps * cell_w) / 2 + 7, top = g->rows / 2 - 5;
-    Rgbf ink = palette_ramp(f->palette, 0.95f), dim = palette_ramp(f->palette, 0.35f), led = palette_accent(f->palette, 0);
+    Rgbf ink = palette_ramp(f->palette, 0.95f), dim = palette_ramp(f->palette, 0.35f),
+         led = palette_accent(f->palette, 0);
     char text[40];
     snprintf(text, sizeof text, "DRUM MACHINE   BPM %d", info->bpm);
     text_at(g, left - 7, top - 3, text, ink);
@@ -792,18 +835,22 @@ void drums_draw(void *state, const Frame *f) {
         text_at(g, left - 7, row, LABELS[r], palette_ramp(f->palette, 0.7f));
         for (int s = 0; s < steps; s++) {
             float from = bar_start + (float)s * step, to = from + step;
-            int hit = f->react > 0 && (score_count(f->score, ROWS[r][0], from, to) || score_count(f->score, ROWS[r][1], from, to));
+            int hit = f->react > 0 &&
+                      (score_count(f->score, ROWS[r][0], from, to) || score_count(f->score, ROWS[r][1], from, to));
             int here = s == now, col = left + s * cell_w;
-            Rgbf color = hit ? (here ? ink : palette_accent(f->palette, r % 3)) : (here ? palette_ramp(f->palette, 0.6f) : dim);
+            Rgbf color =
+                hit ? (here ? ink : palette_accent(f->palette, r % 3)) : (here ? palette_ramp(f->palette, 0.6f) : dim);
             text_at(g, col, row, hit ? "[#]" : "[ ]", color);
         }
     }
-    for (int s = 0; s < steps; s++) put_cell(g, left + s * cell_w + 1, top + 8, s == now ? '^' : (s % 4 ? '.' : ':'), s == now ? led : dim);
+    for (int s = 0; s < steps; s++)
+        put_cell(g, left + s * cell_w + 1, top + 8, s == now ? '^' : (s % 4 ? '.' : ':'), s == now ? led : dim);
     // Three knobs that turn with the music's energy.
     static const char *const KNOBS[3] = {"TEMPO", "SWING", "TUNE"};
     static const char TURN[4] = {'|', '/', '-', '\\'};
     for (int k = 0; k < 3; k++) {
-        int col = left + k * 12, turn = (int)((d->knob + score_energy(f->score, f->t) * 0.8f + (float)k * 0.3f) * 4) & 3;
+        int col = left + k * 12,
+            turn = (int)((d->knob + score_energy(f->score, f->t) * 0.8f + (float)k * 0.3f) * 4) & 3;
         text_at(g, col, top + 11, "(", dim);
         put_cell(g, col + 1, top + 11, TURN[turn], led);
         text_at(g, col + 2, top + 11, ")", dim);

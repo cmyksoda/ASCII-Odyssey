@@ -16,7 +16,8 @@
 #include <string.h>
 
 static void usage(void) {
-    fprintf(stderr, "usage: odyssey-render title [--wide] [--scale N] [--times t1,t2,...] [--sheet OUT.png | --out DIR]\n");
+    fprintf(stderr,
+            "usage: odyssey-render title [--wide] [--scale N] [--times t1,t2,...] [--sheet OUT.png | --out DIR]\n");
     exit(2);
 }
 
@@ -77,8 +78,8 @@ static int wav_main(int argc, char **argv) {
     audio_measure(audio, frames, &st);
     printf("synth %.2fs  render %.2fs for %.1fs of audio (%.0fx realtime)\n", (double)(t1 - t0) / CLOCKS_PER_SEC,
            (double)(t2 - t1) / CLOCKS_PER_SEC, st.seconds, st.seconds / ((double)(t2 - t1) / CLOCKS_PER_SEC));
-    printf("peak %.2f dBFS  rms %.2f dBFS  integrated %.1f LUFS  loudest 400ms %.1f LUFS\n", st.peak_db, st.rms_db, st.lufs,
-           st.loudest_short_lufs);
+    printf("peak %.2f dBFS  rms %.2f dBFS  integrated %.1f LUFS  loudest 400ms %.1f LUFS\n", st.peak_db, st.rms_db,
+           st.lufs, st.loudest_short_lufs);
     printf("clipped %ld  nonfinite %ld  big jumps %ld\n", st.clipped, st.nonfinite, st.big_jumps);
     wav_write(out, audio, frames);
     if (spectro) spectrogram_png(spectro, audio, frames, 1600, 400);
@@ -155,16 +156,19 @@ static int song_main(int argc, char **argv) {
         printf("  %-6s bars %3d-%3d  energy %.2f\n", section_names[info->sections[s].kind], info->sections[s].start_bar,
                info->sections[s].start_bar + info->sections[s].bars - 1, info->sections[s].energy);
     printf("  chords:");
-    for (int i = 0; i < info->chord_count && i < 16; i++) printf(" %s%s", note_names[info->chords[i].chord.root_pc], chord_minor(&info->chords[i].chord) ? "m" : "");
+    for (int i = 0; i < info->chord_count && i < 16; i++)
+        printf(" %s%s", note_names[info->chords[i].chord.root_pc], chord_minor(&info->chords[i].chord) ? "m" : "");
     printf("\n  instruments:");
     for (int i = 0; i < comp.song->instrument_count; i++) printf(" %s;", comp.song->instruments[i].name);
     printf("\n");
     if (info_path) {
         FILE *f = fopen(info_path, "w");
         if (f) {
-            fprintf(f, "{\"title\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, \"sections\": [",
-                    info->title, mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale], info->bpm,
-                    info->length);
+            fprintf(
+                f,
+                "{\"title\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, \"sections\": [",
+                info->title, mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale],
+                info->bpm, info->length);
             for (int s = 0; s < info->section_count; s++)
                 fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f}", s ? ", " : "",
                         section_names[info->sections[s].kind], info->sections[s].start, info->sections[s].end);
@@ -188,8 +192,8 @@ static int song_main(int argc, char **argv) {
         audio_measure(audio, frames, &st);
         printf("compose %.2fs  render %.2fs (%.0fx realtime)  peak voices %d\n", (double)(t1 - t0) / CLOCKS_PER_SEC,
                (double)(t2 - t1) / CLOCKS_PER_SEC, st.seconds / ((double)(t2 - t1) / CLOCKS_PER_SEC), peak);
-        printf("peak %.2f dBFS  integrated %.1f LUFS  loudest 400ms %.1f LUFS  clipped %ld  nonfinite %ld\n", st.peak_db,
-               st.lufs, st.loudest_short_lufs, st.clipped, st.nonfinite);
+        printf("peak %.2f dBFS  integrated %.1f LUFS  loudest 400ms %.1f LUFS  clipped %ld  nonfinite %ld\n",
+               st.peak_db, st.lufs, st.loudest_short_lufs, st.clipped, st.nonfinite);
         wav_write(out, audio, frames);
         if (spectro) spectrogram_png(spectro, audio, frames, 1600, 400);
         free(audio);
@@ -216,10 +220,11 @@ static int piece_video(Piece *p, const char *path, int fps, int scale, int wide)
     image_init(&fb, FB_W, FB_H);
     int w = (wide ? FB_W * 4 / 3 : FB_W) * scale, h = FB_H * scale;
     char cmd[2048];
-    snprintf(cmd, sizeof cmd,
-             "ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s %dx%d -r %d -i - -i '%s' -c:v libx264 -preset medium "
-             "-crf 18 -tune animation -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart '%s'",
-             w, h, fps, wav, path);
+    snprintf(
+        cmd, sizeof cmd,
+        "ffmpeg -y -loglevel error -f rawvideo -pix_fmt rgb24 -s %dx%d -r %d -i - -i '%s' -c:v libx264 -preset medium "
+        "-crf 18 -tune animation -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart '%s'",
+        w, h, fps, wav, path);
     FILE *pipe = popen(cmd, "w");
     if (!pipe) return -1;
     long total = (long)((double)frames / AUDIO_RATE * fps);
@@ -253,23 +258,28 @@ static void piece_info(const Piece *p, const char *path) {
     FILE *f = fopen(path, "w");
     if (!f) return;
     const SongInfo *info = &p->comp.info;
-    fprintf(f, "{\"title\": \"%s\", \"face\": \"%s\", \"title_lines\": %d, \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, "
-               "\"length\": %.2f, ",
-            info->title, face_name(p->art_font), p->art_font ? p->art_layout.lines : 0, mood_names[info->mood],
-            note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length);
+    fprintf(
+        f,
+        "{\"title\": \"%s\", \"face\": \"%s\", \"title_lines\": %d, \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, "
+        "\"length\": %.2f, ",
+        info->title, face_name(p->art_font), p->art_font ? p->art_layout.lines : 0, mood_names[info->mood],
+        note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length);
     fprintf(f, "\"palettes\": [");
     for (int i = 0; i < PALETTE_FAMILY; i++) fprintf(f, "%s\"%s\"", i ? ", " : "", p->direction.palettes[i]->name);
     fprintf(f, "], \"sections\": [");
     for (int s = 0; s < info->section_count; s++)
-        fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f}", s ? ", " : "", section_names[info->sections[s].kind],
-                info->sections[s].start, info->sections[s].end);
+        fprintf(f, "%s{\"kind\": \"%s\", \"start\": %.3f, \"end\": %.3f}", s ? ", " : "",
+                section_names[info->sections[s].kind], info->sections[s].start, info->sections[s].end);
     fprintf(f, "], \"shots\": [");
     for (int i = 0; i < p->direction.count; i++) {
         const Shot *s = &p->direction.shots[i];
-        fprintf(f, "%s{\"scene\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"reactive\": %d, \"heavy\": %d, \"intensity\": %.2f, "
-                   "\"target\": %.2f, \"palette\": \"%s\", \"entrance\": \"%s\", \"fade\": %.2f}",
-                i ? ", " : "", scene_kinds[s->kind].name, s->start, s->end, scene_kinds[s->kind].reactive, scene_kinds[s->kind].heavy,
-                scene_kinds[s->kind].intensity, s->target, p->direction.palettes[s->palette]->name, entrance_names[s->entrance], s->fade);
+        fprintf(
+            f,
+            "%s{\"scene\": \"%s\", \"start\": %.3f, \"end\": %.3f, \"reactive\": %d, \"heavy\": %d, \"intensity\": %.2f, "
+            "\"target\": %.2f, \"palette\": \"%s\", \"entrance\": \"%s\", \"fade\": %.2f}",
+            i ? ", " : "", scene_kinds[s->kind].name, s->start, s->end, scene_kinds[s->kind].reactive,
+            scene_kinds[s->kind].heavy, scene_kinds[s->kind].intensity, s->target,
+            p->direction.palettes[s->palette]->name, entrance_names[s->entrance], s->fade);
     }
     fprintf(f, "]}\n");
     fclose(f);
@@ -351,8 +361,13 @@ static void bench(Piece *p, double rain_on_wii) {
     piece_force_scene(p, scene_kinds[a].name);
     Rng r;
     rng_init(&r, 7, "bench");
-    Frame proto = {.score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid, .stroker = &p->stroker,
-                   .matcher = &p->matcher, .fx = &p->fx};
+    Frame proto = {.score = &p->score,
+                   .palette = p->palette,
+                   .canvas = &p->canvas,
+                   .grid = &p->grid,
+                   .stroker = &p->stroker,
+                   .matcher = &p->matcher,
+                   .fx = &p->fx};
     for (int i = 1; i < p->direction.count; i += 2) {
         p->direction.shots[i].kind = b;
         scene_kinds[b].setup(p->direction.shots[i].state, &r, &proto);
@@ -370,8 +385,8 @@ static void bench(Piece *p, double rain_on_wii) {
         }
         if (frames && sum / frames < blend) blend = sum / frames;
     }
-    printf("%s into %s, blending: %.3f ms, worst %.3f   %5.1f\n", scene_kinds[a].name, scene_kinds[b].name, blend, blend_worst,
-           blend * scale);
+    printf("%s into %s, blending: %.3f ms, worst %.3f   %5.1f\n", scene_kinds[a].name, scene_kinds[b].name, blend,
+           blend_worst, blend * scale);
 }
 
 static int piece_main(int argc, char **argv) {
@@ -381,6 +396,7 @@ static int piece_main(int argc, char **argv) {
     LengthPref length = LENGTH_MEDIUM;
     int wide = 0, fps = 30, scale = 2, count = 0, benchmark = 0, calm = 0, still = 0;
     double times[64];
+
     for (int i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "--seed") && i + 1 < argc)
             seed = argv[++i];
@@ -419,6 +435,7 @@ static int piece_main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--long"))
             length = LENGTH_LONG;
     }
+
     app_boot();
     Viewport vp;
     viewport_init(&vp, wide, 0);
@@ -436,6 +453,7 @@ static int piece_main(int argc, char **argv) {
         fprintf(stderr, "no face called %s, or the title doesn't fit it\n", face);
         return 1;
     }
+
     // Every shot enters the named way, slowed to a second, for looking at one kind of transition.
     for (int e = 0; entrance && e < ENTRANCES; e++)
         if (!strcmp(entrance_names[e], entrance))
@@ -443,20 +461,24 @@ static int piece_main(int argc, char **argv) {
                 p.direction.shots[i].entrance = (Entrance)e;
                 p.direction.shots[i].fade = 1.0f;
             }
+
     if (info_path) piece_info(&p, info_path);
     const SongInfo *info = &p.comp.info;
     printf("\"%s\": %s, %s %s, %d bpm, %.0f s, palette %s, grid %dx%d\n", info->title, mood_names[info->mood],
-           note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length, p.palette->name, p.grid.cols,
-           p.grid.rows);
+           note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length, p.palette->name,
+           p.grid.cols, p.grid.rows);
     for (int i = 0; i < p.direction.count; i++) {
         const Shot *s = &p.direction.shots[i];
         printf("  shot %2d %6.1f-%6.1f s  %-14s %-8s %-9s %s\n", i, s->start, s->end, scene_kinds[s->kind].name,
-               scene_kinds[s->kind].reactive ? "reactive" : "still", entrance_names[s->entrance], p.direction.palettes[s->palette]->name);
+               scene_kinds[s->kind].reactive ? "reactive" : "still", entrance_names[s->entrance],
+               p.direction.palettes[s->palette]->name);
     }
+
     if (sheet) {
         if (!count) {
             for (int i = 0; i < p.direction.count && count < 12; i++)
-                times[count++] = p.direction.shots[i].start + (p.direction.shots[i].end - p.direction.shots[i].start) * 0.4;
+                times[count++] =
+                    p.direction.shots[i].start + (p.direction.shots[i].end - p.direction.shots[i].start) * 0.4;
         }
         Image fb, shown = {0}, out = {0};
         image_init(&fb, FB_W, FB_H);
@@ -474,6 +496,7 @@ static int piece_main(int argc, char **argv) {
         image_free(&shown);
         image_free(&out);
     }
+
     if (video && piece_video(&p, video, fps, scale, wide) != 0) fprintf(stderr, "video failed\n");
     if (benchmark) bench(&p, 6.0);
     piece_free(&p);

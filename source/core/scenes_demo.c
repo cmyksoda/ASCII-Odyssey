@@ -61,7 +61,8 @@ void fire_draw(void *state, const Frame *f) {
             float heat = saturate((n - 0.2f) * 2.2f - rel * 1.05f + 0.25f);
             if (heat < 0.06f) continue;
             int glyph = ramp[clampi((int)(heat * 9.99f), 1, 9)];
-            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.25f + 0.75f * heat), core, smoothstep(0.55f, 1.0f, heat) * 0.6f);
+            Rgbf color =
+                rgbf_mix(palette_ramp(f->palette, 0.25f + 0.75f * heat), core, smoothstep(0.55f, 1.0f, heat) * 0.6f);
             put_cell(g, col, row, glyph, color);
         }
     }
@@ -73,7 +74,8 @@ void fire_draw(void *state, const Frame *f) {
         for (int s = 0; s < 6; s++) {
             uint32_t id = (uint32_t)(hits[i]->time * 911.0f) * 31u + (uint32_t)s;
             float x0 = (hash01(id) * 2 - 1) * g->aspect * 0.8f;
-            float x = x0 + 0.06f * msin(age * 5 + (float)s), y = -1 + fire_reach(p, x0, g->aspect) * 2 * 0.6f + age * 0.55f;
+            float x = x0 + 0.06f * msin(age * 5 + (float)s),
+                  y = -1 + fire_reach(p, x0, g->aspect) * 2 * 0.6f + age * 0.55f;
             put_cell(g, cell_col(g, x), cell_row(g, y), age < 0.5f ? '*' : '.', frame_dim(f, core, bright));
         }
     }
@@ -124,7 +126,8 @@ void twister_draw(void *state, const Frame *f) {
                 Rgbf color = face == 3 ? palette_ramp(f->palette, 0.95f) : palette_accent(f->palette, face);
                 color = frame_dim(f, color, 0.35f + 0.65f * facing * (stripe ? 0.75f : 1.0f));
                 int glyph = facing > 0.7f ? (stripe ? '=' : '#') : facing > 0.35f ? (stripe ? '-' : '+') : ':';
-                for (int col = cell_col(g, px[k]); col <= cell_col(g, px[k + 1]); col++) put_cell(g, col, row, glyph, color);
+                for (int col = cell_col(g, px[k]); col <= cell_col(g, px[k + 1]); col++)
+                    put_cell(g, col, row, glyph, color);
             }
         }
     }
@@ -181,7 +184,8 @@ void rotozoom_draw(void *state, const Frame *f) {
     static const char ramp[] = " .:-=+*#";
     float kick = frame_pulse(f, ROLE_KICK, 0.25f, 1.0f);
     float a = f->local * z->spin + frame_surge(f, ROLE_SNARE, 0.3f, 0.25f);
-    float scale = z->zoom * (1 + 0.35f * msin(f->local * 0.35f)) * (1 - 0.18f * kick), ca = mcos(a) * scale, sa = msin(a) * scale;
+    float scale = z->zoom * (1 + 0.35f * msin(f->local * 0.35f)) * (1 - 0.18f * kick), ca = mcos(a) * scale,
+          sa = msin(a) * scale;
     float ox = z->drift_x * f->local, oy = z->drift_y * f->local;
     Rgbf inks[2] = {palette_accent(f->palette, 0), palette_ramp(f->palette, 0.85f)};
     for (int row = 0; row < g->rows; row++) {
@@ -239,7 +243,8 @@ static void ball_place(int shape, int i, float out[3]) {
     }
     case 2: {
         float a = (float)(i % 12) / 12 * TAU_F, c = (float)(i / 12) / 6 * TAU_F;
-        out[0] = (0.75f + 0.3f * mcos(c)) * mcos(a), out[1] = 0.3f * msin(c), out[2] = (0.75f + 0.3f * mcos(c)) * msin(a);
+        out[0] = (0.75f + 0.3f * mcos(c)) * mcos(a), out[1] = 0.3f * msin(c),
+        out[2] = (0.75f + 0.3f * mcos(c)) * msin(a);
         break;
     }
     default: {
@@ -318,8 +323,10 @@ typedef struct {
 static StrokePoint project(const View *v, const float p[3], const Frame *f, float bright) {
     float x = v->m[0] * p[0] + v->m[1] * p[1] + v->m[2] * p[2], y = v->m[3] * p[0] + v->m[4] * p[1] + v->m[5] * p[2];
     float z = v->m[6] * p[0] + v->m[7] * p[1] + v->m[8] * p[2], d = 2.8f / (2.8f + z), near = saturate(0.5f - z * 0.6f);
-    Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * near), palette_accent(f->palette, near > 0.5f ? 1 : 0), 0.3f);
-    return (StrokePoint){x * d * v->scale * v->aspect, y * d * v->scale, frame_dim(f, color, (0.55f + 0.6f * near) * bright)};
+    Rgbf color =
+        rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * near), palette_accent(f->palette, near > 0.5f ? 1 : 0), 0.3f);
+    return (StrokePoint){x * d * v->scale * v->aspect, y * d * v->scale,
+                         frame_dim(f, color, (0.55f + 0.6f * near) * bright)};
 }
 
 // A wireframe torus or a knot tied round one, turning in space; every kick gives it a shove.
@@ -330,8 +337,8 @@ void torus_draw(void *state, const Frame *f) {
     float shove = frame_surge(f, ROLE_KICK, 0.25f, 0.35f);
     float ax = f->local * t->spin_x + shove, ay = f->local * t->spin_y, az = f->local * t->spin_z;
     float sa = msin(ax), ca = mcos(ax), sb = msin(ay), cb = mcos(ay), sc = msin(az), cc = mcos(az);
-    View v = {{cb * cc, -cb * sc, sb, sa * sb * cc + ca * sc, -sa * sb * sc + ca * cc, -sa * cb, -ca * sb * cc + sa * sc,
-               ca * sb * sc + sa * cc, ca * cb},
+    View v = {{cb * cc, -cb * sc, sb, sa * sb * cc + ca * sc, -sa * sb * sc + ca * cc, -sa * cb,
+               -ca * sb * cc + sa * sc, ca * sb * sc + sa * cc, ca * cb},
               (t->form ? 0.82f : 0.62f) * (1 + 0.1f * frame_pulse(f, ROLE_KICK, 0.25f, 1.0f)),
               g->aspect * 0.75f};
     StrokePoint pts[96];
@@ -339,7 +346,8 @@ void torus_draw(void *state, const Frame *f) {
         for (int ring = 0; ring < 18; ring++) {
             float a = (float)ring / 18 * TAU_F;
             for (int k = 0; k < 24; k++) {
-                float c = (float)k / 24 * TAU_F, p[3] = {(1 + 0.4f * mcos(c)) * mcos(a), 0.4f * msin(c), (1 + 0.4f * mcos(c)) * msin(a)};
+                float c = (float)k / 24 * TAU_F,
+                      p[3] = {(1 + 0.4f * mcos(c)) * mcos(a), 0.4f * msin(c), (1 + 0.4f * mcos(c)) * msin(a)};
                 pts[k] = project(&v, p, f, 1.0f);
             }
             stroke_draw(f->stroker, pts, 24, 1);
@@ -347,7 +355,8 @@ void torus_draw(void *state, const Frame *f) {
         for (int lane = 0; lane < 6; lane++) {
             float c = (float)lane / 6 * TAU_F;
             for (int k = 0; k < 48; k++) {
-                float a = (float)k / 48 * TAU_F, p[3] = {(1 + 0.4f * mcos(c)) * mcos(a), 0.4f * msin(c), (1 + 0.4f * mcos(c)) * msin(a)};
+                float a = (float)k / 48 * TAU_F,
+                      p[3] = {(1 + 0.4f * mcos(c)) * mcos(a), 0.4f * msin(c), (1 + 0.4f * mcos(c)) * msin(a)};
                 pts[k] = project(&v, p, f, 0.7f);
             }
             stroke_draw(f->stroker, pts, 48, 1);
@@ -361,7 +370,8 @@ void torus_draw(void *state, const Frame *f) {
                 float p[3] = {r * mcos(pk * s), 0.3f * msin(qk * s), r * msin(pk * s)};
                 if (strand) {
                     float wind = s * 9 + (float)strand * PI_F;
-                    p[0] += 0.08f * mcos(wind) * mcos(pk * s), p[1] += 0.08f * msin(wind), p[2] += 0.08f * mcos(wind) * msin(pk * s);
+                    p[0] += 0.08f * mcos(wind) * mcos(pk * s), p[1] += 0.08f * msin(wind),
+                        p[2] += 0.08f * mcos(wind) * msin(pk * s);
                 }
                 pts[k] = project(&v, p, f, strand ? 0.6f : 1.0f);
             }
@@ -407,7 +417,8 @@ void spirograph_draw(void *state, const Frame *f) {
     Spirograph *s = state;
     Grid *g = f->grid;
     dust_stars(f, 0x5b16, 0.0f, 0.4f);
-    Wheel w = {(float)s->big, (float)s->small, (float)s->small * s->pen, 0, g->aspect * 0.75f, s->turn + f->local * 0.03f};
+    Wheel w = {(float)s->big,     (float)s->small,           (float)s->small * s->pen, 0,
+               g->aspect * 0.75f, s->turn + f->local * 0.03f};
     w.scale = 0.88f / (w.R - w.r + w.d);
     // The figure closes after the small wheel has gone round as many times as it takes to come back to its start.
     int loops = s->small;
@@ -437,7 +448,8 @@ void spirograph_draw(void *state, const Frame *f) {
         for (int k = 0; k < n; k++) {
             float t = drawn * (float)(k0 + k) / (float)(segments - 1), age = (drawn - t) / whole, x, y;
             wheel_point(&w, t, &x, &y);
-            Rgbf color = rgbf_mix(palette_accent(f->palette, hue + (k0 + k) / 200), palette_ramp(f->palette, 1.0f), 0.25f);
+            Rgbf color =
+                rgbf_mix(palette_accent(f->palette, hue + (k0 + k) / 200), palette_ramp(f->palette, 1.0f), 0.25f);
             pts[k] = (StrokePoint){x, y, frame_dim(f, color, 0.5f + 0.7f * mexp(-age * 4))};
         }
         stroke_draw(f->stroker, pts, n, 0);
@@ -448,7 +460,8 @@ void spirograph_draw(void *state, const Frame *f) {
     float wx = (kx * c - ky * sn) * w.scale * w.aspect, wy = (kx * sn + ky * c) * w.scale;
     for (int k = 0; k < 32; k++) {
         float a = (float)k / 32 * TAU_F;
-        pts[k] = (StrokePoint){wx + mcos(a) * w.r * w.scale * w.aspect, wy + msin(a) * w.r * w.scale, frame_dim(f, ring, 0.8f)};
+        pts[k] = (StrokePoint){wx + mcos(a) * w.r * w.scale * w.aspect, wy + msin(a) * w.r * w.scale,
+                               frame_dim(f, ring, 0.8f)};
     }
     stroke_draw(f->stroker, pts, 32, 1);
     put_cell(g, cell_col(g, x), cell_row(g, y), '*', palette_ramp(f->palette, 1.0f));
@@ -504,7 +517,8 @@ void julia_draw(void *state, const Frame *f) {
             level *= level * (3 - 2 * level);
             int i = (int)(level * 9.99f);
             if (i <= 0) continue;
-            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * level), palette_accent(f->palette, (int)(smooth * 0.4f)), 0.35f);
+            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * level),
+                                  palette_accent(f->palette, (int)(smooth * 0.4f)), 0.35f);
             put_cell(g, col, row, ramp[i], color);
         }
     }

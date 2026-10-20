@@ -50,7 +50,8 @@ float frame_surge(const Frame *f, Role role, float tau, float strength) {
         strength *= 0.3f;
     }
     strength *= f->react;
-    return strength * (score_pulse_area(f->score, role, f->t, tau) - score_pulse_area(f->score, role, f->t - f->local, tau));
+    return strength *
+           (score_pulse_area(f->score, role, f->t, tau) - score_pulse_area(f->score, role, f->t - f->local, tau));
 }
 
 void put_cell(Grid *g, int col, int row, int glyph, Rgbf color) {
@@ -230,7 +231,8 @@ static int tunnel_texture(int kind, uint32_t seed) {
                 // Woven threads: warp over weft, then weft over warp.
                 float wu = mfract(u * 12), wv = mfract(v * 8);
                 int over = ((int)(u * 12) + (int)(v * 8)) & 1;
-                float warp = smoothstep(0.42f, 0.25f, mabs(wu - 0.5f)), weft = smoothstep(0.42f, 0.25f, mabs(wv - 0.5f));
+                float warp = smoothstep(0.42f, 0.25f, mabs(wu - 0.5f)),
+                      weft = smoothstep(0.42f, 0.25f, mabs(wv - 0.5f));
                 ink = (over ? mmax(warp, weft * 0.6f) : mmax(weft, warp * 0.6f)) * 0.9f;
                 break;
             }
@@ -274,7 +276,8 @@ static void tunnel_draw(void *state, const Frame *f) {
     int n = c->w * c->h;
     for (int k = 0; k < n; k++) {
         uint32_t v = (uint32_t)tunnel_lut.v[k] * 16 + dv;
-        uint32_t u = ((uint32_t)tunnel_lut.u[k] + du + (uint32_t)(int32_t)(((int)tunnel_lut.v[k] * twist) >> 6)) & 0xffff;
+        uint32_t u =
+            ((uint32_t)tunnel_lut.u[k] + du + (uint32_t)(int32_t)(((int)tunnel_lut.v[k] * twist) >> 6)) & 0xffff;
         int tx = (int)(u >> 8), ty = (int)((v >> 10) & 255);
         int fog = tunnel_lut.fog[k];
         c->ink[k] = inks[tex[ty * TEX + tx]] * inks[fog] * 0.62f;
@@ -315,7 +318,8 @@ static float plasma_field(const Plasma *p, float x, float y, float t) {
     if (p->look == 2) {
         float v = 0;
         for (int k = 0; k < 3; k++) {
-            float cx = p->cx[k] + 0.4f * msin(t * p->wx[k] + (float)k), cy = p->cy[k] + 0.3f * mcos(t * p->wy[k] + (float)k * 2);
+            float cx = p->cx[k] + 0.4f * msin(t * p->wx[k] + (float)k),
+                  cy = p->cy[k] + 0.3f * mcos(t * p->wy[k] + (float)k * 2);
             v += msin(mhypot(x - cx, y - cy) * p->d * 3 - t * 2);
         }
         return v / 3;
@@ -352,7 +356,9 @@ static void plasma_draw(void *state, const Frame *f) {
                 float gx = plasma_field(p, x + dx, y, t) - plasma_field(p, x - dx, y, t);
                 float gy = plasma_field(p, x, y + dy, t) - plasma_field(p, x, y - dy, t);
                 float along = matan2(gx, -gy), a = mabs(along) > PI_F / 2 ? PI_F - mabs(along) : mabs(along);
-                int glyph = a < 0.45f ? '|' : a < 1.12f ? ((gx > 0) == (gy > 0) ? '\\' : '/') : (band < 0.5f ? '-' : '~');
+                int glyph = a < 0.45f   ? '|'
+                            : a < 1.12f ? ((gx > 0) == (gy > 0) ? '\\' : '/')
+                                        : (band < 0.5f ? '-' : '~');
                 Rgbf color = flow_color(f->palette, level * 0.9f + f->local * p->cycle);
                 *cell = (Cell){(uint8_t)glyph, rgb_from_f(frame_dim(f, color, 0.75f + lift * 2)), 0};
                 continue;
@@ -441,7 +447,8 @@ static void sunset_draw(void *state, const Frame *f) {
         float z = (float)k + 1 - scroll, y = s->horizon - 0.9f / z;
         if (y < -1.05f || y > s->horizon - 0.01f) continue;
         float near = saturate(1.2f / z);
-        StrokePoint bar[2] = {{-g->aspect, y, frame_dim(f, neon, 0.2f + near * glow)}, {g->aspect, y, frame_dim(f, neon, 0.2f + near * glow)}};
+        StrokePoint bar[2] = {{-g->aspect, y, frame_dim(f, neon, 0.2f + near * glow)},
+                              {g->aspect, y, frame_dim(f, neon, 0.2f + near * glow)}};
         stroke_draw(f->stroker, bar, 2, 0);
     }
     f->fx->glow = 0.5f;
@@ -462,8 +469,9 @@ static const float OCTA[6][3] = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {
 static const int OCTA_EDGES[12][2] = {{0, 2}, {0, 3}, {0, 4}, {0, 5}, {1, 2}, {1, 3},
                                       {1, 4}, {1, 5}, {2, 4}, {4, 3}, {3, 5}, {5, 2}};
 #define PHI 1.618034f
-static const float ICOSA[12][3] = {{-1, PHI, 0}, {1, PHI, 0},  {-1, -PHI, 0}, {1, -PHI, 0}, {0, -1, PHI}, {0, 1, PHI},
-                                   {0, -1, -PHI}, {0, 1, -PHI}, {PHI, 0, -1},  {PHI, 0, 1},  {-PHI, 0, -1}, {-PHI, 0, 1}};
+static const float ICOSA[12][3] = {{-1, PHI, 0}, {1, PHI, 0}, {-1, -PHI, 0}, {1, -PHI, 0},
+                                   {0, -1, PHI}, {0, 1, PHI}, {0, -1, -PHI}, {0, 1, -PHI},
+                                   {PHI, 0, -1}, {PHI, 0, 1}, {-PHI, 0, -1}, {-PHI, 0, 1}};
 static const int ICOSA_EDGES[30][2] = {{0, 1},  {0, 5},  {0, 7},  {0, 10}, {0, 11}, {1, 5},  {1, 7},  {1, 8},
                                        {1, 9},  {2, 3},  {2, 4},  {2, 6},  {2, 10}, {2, 11}, {3, 4},  {3, 6},
                                        {3, 8},  {3, 9},  {4, 5},  {4, 9},  {4, 11}, {5, 9},  {5, 11}, {6, 7},
@@ -479,8 +487,8 @@ static void solids_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-static void solid(const Frame *f, const float (*v)[3], int nv, const int (*e)[2], int ne, float scale, float ax, float ay,
-                  float cx, Rgbf color) {
+static void solid(const Frame *f, const float (*v)[3], int nv, const int (*e)[2], int ne, float scale, float ax,
+                  float ay, float cx, Rgbf color) {
     float px[12], py[12], depth[12];
     Rgbf far = palette_ramp(f->palette, 0.45f);
     float sx = msin(ax), cxr = mcos(ax), sy = msin(ay), cy = mcos(ay);
@@ -501,7 +509,8 @@ static void solid(const Frame *f, const float (*v)[3], int nv, const int (*e)[2]
         stroke_draw(f->stroker, seg, 2, 0);
     }
     for (int i = 0; i < nv && i < 12; i++)
-        if (depth[i] < 0) put_cell(f->grid, cell_col(f->grid, px[i]), cell_row(f->grid, py[i]), depth[i] < -0.6f ? '*' : 'o', color);
+        if (depth[i] < 0)
+            put_cell(f->grid, cell_col(f->grid, px[i]), cell_row(f->grid, py[i]), depth[i] < -0.6f ? '*' : 'o', color);
 }
 
 static void solid_of(const Frame *f, int shape, float scale, float ax, float ay, float cx, Rgbf color) {
@@ -518,16 +527,20 @@ static void solids_draw(void *state, const Frame *f) {
     for (int i = 0; i < s->count; i++) {
         float offset = s->count > 1 ? ((float)i - 0.5f) * 1.1f : 0;
         float scale = s->size * (1 + kick) * (s->count > 1 ? 0.7f : 1.0f);
-        Rgbf color = i ? palette_accent(f->palette, 0) : rgbf_mix(palette_ramp(f->palette, 1.0f), palette_accent(f->palette, 2), 0.35f);
+        Rgbf color = i ? palette_accent(f->palette, 0)
+                       : rgbf_mix(palette_ramp(f->palette, 1.0f), palette_accent(f->palette, 2), 0.35f);
         int shape = (s->shape + i) % 3;
         // Two fading echoes trail each solid, the way a vector display's phosphor lingers.
         for (int echo = 2; echo >= 0; echo--) {
-            float te = t - (float)echo * 0.09f, ax = te * s->spin_x + (float)i, ay = te * s->spin_y * (i ? -1.0f : 1.0f);
-            solid_of(f, shape, scale, ax, ay, offset, frame_dim(f, color, echo ? 0.25f + 0.15f * (float)(2 - echo) : 1.0f));
+            float te = t - (float)echo * 0.09f, ax = te * s->spin_x + (float)i,
+                  ay = te * s->spin_y * (i ? -1.0f : 1.0f);
+            solid_of(f, shape, scale, ax, ay, offset,
+                     frame_dim(f, color, echo ? 0.25f + 0.15f * (float)(2 - echo) : 1.0f));
         }
         // A lone solid holds another inside it, turning the other way.
         if (s->count == 1)
-            solid_of(f, (shape + 1) % 3, scale * 0.42f, -t * s->spin_x * 1.3f, -t * s->spin_y * 1.3f, offset, palette_accent(f->palette, 1));
+            solid_of(f, (shape + 1) % 3, scale * 0.42f, -t * s->spin_x * 1.3f, -t * s->spin_y * 1.3f, offset,
+                     palette_accent(f->palette, 1));
     }
     f->fx->glow = 0.5f;
 }
@@ -560,7 +573,8 @@ typedef struct {
 // Everything about a curtain that depends only on the column, so each row just measures its height above the hem.
 static Curtain aurora_column(const Aurora *a, float x, float t) {
     float drift = noise_fbm(x * 0.5f + a->seed + t * 0.03f, t * 0.01f) - 0.5f;
-    float base = a->base + a->amp * msin(x * a->k1 + t * a->w1) + a->amp * 0.5f * msin(x * a->k2 - t * a->w2) + drift * 0.3f;
+    float base =
+        a->base + a->amp * msin(x * a->k1 + t * a->w1) + a->amp * 0.5f * msin(x * a->k2 - t * a->w2) + drift * 0.3f;
     float fold = 0.5f + 0.5f * msin(x * a->fold_k + drift * 6 + t * 0.25f);
     fold = fold * fold * fold;
     float rays = noise_value(x * 14 + a->seed, t * 0.06f);
@@ -583,7 +597,8 @@ static void aurora_draw(void *state, const Frame *f) {
     // A second, fainter curtain hangs higher and folds faster, in another color.
     Aurora b = *a;
     b.seed += 17, b.base += 0.22f, b.amp *= 0.7f, b.k1 *= 1.3f, b.fold_k *= 1.4f, b.w1 *= -1;
-    float swell = 0.12f * msin(f->t * 0.35f) + frame_pulse(f, ROLE_PAD, 1.0f, 0.25f) + frame_pulse(f, ROLE_BELL, 0.7f, 0.2f);
+    float swell =
+        0.12f * msin(f->t * 0.35f) + frame_pulse(f, ROLE_PAD, 1.0f, 0.25f) + frame_pulse(f, ROLE_BELL, 0.7f, 0.2f);
     float t = f->local;
     int ground_row = cell_row(g, a->ground);
     dust_stars(f, 0xa707a, 0.03f, 0.85f);
@@ -608,7 +623,8 @@ static void aurora_draw(void *state, const Frame *f) {
             float glow = aurora_glow(&near, mirror, swell, &above) * (0.55f - depth * 0.4f);
             float ripple = msin(x * 18 + depth * 40 - t * 2.2f);
             if (glow < 0.08f || ripple < -0.2f) continue;
-            Rgbf color = frame_dim(f, rgbf_mix(palette_ramp(f->palette, 0.5f), palette_accent(f->palette, 0), 0.3f), 0.5f + glow);
+            Rgbf color = frame_dim(f, rgbf_mix(palette_ramp(f->palette, 0.5f), palette_accent(f->palette, 0), 0.3f),
+                                   0.5f + glow);
             *grid_at(g, col, row) = (Cell){(uint8_t)(ripple > 0.6f ? '~' : '-'), rgb_from_f(color), 0};
         }
     }
@@ -661,7 +677,8 @@ static void sea_draw(void *state, const Frame *f) {
             if (d2 >= 1) continue;
             float z = msqrt(1 - d2), lit = smoothstep(-0.05f, 0.25f, x * lx + z * lz);
             float crater = noise_fbm(x * 2 + 7, y * 2 + 3) - 0.5f;
-            canvas_max(c, i, j, 0.14f + 0.5f * lit + crater * 0.35f * lit, rgbf_mix(palette_ramp(f->palette, 0.35f), pearl, lit));
+            canvas_max(c, i, j, 0.14f + 0.5f * lit + crater * 0.35f * lit,
+                       rgbf_mix(palette_ramp(f->palette, 0.35f), pearl, lit));
         }
     }
     frame_resolve(f);
@@ -679,8 +696,10 @@ static void sea_draw(void *state, const Frame *f) {
         float scale = 1 / (depth + 0.08f);
         for (int col = 0; col < g->cols; col++) {
             float x = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect;
-            float wave = msin(x * 3.2f * scale * 0.25f + travel * (1 + depth) + noise_value(x * scale * 0.3f, depth * 9) * 4);
-            float reflect = mabs(x - s->moon_x) < (0.04f + depth * 0.3f) * (0.6f + 0.4f * noise_value(x * 30, depth * 50 + f->local));
+            float wave =
+                msin(x * 3.2f * scale * 0.25f + travel * (1 + depth) + noise_value(x * scale * 0.3f, depth * 9) * 4);
+            float reflect = mabs(x - s->moon_x) <
+                            (0.04f + depth * 0.3f) * (0.6f + 0.4f * noise_value(x * 30, depth * 50 + f->local));
             int glyph = 0;
             Rgbf color = palette_ramp(f->palette, 0.25f + 0.45f * depth);
             if (reflect && wave > -0.3f) {
@@ -692,7 +711,8 @@ static void sea_draw(void *state, const Frame *f) {
                 glyph = '-';
                 color = frame_dim(f, color, 0.7f);
             }
-            if (glints > 0.05f && wave > 0.9f && hash01((uint32_t)(row * 31 + col * 17) ^ (uint32_t)(f->t * 8)) < glints * 0.08f) {
+            if (glints > 0.05f && wave > 0.9f &&
+                hash01((uint32_t)(row * 31 + col * 17) ^ (uint32_t)(f->t * 8)) < glints * 0.08f) {
                 glyph = '*';
                 color = glint;
             }
@@ -848,10 +868,12 @@ static void constellation_draw(void *state, const Frame *f) {
         StrokePoint seg[2] = {{sx[a], sy[a], line}, {bx, by, line}};
         stroke_draw(f->stroker, seg, 2, 0);
         // Once a figure is whole, a light runs along its lines one after another, tracing it again and again.
-        float run = mfract(f->t * 0.35f + (float)(e % (STARS / CLUSTERS - 1)) * 0.13f + (float)(e / (STARS / CLUSTERS - 1)) * 0.29f);
+        float run = mfract(f->t * 0.35f + (float)(e % (STARS / CLUSTERS - 1)) * 0.13f +
+                           (float)(e / (STARS / CLUSTERS - 1)) * 0.29f);
         if (grow >= 1 && run < 0.3f) {
             float u = run / 0.3f;
-            put_cell(g, cell_col(g, sx[a] + (sx[b] - sx[a]) * u), cell_row(g, sy[a] + (sy[b] - sy[a]) * u), '*', frame_dim(f, glint, 0.8f));
+            put_cell(g, cell_col(g, sx[a] + (sx[b] - sx[a]) * u), cell_row(g, sy[a] + (sy[b] - sy[a]) * u), '*',
+                     frame_dim(f, glint, 0.8f));
         }
     }
     float flare[STARS] = {0};
@@ -886,7 +908,8 @@ static void constellation_draw(void *state, const Frame *f) {
         for (int i = 0; i < n; i++) {
             uint32_t id = (uint32_t)(hits[i]->time * 1000.0f) ^ c->salt;
             if (hash01(id) > 0.3f) continue;
-            float age = f->t - hits[i]->time, x0 = (hash01(id + 1) * 1.4f - 0.4f) * g->aspect, y0 = 0.4f + hash01(id + 2) * 0.5f;
+            float age = f->t - hits[i]->time, x0 = (hash01(id + 1) * 1.4f - 0.4f) * g->aspect,
+                  y0 = 0.4f + hash01(id + 2) * 0.5f;
             for (int k = 0; k < 6; k++) {
                 float at = age - (float)k * 0.03f;
                 if (at < 0) continue;
@@ -957,7 +980,8 @@ static void cracktro_draw(void *state, const Frame *f) {
             char ch = art[y * 512 + x];
             if (ch == ' ') continue;
             Rgbf color = flow_color(f->palette, (float)col / (float)g->cols * 0.6f + f->local * 0.1f);
-            put_cell(g, col, base + y + lift, ch, rgbf_mix(color, palette_ramp(f->palette, 1.0f), (float)y / (float)font->height * 0.5f));
+            put_cell(g, col, base + y + lift, ch,
+                     rgbf_mix(color, palette_ramp(f->palette, 1.0f), (float)y / (float)font->height * 0.5f));
         }
     }
     f->fx->glow = 0.5f;
@@ -1012,7 +1036,8 @@ void canvas_from_corners(const Frame *f, CornerFn fn, const void *ctx) {
             int k = row * w + col;
             float k00 = ink[k], k10 = ink[k + 1], k01 = ink[k + w], k11 = ink[k + w + 1];
             if (k00 <= 0.01f && k10 <= 0.01f && k01 <= 0.01f && k11 <= 0.01f) continue;
-            Rgbf tint = rgbf_scale(rgbf_add(rgbf_add(color[k], color[k + 1]), rgbf_add(color[k + w], color[k + w + 1])), 0.25f);
+            Rgbf tint =
+                rgbf_scale(rgbf_add(rgbf_add(color[k], color[k + 1]), rgbf_add(color[k + w], color[k + w + 1])), 0.25f);
             for (int y = 0; y < 4; y++) {
                 float v = ((float)y + 0.5f) / 4, left = mixf(k00, k01, v), right = mixf(k10, k11, v);
                 for (int x = 0; x < 2; x++) {
@@ -1026,17 +1051,20 @@ void canvas_from_corners(const Frame *f, CornerFn fn, const void *ctx) {
 void moon_disc(const Frame *f, float x, float y, float radius, Rgbf color, uint32_t salt, int behind) {
     Grid *g = f->grid;
     float reach = radius * 1.7f;
-    int c0 = cell_col(g, x - reach), c1 = cell_col(g, x + reach), r0 = cell_row(g, y + reach), r1 = cell_row(g, y - reach);
+    int c0 = cell_col(g, x - reach), c1 = cell_col(g, x + reach), r0 = cell_row(g, y + reach),
+        r1 = cell_row(g, y - reach);
     for (int row = r0; row <= r1; row++)
         for (int col = c0; col <= c1; col++) {
-            float cx = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect, cy = 1 - ((float)row + 0.5f) / (float)g->rows * 2;
+            float cx = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect,
+                  cy = 1 - ((float)row + 0.5f) / (float)g->rows * 2;
             float d = mhypot(cx - x, cy - y) / radius;
             uint32_t id = (uint32_t)(row * 977 + col * 131) ^ salt;
             if (d < 0.9f) {
                 // The face: mostly bright fill, with a few darker crater marks.
                 float crater = noise_value(cx * 9 + (float)(salt % 61), cy * 9);
                 int glyph = crater > 0.72f ? 'o' : crater > 0.62f ? ':' : '#';
-                (behind ? put_cell_under : put_cell)(g, col, row, glyph, frame_dim(f, color, crater > 0.62f ? 0.75f : 1.0f - d * 0.15f));
+                (behind ? put_cell_under : put_cell)(g, col, row, glyph,
+                                                     frame_dim(f, color, crater > 0.62f ? 0.75f : 1.0f - d * 0.15f));
             } else if (d < 1.7f && hash01(id) < 0.35f * (1.7f - d)) {
                 put_cell_under(g, col, row, '.', frame_dim(f, color, 0.45f * (1.7f - d)));
             }
@@ -1081,7 +1109,8 @@ static void rain_draw(void *state, const Frame *f) {
     float turn = chord ? (float)chord->chord.root_pc / 12.0f : 0, bloom = frame_pulse(f, ROLE_KICK, 0.25f, 0.35f);
     for (int i = 0; i < w->lights; i++) {
         float hue = mfract(w->hue[i] + turn * 0.5f);
-        Rgbf color = hue < 0.5f ? palette_accent(f->palette, (int)(hue * 6)) : palette_ramp(f->palette, 0.45f + hue * 0.5f);
+        Rgbf color =
+            hue < 0.5f ? palette_accent(f->palette, (int)(hue * 6)) : palette_ramp(f->palette, 0.45f + hue * 0.5f);
         float level = 0.35f + 0.15f * msin(f->t * 0.4f + w->twinkle[i]) + bloom;
         bokeh(c, w->x[i], w->y[i], w->radius[i] * (1.4f + bloom * 0.3f), level, color);
     }
@@ -1144,7 +1173,8 @@ static void snow_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // A cottage: a snow-capped roof of slashes over plain walls, with two windows the caller lights.
-static void cottage(const Frame *f, int x, int w, int h, int ground, const float lit[2], Rgbf wall, Rgbf warm, Rgbf snow) {
+static void cottage(const Frame *f, int x, int w, int h, int ground, const float lit[2], Rgbf wall, Rgbf warm,
+                    Rgbf snow) {
     Grid *g = f->grid;
     int top = ground - h;
     for (int k = 0;; k++) {
@@ -1198,7 +1228,8 @@ static void snow_draw(void *state, const Frame *f) {
             if (glow > lit[w]) lit[w] = glow;
         }
     }
-    Rgbf wall = palette_ramp(f->palette, 0.6f), warm = palette_accent(f->palette, 1), snow = palette_ramp(f->palette, 0.95f);
+    Rgbf wall = palette_ramp(f->palette, 0.6f), warm = palette_accent(f->palette, 1),
+         snow = palette_ramp(f->palette, 0.95f);
     for (int i = 0; i < s->houses; i++) cottage(f, s->x[i], s->w[i], s->h[i], s->ground, lit + 2 * i, wall, warm, snow);
     for (int x = 0; x < g->cols; x++) {
         put_cell(g, x, s->ground, hash01((uint32_t)x * 977u + s->salt) < 0.3f ? '~' : '_', snow);
@@ -1334,7 +1365,8 @@ const SceneKind scene_kinds[] = {
     {"drum machine", W(1, 0, 1, 2, 1, 1, 0, 2, 2, 0), 0.55f, 1, 0, drums_setup, drums_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
-_Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS, "the scene table outgrew MAX_SCENE_KINDS");
+_Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS,
+               "the scene table outgrew MAX_SCENE_KINDS");
 
 int scene_in_use(const SceneKind *k) {
     for (int m = 0; m < MOOD_COUNT; m++)

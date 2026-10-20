@@ -50,6 +50,7 @@ static unsigned remote(int chan, Input *in) {
     WPADData *d = WPAD_Data(chan);
     u32 b = d->btns_h, down = d->btns_d;
     unsigned r = 0;
+
     if (type == WPAD_EXP_CLASSIC) {
         if (b & WPAD_CLASSIC_BUTTON_UP) r |= INPUT_UP;
         if (b & WPAD_CLASSIC_BUTTON_DOWN) r |= INPUT_DOWN;
@@ -63,6 +64,7 @@ static unsigned remote(int chan, Input *in) {
         if (b & WPAD_CLASSIC_BUTTON_HOME) r |= INPUT_HOME;
         if (b & WPAD_CLASSIC_BUTTON_FULL_R) r |= INPUT_VOLUME_UP;
         if (b & WPAD_CLASSIC_BUTTON_FULL_L) r |= INPUT_VOLUME_DOWN;
+
         float x = d->exp.classic.ljs.mag * __builtin_sinf(d->exp.classic.ljs.ang * 0.0174532925f);
         float y = d->exp.classic.ljs.mag * __builtin_cosf(d->exp.classic.ljs.ang * 0.0174532925f);
         if (y > 0.5f) r |= INPUT_UP;
@@ -71,6 +73,7 @@ static unsigned remote(int chan, Input *in) {
         if (x > 0.5f) r |= INPUT_RIGHT;
         return r;
     }
+
     // Pressing A means the remote is pointed at the screen; 1 or 2 means it's held sideways.
     if (down & WPAD_BUTTON_A) sideways[chan] = 0;
     if (down & (WPAD_BUTTON_1 | WPAD_BUTTON_2)) sideways[chan] = 1;
@@ -93,9 +96,11 @@ static unsigned remote(int chan, Input *in) {
         if (b & WPAD_BUTTON_1) r |= INPUT_ALT1;
         if (b & WPAD_BUTTON_2) r |= INPUT_ALT2;
     }
+
     if (b & WPAD_BUTTON_PLUS) r |= INPUT_PAUSE;
     if (b & WPAD_BUTTON_MINUS) r |= INPUT_VOLUME_DOWN;
     if (b & WPAD_BUTTON_HOME) r |= INPUT_HOME;
+
     if (type == WPAD_EXP_NUNCHUK) {
         float x = d->exp.nunchuk.js.mag * __builtin_sinf(d->exp.nunchuk.js.ang * 0.0174532925f);
         float y = d->exp.nunchuk.js.mag * __builtin_cosf(d->exp.nunchuk.js.ang * 0.0174532925f);
@@ -104,11 +109,13 @@ static unsigned remote(int chan, Input *in) {
         if (x < -0.5f) r |= INPUT_LEFT;
         if (x > 0.5f) r |= INPUT_RIGHT;
     }
+
     if (!sideways[chan] && d->ir.valid && !in->pointer) {
         in->pointer = 1;
         in->pointer_x = d->ir.x;
         in->pointer_y = d->ir.y;
     }
+
     return r;
 }
 

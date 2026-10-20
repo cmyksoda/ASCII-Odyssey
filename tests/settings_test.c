@@ -7,12 +7,12 @@
 
 static int failures;
 
-#define CHECK(cond)                                                                                                     \
-    do {                                                                                                                \
-        if (!(cond)) {                                                                                                  \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                      \
-            failures++;                                                                                                 \
-        }                                                                                                               \
+#define CHECK(cond)                                                                                                    \
+    do {                                                                                                               \
+        if (!(cond)) {                                                                                                 \
+            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
+            failures++;                                                                                                \
+        }                                                                                                              \
     } while (0)
 
 static void round_trip(void) {
@@ -48,7 +48,8 @@ static void round_trip(void) {
 static void damaged(void) {
     Settings s;
     settings_defaults(&s);
-    settings_parse(&s, "volume = 99\nmood = polka\nseed = typed\nmargin = -3\nglow\n=\n\x01\x02 junk\nlength = short\r\n");
+    settings_parse(&s,
+                   "volume = 99\nmood = polka\nseed = typed\nmargin = -3\nglow\n=\n\x01\x02 junk\nlength = short\r\n");
     CHECK(s.volume == VOLUME_STEPS);
     CHECK(s.mood == MOOD_ANY);
     CHECK(s.seed_mode == SEED_RANDOM);

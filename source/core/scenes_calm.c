@@ -43,7 +43,8 @@ void petals_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     dust_stars(f, p->salt, 0.0f, 0.5f);
     moon_disc(f, p->moon_x, p->moon_y, 0.2f, palette_ramp(f->palette, 0.9f), p->salt, 0);
-    Rgbf bark = palette_ramp(f->palette, 0.35f), bloom = palette_accent(f->palette, 0), pale = palette_ramp(f->palette, 0.95f);
+    Rgbf bark = palette_ramp(f->palette, 0.35f), bloom = palette_accent(f->palette, 0),
+         pale = palette_ramp(f->palette, 0.95f);
     // The branch and its twigs.
     StrokePoint pts[40];
     float from = p->left ? -g->aspect : g->aspect, to = from + (p->left ? 1 : -1) * g->aspect * 1.25f;
@@ -53,7 +54,8 @@ void petals_draw(void *state, const Frame *f) {
     }
     stroke_draw(f->stroker, pts, 40, 0);
     for (int t = 0; t < 5; t++) {
-        float x = mixf(from, to, 0.15f + 0.17f * (float)t), y = branch_at(p, x, g->aspect), dir = (t & 1) ? 1.0f : -1.0f;
+        float x = mixf(from, to, 0.15f + 0.17f * (float)t), y = branch_at(p, x, g->aspect),
+              dir = (t & 1) ? 1.0f : -1.0f;
         StrokePoint twig[2] = {{x, y, bark}, {x + (p->left ? 0.12f : -0.12f), y + dir * 0.16f, bark}};
         stroke_draw(f->stroker, twig, 2, 0);
         // Blossoms clustered at the twig's end.
@@ -70,7 +72,8 @@ void petals_draw(void *state, const Frame *f) {
         uint32_t id = p->salt + (uint32_t)i * 2654435761u;
         float speed = 0.06f + 0.06f * hash01(id + 2), life = 2.2f / speed;
         float age = mfract(hash01(id) + f->t / life) * life;
-        float x = from + (to - from) * hash01(id + 1) + age * p->wind * (p->left ? 1 : -1) * 0.5f + 0.05f * msin(age * 1.7f + hash01(id + 3) * 6);
+        float x = from + (to - from) * hash01(id + 1) + age * p->wind * (p->left ? 1 : -1) * 0.5f +
+                  0.05f * msin(age * 1.7f + hash01(id + 3) * 6);
         float y = branch_at(p, x, g->aspect) - age * speed;
         if (y < -1.05f) continue;
         int face = (int)(age * 3 + hash01(id + 4) * 6) % 6;
@@ -172,8 +175,8 @@ static void cloud_corner(const void *ctx, const Frame *f, float x, float y, floa
 void clouds_draw(void *state, const Frame *f) {
     Clouds *cl = state;
     float seed = (float)(cl->salt % 101);
-    CloudFrame cf = {cl, seed - f->t * cl->speed * 1.6f, seed * 2 - f->t * cl->speed, seed, palette_ramp(f->palette, 0.3f),
-                     palette_ramp(f->palette, 0.95f)};
+    CloudFrame cf = {cl,   seed - f->t * cl->speed * 1.6f, seed * 2 - f->t * cl->speed,
+                     seed, palette_ramp(f->palette, 0.3f), palette_ramp(f->palette, 0.95f)};
     canvas_clear(f->canvas);
     canvas_from_corners(f, cloud_corner, &cf);
     frame_resolve(f);
@@ -214,7 +217,8 @@ void lanterns_draw(void *state, const Frame *f) {
     Lanterns *l = state;
     Grid *g = f->grid;
     dust_stars(f, l->salt, 0.0f, 0.5f);
-    Rgbf warm = palette_accent(f->palette, 1), paper = palette_ramp(f->palette, 0.8f), dim = palette_ramp(f->palette, 0.3f);
+    Rgbf warm = palette_accent(f->palette, 1), paper = palette_ramp(f->palette, 0.8f),
+         dim = palette_ramp(f->palette, 0.3f);
     int horizon = cell_row(g, l->water);
     // The far shore.
     StrokePoint shore[40];
@@ -225,7 +229,8 @@ void lanterns_draw(void *state, const Frame *f) {
     stroke_draw(f->stroker, shore, 40, 0);
     for (int row = horizon + 1; row < g->rows; row++)
         for (int col = 0; col < g->cols; col++)
-            if (hash01((uint32_t)(row * 977 + col * 131) ^ (uint32_t)(f->t * 1.5f + (float)row)) < 0.05f) put_cell(g, col, row, '-', frame_dim(f, dim, 0.6f));
+            if (hash01((uint32_t)(row * 977 + col * 131) ^ (uint32_t)(f->t * 1.5f + (float)row)) < 0.05f)
+                put_cell(g, col, row, '-', frame_dim(f, dim, 0.6f));
     int count = 50;
     for (int i = 0; i < count; i++) {
         uint32_t id = l->salt + (uint32_t)i * 2246822519u;
@@ -279,7 +284,8 @@ void jellyfish_draw(void *state, const Frame *f) {
     // Specks of sea snow rising past.
     for (int s = 0; s < g->cols * g->rows / 30; s++) {
         uint32_t id = j->salt + (uint32_t)s * 2654435761u;
-        int col = (int)(hash01(id) * (float)g->cols), row = (int)((1 - mfract(hash01(id + 1) + f->t * 0.015f)) * (float)g->rows);
+        int col = (int)(hash01(id) * (float)g->cols),
+            row = (int)((1 - mfract(hash01(id + 1) + f->t * 0.015f)) * (float)g->rows);
         put_cell_under(g, col, row, '.', palette_ramp(f->palette, 0.3f + 0.3f * hash01(id + 2)));
     }
     for (int i = 0; i < j->count; i++) {
@@ -303,8 +309,8 @@ void jellyfish_draw(void *state, const Frame *f) {
             float tx = x + w * ((float)t / 2.0f - 1) * 0.8f;
             for (int k = 0; k < 10; k++) {
                 float down = (float)k * h * 0.45f;
-                arm[k] = (StrokePoint){tx + 0.04f * msin(f->t * 1.2f - (float)k * 0.5f + (float)t + j->phase[i]), y - down,
-                                       frame_dim(f, body, 0.8f - (float)k * 0.06f)};
+                arm[k] = (StrokePoint){tx + 0.04f * msin(f->t * 1.2f - (float)k * 0.5f + (float)t + j->phase[i]),
+                                       y - down, frame_dim(f, body, 0.8f - (float)k * 0.06f)};
             }
             stroke_draw(f->stroker, arm, 10, 0);
         }
@@ -337,7 +343,8 @@ void terrain_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     dust_stars(f, (uint32_t)(t->seed * 977), 0.0f, 0.5f);
     const float horizon = 0.08f, step = 0.45f, eye = 0.7f;
-    if (t->sun) moon_disc(f, t->sun_x, horizon + 0.3f, 0.2f, palette_accent(f->palette, 1), (uint32_t)(t->seed * 31), 0);
+    if (t->sun)
+        moon_disc(f, t->sun_x, horizon + 0.3f, 0.2f, palette_accent(f->palette, 1), (uint32_t)(t->seed * 31), 0);
     for (int col = 0; col < g->cols; col++) put_cell(g, col, cell_row(g, horizon), '_', palette_ramp(f->palette, 0.4f));
     float travel = f->t * t->speed, offset = mfract(travel / step) * step, row0 = mfloor(travel / step);
     StrokePoint mesh[MESH_Z][MESH_X];
@@ -346,7 +353,8 @@ void terrain_draw(void *state, const Frame *f) {
         Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.2f), palette_ramp(f->palette, 0.9f), fade * fade);
         for (int i = 0; i < MESH_X; i++) {
             float x = ((float)i - (MESH_X - 1) * 0.5f) * 0.4f;
-            float h = noise_fbm(x * 0.35f + t->seed, ((float)k + row0) * step * 0.35f) * t->height * (0.25f + 2.6f * smoothstep(1.0f, 4.0f, mabs(x)));
+            float h = noise_fbm(x * 0.35f + t->seed, ((float)k + row0) * step * 0.35f) * t->height *
+                      (0.25f + 2.6f * smoothstep(1.0f, 4.0f, mabs(x)));
             mesh[k][i] = (StrokePoint){x / z, horizon + (h - eye) / z, color};
         }
     }
@@ -394,11 +402,13 @@ void galaxy_draw(void *state, const Frame *f) {
             float dust = noise_fbm(x * 3 + gx->seed + f->t * 0.02f, y * 3);
             float level = mexp(-radius * 5.0f) * 1.3f + arm * arm * arm * mexp(-radius * 1.1f) * (0.35f + 0.75f * dust);
             float h = hash01((uint32_t)(row * 977 + col) ^ (uint32_t)gx->seed);
-            if (arm > 0.85f && radius > 0.2f && h < 0.05f) level += 0.4f * (0.5f + 0.5f * msin(f->t * (1.5f + 3 * h * 20) + h * 300));
+            if (arm > 0.85f && radius > 0.2f && h < 0.05f)
+                level += 0.4f * (0.5f + 0.5f * msin(f->t * (1.5f + 3 * h * 20) + h * 300));
             level = saturate(level - 0.06f);
             int i = (int)(level * 6.99f);
             if (i <= 0) continue;
-            Rgbf color = rgbf_mix(palette_accent(f->palette, 2), palette_ramp(f->palette, 0.5f + 0.5f * level), saturate(level * 1.5f));
+            Rgbf color = rgbf_mix(palette_accent(f->palette, 2), palette_ramp(f->palette, 0.5f + 0.5f * level),
+                                  saturate(level * 1.5f));
             *grid_at(g, col, row) = (Cell){(uint8_t)ramp[i], rgb_from_f(color), 0};
         }
     }
@@ -487,7 +497,8 @@ void ocean_draw(void *state, const Frame *f) {
         float scale = 1.0f / (0.15f + near);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col);
-            float wave = msin(x * 3.0f * scale + f->t * o->swell * (0.6f + near) + noise_value(x * scale, near * 9) * 4);
+            float wave =
+                msin(x * 3.0f * scale + f->t * o->swell * (0.6f + near) + noise_value(x * scale, near * 9) * 4);
             // The moon's path widens toward the viewer and only catches the wave crests.
             float path = mabs(x - o->moon_x) / (0.05f + near * 0.45f);
             if (path < 1 && wave > 0.1f - near * 0.3f) {

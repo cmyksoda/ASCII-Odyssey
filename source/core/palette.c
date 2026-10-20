@@ -181,7 +181,8 @@ static void from_curated(const Curated *c, Palette *out) {
 }
 
 // Bright, full stops, with blue and violet lifted so they read on black as well as yellow does.
-static const Rgb SPECTRUM[] = {H(0xff3b4e), H(0xff8a1f), H(0xffe03a), H(0x4cf06a), H(0x2bd6ff), H(0x5070ff), H(0xb455ff)};
+static const Rgb SPECTRUM[] = {H(0xff3b4e), H(0xff8a1f), H(0xffe03a), H(0x4cf06a),
+                               H(0x2bd6ff), H(0x5070ff), H(0xb455ff)};
 
 Rgbf palette_rainbow_at(const Grid *g, int col, int row, float t) {
     const int n = (int)(sizeof SPECTRUM / sizeof SPECTRUM[0]);
@@ -267,7 +268,8 @@ static void generate(Recipe k, Palette *out) {
     out->bg = oklch(0.14f, 0.035f, hue);
     for (int i = 0; i < RAMP_STEPS; i++) {
         float t = (float)i / (RAMP_STEPS - 1);
-        out->ramp[i] = oklch(0.27f + 0.68f * t, chroma * (0.45f + 0.75f * msin(t * PI_F)) * (1 - 0.6f * t * t), hue + sweep * t);
+        out->ramp[i] =
+            oklch(0.27f + 0.68f * t, chroma * (0.45f + 0.75f * msin(t * PI_F)) * (1 - 0.6f * t * t), hue + sweep * t);
     }
     // Accents sit across the wheel: the complement, or a triad, or the two sides of a split.
     static const float offsets[4][3] = {{180, 150, 210}, {120, 240, 180}, {150, 210, 30}, {90, 180, 270}};
@@ -315,7 +317,8 @@ void palette_family(Rng *r, Mood mood, Palette out[PALETTE_FAMILY]) {
         }
         if (rng_chance(r, 70)) {
             int pick = pick_curated(r, mood);
-            for (int tries = 0; tries < 12 && (pick == used[0] || pick == used[1] || pick == used[2] || pick == used[3]); tries++)
+            for (int tries = 0;
+                 tries < 12 && (pick == used[0] || pick == used[1] || pick == used[2] || pick == used[3]); tries++)
                 pick = pick_curated(r, mood);
             used[i] = pick;
             from_curated(&CURATED[pick], &out[i]);

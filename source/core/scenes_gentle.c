@@ -59,14 +59,16 @@ static void bubble(const Frame *f, const Bubbles *b, float born, int note, float
     float age = (f->t - born) * frame_pace(f), life = BUBBLE_LIFE * (0.6f + 0.4f * hash01(id + 1));
     if (age < 0 || age > life + 0.4f) return;
     float pitch = saturate(((float)note - 48) / 36), radius = 0.05f + 0.11f * (1 - pitch) + 0.03f * hash01(id + 2);
-    float x = (hash01(id) * 1.7f - 0.85f) * g->aspect + 0.07f * msin(age * 0.9f + hash01(id + 3) * TAU_F) + b->drift * age;
+    float x =
+        (hash01(id) * 1.7f - 0.85f) * g->aspect + 0.07f * msin(age * 0.9f + hash01(id + 3) * TAU_F) + b->drift * age;
     float y = -1.1f - radius + age * (0.2f + 0.08f * hash01(id + 4));
     Rgbf white = palette_ramp(f->palette, 1.0f);
     if (age > life) {
         float spread = radius * (1 + (age - life) * 4), fade = 1 - (age - life) / 0.4f;
         for (int k = 0; k < 10; k++) {
             float a = (float)k / 10 * TAU_F;
-            put_cell(g, cell_col(g, x + mcos(a) * spread), cell_row(g, y + msin(a) * spread), '.', frame_dim(f, white, 0.8f * fade));
+            put_cell(g, cell_col(g, x + mcos(a) * spread), cell_row(g, y + msin(a) * spread), '.',
+                     frame_dim(f, white, 0.8f * fade));
         }
         return;
     }
@@ -75,7 +77,8 @@ static void bubble(const Frame *f, const Bubbles *b, float born, int note, float
     for (int k = 0; k < 20; k++) {
         float a = (float)k / 20 * TAU_F, hue = 0.5f + 0.5f * msin(a * 2 + swirl);
         Rgbf c = rgbf_mix(palette_accent(f->palette, k % 3), palette_accent(f->palette, k % 3 + 1), hue);
-        skin[k] = (StrokePoint){x + mcos(a) * radius, y + msin(a) * radius, frame_dim(f, rgbf_mix(c, white, 0.25f + 0.5f * flare), 0.75f + 0.4f * flare)};
+        skin[k] = (StrokePoint){x + mcos(a) * radius, y + msin(a) * radius,
+                                frame_dim(f, rgbf_mix(c, white, 0.25f + 0.5f * flare), 0.75f + 0.4f * flare)};
     }
     stroke_draw(f->stroker, skin, 20, 1);
     put_cell(g, cell_col(g, x - radius * 0.45f), cell_row(g, y + radius * 0.45f), radius > 0.09f ? '*' : '\'', white);
@@ -123,9 +126,11 @@ void globe_draw(void *state, const Frame *f) {
     static const char *const cottage[4] = {"  /\\| ", " /  \\ ", "|[] #|", "|__|_|"};
     static const char *const pine[4] = {" ^ ", "/^\\", "/^\\", " | "};
     float bar = f->score->beat * (float)f->score->info->beats_per_bar, every = bar * (float)s->bars;
-    float since = f->t - mfloor(f->t / every) * every, wobble = f->still ? 0 : 0.03f * msin(since * 24) * mexp(-since * 5);
+    float since = f->t - mfloor(f->t / every) * every,
+          wobble = f->still ? 0 : 0.03f * msin(since * 24) * mexp(-since * 5);
     float cx = wobble, cy = 0.12f, radius = 0.62f, bank = cy - radius * 0.55f;
-    Rgbf glass = palette_ramp(f->palette, 0.7f), wood = palette_accent(f->palette, 1), snow = palette_ramp(f->palette, 1.0f);
+    Rgbf glass = palette_ramp(f->palette, 0.7f), wood = palette_accent(f->palette, 1),
+         snow = palette_ramp(f->palette, 1.0f);
     Rgbf glow = palette_accent(f->palette, 0);
     dust_stars(f, s->salt, 0.0f, 0.4f);
     // The base, and the glass with a curve of light along its upper left.
@@ -138,12 +143,14 @@ void globe_draw(void *state, const Frame *f) {
     StrokePoint rim[40];
     for (int k = 0; k < 40; k++) {
         float a = (float)k / 40 * TAU_F, sheen = mexp(-(a - 2.2f) * (a - 2.2f) * 3);
-        rim[k] = (StrokePoint){cx + mcos(a) * radius, cy + msin(a) * radius, rgbf_mix(frame_dim(f, glass, 0.6f), snow, sheen)};
+        rim[k] = (StrokePoint){cx + mcos(a) * radius, cy + msin(a) * radius,
+                               rgbf_mix(frame_dim(f, glass, 0.6f), snow, sheen)};
     }
     stroke_draw(f->stroker, rim, 40, 1);
     // The drift inside, deep snow under it filling the bottom of the glass, the cottage with its lit window, and the pine.
     for (int col = cell_col(g, cx - radius * 0.9f); col <= cell_col(g, cx + radius * 0.9f); col++) {
-        float x = cell_x(g, col), top = bank + 0.02f * msin(x * 9), depth = msqrt(mmax(0.0f, radius * radius - (x - cx) * (x - cx)));
+        float x = cell_x(g, col), top = bank + 0.02f * msin(x * 9),
+              depth = msqrt(mmax(0.0f, radius * radius - (x - cx) * (x - cx)));
         if (mabs(x - cx) < radius * 0.82f) put_cell(g, col, cell_row(g, top), '~', frame_dim(f, snow, 0.8f));
         for (int row = cell_row(g, top) + 1; row < cell_row(g, cy - depth); row++)
             put_cell(g, col, row, (row + col) % 3 ? ':' : '.', frame_dim(f, snow, 0.35f));
@@ -151,26 +158,33 @@ void globe_draw(void *state, const Frame *f) {
     int house_col = cell_col(g, cx - 0.14f), house_row = cell_row(g, bank + 0.12f);
     sprite(g, house_col, house_row, cottage, 4, frame_dim(f, wood, 1.1f));
     // The sprite sits centered on (house_col, house_row): its lit window is row 2, column 4, and the chimney row 0, column 4.
-    put_cell(g, house_col + 1, house_row, '#', frame_dim(f, glow, 0.85f + 0.15f * msin(f->t * 7.3f) * msin(f->t * 3.1f)));
+    put_cell(g, house_col + 1, house_row, '#',
+             frame_dim(f, glow, 0.85f + 0.15f * msin(f->t * 7.3f) * msin(f->t * 3.1f)));
     // Smoke from the chimney, curling up and fading, whatever the snow is doing.
     for (int k = 0; k < 6; k++) {
         float age = mfract(f->t * 0.35f * frame_pace(f) + (float)k / 6), up = age * 0.3f;
-        int col = house_col + 1 + (int)mfloor(0.04f * msin(age * 7 + f->t * 0.5f) / (2 * g->aspect / (float)g->cols) + 0.5f);
-        put_cell(g, col, house_row - 3 - (int)(up / (2.0f / (float)g->rows)), age < 0.5f ? '~' : '.', frame_dim(f, palette_ramp(f->palette, 0.6f), 0.7f * (1 - age)));
+        int col =
+            house_col + 1 + (int)mfloor(0.04f * msin(age * 7 + f->t * 0.5f) / (2 * g->aspect / (float)g->cols) + 0.5f);
+        put_cell(g, col, house_row - 3 - (int)(up / (2.0f / (float)g->rows)), age < 0.5f ? '~' : '.',
+                 frame_dim(f, palette_ramp(f->palette, 0.6f), 0.7f * (1 - age)));
     }
-    sprite(g, cell_col(g, cx + 0.24f), cell_row(g, bank + 0.11f), pine, 4, frame_dim(f, palette_accent(f->palette, 2), 0.9f));
+    sprite(g, cell_col(g, cx + 0.24f), cell_row(g, bank + 0.11f), pine, 4,
+           frame_dim(f, palette_accent(f->palette, 2), 0.9f));
     // The snow: tossed up off the drift by each shake, then circling the middle as the swirl dies away and sinking
     // until it rests again. The swirl carries on from shake to shake, so no flake ever jumps.
-    float spin = 2.4f * (mfloor(f->t / every) + 1 - mexp(-since / 1.4f)) * frame_pace(f), toss = smoothstep(0.0f, 0.5f, since);
+    float spin = 2.4f * (mfloor(f->t / every) + 1 - mexp(-since / 1.4f)) * frame_pace(f),
+          toss = smoothstep(0.0f, 0.5f, since);
     for (int k = 0; k < FLAKES; k++) {
         uint32_t id = s->salt + (uint32_t)k * 2654435761u;
-        float a = hash01(id) * TAU_F + spin * (0.6f + 0.8f * hash01(id + 1)), ring = radius * (0.2f + 0.65f * hash01(id + 2));
+        float a = hash01(id) * TAU_F + spin * (0.6f + 0.8f * hash01(id + 1)),
+              ring = radius * (0.2f + 0.65f * hash01(id + 2));
         // One flake in five is a straggler, still drifting down long after the rest have settled.
         float sink = hash01(id + 7) < 0.2f ? 0.15f : 0.6f + 0.8f * hash01(id + 3);
         float x = cx + mcos(a) * ring, swirl = cy + msin(a) * ring * 0.8f - since * s->settle * sink;
         float floor_y = bank + 0.01f + 0.05f * hash01(id + 4), y = mixf(floor_y, mmax(swirl, floor_y), toss);
         if (mhypot(x - cx, y - cy) > radius - 0.05f) continue;
-        put_cell(g, cell_col(g, x), cell_row(g, y), hash01(id + 5) < 0.3f ? '*' : '.', frame_dim(f, snow, 0.6f + 0.4f * hash01(id + 6)));
+        put_cell(g, cell_col(g, x), cell_row(g, y), hash01(id + 5) < 0.3f ? '*' : '.',
+                 frame_dim(f, snow, 0.6f + 0.4f * hash01(id + 6)));
     }
     f->fx->glow = 0.5f;
 }
@@ -216,19 +230,22 @@ static int released(const Dandelion *d, const Frame *f, float t) {
 void dandelion_draw(void *state, const Frame *f) {
     Dandelion *d = state;
     Grid *g = f->grid;
-    Rgbf grass = palette_ramp(f->palette, 0.35f), stem = palette_accent(f->palette, 2), down = palette_ramp(f->palette, 1.0f);
+    Rgbf grass = palette_ramp(f->palette, 0.35f), stem = palette_accent(f->palette, 2),
+         down = palette_ramp(f->palette, 1.0f);
     float pace = frame_pace(f);
     dust_stars(f, d->salt, 0.003f, 0.6f);
     moon_disc(f, g->aspect * 0.55f, 0.62f, 0.13f, palette_ramp(f->palette, 0.95f), d->salt, 1);
     // The meadow: blades swaying, taller toward the front.
     for (int col = 0; col < g->cols; col += 2) {
-        float x = cell_x(g, col), h = 0.08f + 0.12f * hash01((uint32_t)col * 7919u ^ d->salt), sway = 0.03f * msin(f->t * 0.8f + x * 3);
+        float x = cell_x(g, col), h = 0.08f + 0.12f * hash01((uint32_t)col * 7919u ^ d->salt),
+              sway = 0.03f * msin(f->t * 0.8f + x * 3);
         line(f, x, -1.0f, x + sway, -1.0f + h, frame_dim(f, grass, 0.6f + 0.4f * h / 0.2f));
     }
     StrokePoint stalk[8];
     for (int k = 0; k < 8; k++) {
         float u = (float)k / 7;
-        stalk[k] = (StrokePoint){d->hx + 0.05f * msin(u * PI_F) + 0.01f * msin(f->t * 0.7f) * u, mixf(-1.0f, d->hy - 0.02f, u), stem};
+        stalk[k] = (StrokePoint){d->hx + 0.05f * msin(u * PI_F) + 0.01f * msin(f->t * 0.7f) * u,
+                                 mixf(-1.0f, d->hy - 0.02f, u), stem};
     }
     stroke_draw(f->stroker, stalk, 8, 0);
     int gone = released(d, f, f->t) % SEED_CYCLE;
@@ -283,7 +300,8 @@ void ballerina_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // A point of the dancer, given in her own frame (x right, y up, z toward us), turned about her standing leg.
-static void dancer_point(float c, float s, float x, float y, float z, float base_x, float base_y, float *ox, float *oy, float *depth) {
+static void dancer_point(float c, float s, float x, float y, float z, float base_x, float base_y, float *ox, float *oy,
+                         float *depth) {
     *ox = base_x + x * c + z * s;
     *oy = base_y + y;
     *depth = z * c - x * s;
@@ -303,25 +321,30 @@ static void limb(Canvas *cv, float x0, float y0, float x1, float y1, float r, Rg
 void ballerina_draw(void *state, const Frame *f) {
     Ballerina *b = state;
     Grid *g = f->grid;
-    float bar = f->score->beat * (float)f->score->info->beats_per_bar, turn = b->spin * TAU_F * f->t / bar * frame_pace(f);
+    float bar = f->score->beat * (float)f->score->info->beats_per_bar,
+          turn = b->spin * TAU_F * f->t / bar * frame_pace(f);
     float c = mcos(turn), s = msin(turn), bx = 0, by = -0.6f, k = 1.9f;
-    Rgbf wood = palette_accent(f->palette, 1), velvet = palette_accent(f->palette, 0), body = palette_ramp(f->palette, 1.0f);
+    Rgbf wood = palette_accent(f->palette, 1), velvet = palette_accent(f->palette, 0),
+         body = palette_ramp(f->palette, 1.0f);
     Rgbf silver = palette_ramp(f->palette, 0.75f), skirt = palette_accent(f->palette, 2);
     // Joints in her own frame (x right, y up, z toward us), turned about her standing leg as she spins.
     static const float J[][3] = {
         {0, 0, 0},       {0, 0.22f, 0},     {0.12f, 0.17f, 0.05f}, {0.01f, 0.13f, 0.01f}, {0, 0.26f, 0},
         {0, 0.4f, 0},    {-0.07f, 0.38f, 0}, {0.07f, 0.38f, 0},    {-0.12f, 0.47f, 0.03f}, {0.12f, 0.47f, 0.03f},
         {-0.02f, 0.55f, 0.04f}, {0.02f, 0.55f, 0.04f}};
-    static const int LIMBS[][2] = {{0, 1}, {1, 2}, {2, 3}, {1, 4}, {4, 5}, {5, 6}, {5, 7}, {6, 8}, {8, 10}, {7, 9}, {9, 11}};
+    static const int LIMBS[][2] = {{0, 1}, {1, 2}, {2, 3},  {1, 4}, {4, 5}, {5, 6},
+                                   {5, 7}, {6, 8}, {8, 10}, {7, 9}, {9, 11}};
     float px[12], py[12], depth[12];
-    for (int i = 0; i < 12; i++) dancer_point(c, s, J[i][0] * k, J[i][1] * k, J[i][2] * k, bx, by, &px[i], &py[i], &depth[i]);
+    for (int i = 0; i < 12; i++)
+        dancer_point(c, s, J[i][0] * k, J[i][1] * k, J[i][2] * k, bx, by, &px[i], &py[i], &depth[i]);
     Canvas *cv = f->canvas;
     canvas_clear(cv);
     // The tutu first, a disc of tulle seen from a little above, so her body stands in front of it.
     for (int ring = 0; ring < 3; ring++)
         for (int i = 0; i < 14; i++) {
             float a = (float)i / 14 * TAU_F + turn, reach = (0.04f + 0.055f * (float)ring) * k;
-            canvas_disc(cv, bx + mcos(a) * reach, by + 0.27f * k + msin(a) * reach * b->tilt, 0.036f * k, 0.8f - 0.1f * (float)ring, skirt);
+            canvas_disc(cv, bx + mcos(a) * reach, by + 0.27f * k + msin(a) * reach * b->tilt, 0.036f * k,
+                        0.8f - 0.1f * (float)ring, skirt);
         }
     for (int i = 0; i < (int)(sizeof LIMBS / sizeof LIMBS[0]); i++) {
         int p = LIMBS[i][0], q = LIMBS[i][1], torso = (p == 4 || q == 5);
@@ -334,7 +357,11 @@ void ballerina_draw(void *state, const Frame *f) {
     // The box's front with its keyhole, and the mirror she turns on.
     for (int row = cell_row(g, -0.7f); row <= cell_row(g, -0.98f); row++)
         for (int col = cell_col(g, -0.95f); col <= cell_col(g, 0.95f); col++)
-            put_cell(g, col, row, row == cell_row(g, -0.7f) ? '=' : (col + row) % 4 ? ':' : '.', frame_dim(f, row == cell_row(g, -0.7f) ? wood : velvet, 0.55f));
+            put_cell(g, col, row,
+                     row == cell_row(g, -0.7f) ? '='
+                     : (col + row) % 4         ? ':'
+                                               : '.',
+                     frame_dim(f, row == cell_row(g, -0.7f) ? wood : velvet, 0.55f));
     put_cell(g, cell_col(g, 0), cell_row(g, -0.86f), 'o', wood);
     StrokePoint mirror[24];
     for (int i = 0; i < 24; i++) {
@@ -344,7 +371,9 @@ void ballerina_draw(void *state, const Frame *f) {
     stroke_draw(f->stroker, mirror, 24, 1);
     for (int i = 0; i < 3; i++) {
         float a = turn * 0.5f + (float)i * 2.1f, wink = 0.5f + 0.5f * msin(f->t * 2.3f + (float)i * 1.7f);
-        if (wink > 0.6f) put_cell(g, cell_col(g, bx + mcos(a) * 0.24f), cell_row(g, by + msin(a) * 0.07f), '*', frame_dim(f, body, wink));
+        if (wink > 0.6f)
+            put_cell(g, cell_col(g, bx + mcos(a) * 0.24f), cell_row(g, by + msin(a) * 0.07f), '*',
+                     frame_dim(f, body, wink));
     }
     f->fx->glow = 0.5f;
 }
@@ -378,13 +407,16 @@ void lights_draw(void *state, const Frame *f) {
     // A dimmer, farther layer of strings behind the near ones, for depth.
     for (int s = 0; s < 3; s++)
         for (int i = 0; i < 30; i++) {
-            float u = ((float)i + 0.5f) / 30, x = (u * 2 - 1) * (g->aspect + 0.05f), y = 0.55f - 0.5f * (float)s - 0.1f * 4 * u * (1 - u) + 0.15f;
+            float u = ((float)i + 0.5f) / 30, x = (u * 2 - 1) * (g->aspect + 0.05f),
+                  y = 0.55f - 0.5f * (float)s - 0.1f * 4 * u * (1 - u) + 0.15f;
             float tw = 0.5f + 0.5f * msin(f->t * 0.9f + (float)(i * 7 + s * 3));
-            put_cell_under(g, cell_col(g, x), cell_row(g, y), '.', frame_dim(f, palette_accent(f->palette, i + s), 0.25f + 0.2f * tw));
+            put_cell_under(g, cell_col(g, x), cell_row(g, y), '.',
+                           frame_dim(f, palette_accent(f->palette, i + s), 0.25f + 0.2f * tw));
         }
     const ScoreEvent *notes[16];
     int n = 0;
-    for (int k = 0; k < 4 && f->react > 0 && n < 12; k++) n += recent_notes(f->score, TUNE[k], f->t, 1.6f, notes + n, 16 - n < 4 ? 16 - n : 4);
+    for (int k = 0; k < 4 && f->react > 0 && n < 12; k++)
+        n += recent_notes(f->score, TUNE[k], f->t, 1.6f, notes + n, 16 - n < 4 ? 16 - n : 4);
     Rgbf wire = palette_ramp(f->palette, 0.3f);
     for (int s = 0; s < STRINGS; s++) {
         StrokePoint pts[24];
@@ -394,14 +426,17 @@ void lights_draw(void *state, const Frame *f) {
         }
         stroke_draw(f->stroker, pts, 24, 0);
         for (int i = 0; i < BULBS; i++) {
-            float u = ((float)i + 0.5f) / BULBS, x = (u * 2 - 1) * (g->aspect + 0.05f), y = l->height[s] - l->sag[s] * 4 * u * (1 - u);
+            float u = ((float)i + 0.5f) / BULBS, x = (u * 2 - 1) * (g->aspect + 0.05f),
+                  y = l->height[s] - l->sag[s] * 4 * u * (1 - u);
             uint32_t id = l->salt ^ (uint32_t)(s * 131 + i) * 2654435761u;
-            float level = 0.45f + 0.35f * (0.5f + 0.5f * msin(f->t * (0.7f + hash01(id) * 1.6f) + hash01(id + 1) * TAU_F));
+            float level =
+                0.45f + 0.35f * (0.5f + 0.5f * msin(f->t * (0.7f + hash01(id) * 1.6f) + hash01(id + 1) * TAU_F));
             for (int k = 0; k < n; k++) {
                 // A note's glow sets off from a place its pitch picks on the string its time picks, and runs both ways.
                 uint32_t nid = (uint32_t)(notes[k]->time * 1000.0f);
                 if ((int)(nid % STRINGS) != s) continue;
-                float from = (float)(notes[k]->note % 24) / 24, run = (f->t - notes[k]->time) * 0.9f, d = mabs(u - from) - run;
+                float from = (float)(notes[k]->note % 24) / 24, run = (f->t - notes[k]->time) * 0.9f,
+                      d = mabs(u - from) - run;
                 level += mexp(-d * d * 400) * frame_bright(f) * 0.8f;
             }
             Rgbf color = rgbf_mix(palette_accent(f->palette, i % 3), palette_ramp(f->palette, 1.0f), 0.2f);
@@ -444,7 +479,8 @@ typedef struct {
 // wedge, opening quickly and then drifting outward as it fades.
 static Petal petal(const Frame *f, float age, float high, float angle, float level, float attack, Rgbf color) {
     float grow = smoothstep(0.0f, attack, age), fade = saturate(1 - (age / PETAL_LIFE) * (age / PETAL_LIFE));
-    return (Petal){0.2f + 0.6f * high + age * 0.05f * frame_pace(f), angle, (0.035f + 0.035f * (1 - high)) * grow, level * fade, color};
+    return (Petal){0.2f + 0.6f * high + age * 0.05f * frame_pace(f), angle, (0.035f + 0.035f * (1 - high)) * grow,
+                   level * fade, color};
 }
 
 // A mandala the tune draws for itself: every note of the melody opens a petal, set farther out the higher it is and
@@ -454,35 +490,43 @@ void mandala_draw(void *state, const Frame *f) {
     Mandala *m = state;
     Grid *g = f->grid;
     static const char ramp[] = " .:-=+*#@";
-    float turn = f->local * m->spin * TAU_F * frame_pace(f), wedge = TAU_F / (float)m->folds, contrast = frame_contrast(f);
+    float turn = f->local * m->spin * TAU_F * frame_pace(f), wedge = TAU_F / (float)m->folds,
+          contrast = frame_contrast(f);
     float kick = frame_pulse(f, ROLE_KICK, 0.25f, 1.0f), attack = f->calm || f->still ? 0.3f : 0.08f;
     const ChordMark *chord = score_chord(f->score, f->t);
     int shift = chord ? chord->chord.root_pc : 0;
+
     const ScoreEvent *notes[4 * PETAL_NOTES];
     int n = 0, count = 0;
-    for (int k = 0; k < 4 && f->react > 0; k++) n += recent_notes(f->score, TUNE[k], f->t, PETAL_LIFE, notes + n, PETAL_NOTES);
+    for (int k = 0; k < 4 && f->react > 0; k++)
+        n += recent_notes(f->score, TUNE[k], f->t, PETAL_LIFE, notes + n, PETAL_NOTES);
+
     // The newest notes win when a busy tune has more than the mandala can hold.
     for (int i = 1; i < n; i++)
         for (int j = i; j > 0 && notes[j]->time > notes[j - 1]->time; j--) {
             const ScoreEvent *swap = notes[j];
             notes[j] = notes[j - 1], notes[j - 1] = swap;
         }
+
     Petal petals[PETALS];
     for (int i = 0; i < n && count < PETALS; i++) {
         float high = saturate(((float)notes[i]->note - 48) / 40.0f);
         float angle = wedge * 0.5f * hash01((uint32_t)notes[i]->note * 2654435761u ^ m->salt);
         float level = (0.6f + 0.4f * frame_bright(f)) * (0.55f + 0.45f * notes[i]->velocity);
-        petals[count++] = petal(f, f->t - notes[i]->time, high, angle, level, attack, palette_accent(f->palette, notes[i]->note + shift));
+        petals[count++] = petal(f, f->t - notes[i]->time, high, angle, level, attack,
+                                palette_accent(f->palette, notes[i]->note + shift));
     }
+
     // Between tunes, or in a shot that doesn't follow the music, petals keep opening on a clock of their own.
     if (n < 3) {
         int last = mfloor_i(f->t / m->every);
         for (int k = 0; k <= (int)(PETAL_LIFE / m->every) && count < PETALS; k++) {
             uint32_t id = m->salt + (uint32_t)(last - k) * 2654435761u;
-            petals[count++] = petal(f, f->t - (float)(last - k) * m->every, hash01(id), wedge * 0.5f * hash01(id + 1), 0.6f, attack,
-                                    palette_accent(f->palette, (int)(hash01(id + 2) * 3) + shift));
+            petals[count++] = petal(f, f->t - (float)(last - k) * m->every, hash01(id), wedge * 0.5f * hash01(id + 1),
+                                    0.6f, attack, palette_accent(f->palette, (int)(hash01(id + 2) * 3) + shift));
         }
     }
+
     Rgbf bone = palette_ramp(f->palette, 0.5f), heart = palette_ramp(f->palette, 1.0f);
     // No petal grows wider than a third of its half-wedge, or near the middle the mirrors would fuse petals into rings.
     float core = 0.05f + 0.05f * kick, widest = 0.35f * wedge * 0.5f;
@@ -494,6 +538,7 @@ void mandala_draw(void *state, const Frame *f) {
                 put_cell(g, col, row, '@', frame_dim(f, heart, (0.8f + 0.2f * kick) * contrast));
                 continue;
             }
+
             // Folded into half a wedge by the mirrors, as a kaleidoscope folds its view.
             float a = matan2(y, x) - turn;
             a -= mfloor(a / wedge) * wedge;
@@ -503,7 +548,8 @@ void mandala_draw(void *state, const Frame *f) {
             for (int k = 0; k < count; k++) {
                 const Petal *p = &petals[k];
                 if (p->size <= 0.001f || mabs(r - p->at) > p->size * 1.8f) continue;
-                float dr = (r - p->at) / (p->size * 1.8f), dt = (a - p->angle) / mmin(p->size / r, widest), d = dr * dr + dt * dt;
+                float dr = (r - p->at) / (p->size * 1.8f), dt = (a - p->angle) / mmin(p->size / r, widest),
+                      d = dr * dr + dt * dt;
                 // Full inside and soft only at the rim, so each petal keeps a clear shape.
                 float lit = d < 1 ? saturate((1 - d) * 2.5f) * p->level : 0;
                 if (lit > best) best = lit, ink = p->color;
@@ -516,5 +562,6 @@ void mandala_draw(void *state, const Frame *f) {
                 put_cell(g, col, row, '.', frame_dim(f, bone, 0.45f * contrast));
         }
     }
+
     f->fx->glow = 0.6f + 0.2f * kick;
 }

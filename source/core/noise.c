@@ -33,7 +33,8 @@ void noise_init(void) {
             float sum = 0, amp = 0.5f, norm = 0;
             int period = CELLS;
             for (int o = 0; o < 4; o++) {
-                sum += amp * smooth_value(u * (float)period, v * (float)period, period, 0x51ed270bu * (uint32_t)(o + 1));
+                sum +=
+                    amp * smooth_value(u * (float)period, v * (float)period, period, 0x51ed270bu * (uint32_t)(o + 1));
                 norm += amp;
                 amp *= 0.5f;
                 period *= 2;

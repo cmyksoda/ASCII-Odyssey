@@ -151,7 +151,8 @@ void soft_present(const Image *fb, int wide, int scale, Image *out) {
                 sx0 = sx1 = x / scale;
                 t = 0;
             }
-            const uint8_t *a = &fb->rgb[((y / scale) * fb->w + sx0) * 3], *b = &fb->rgb[((y / scale) * fb->w + sx1) * 3];
+            const uint8_t *a = &fb->rgb[((y / scale) * fb->w + sx0) * 3],
+                          *b = &fb->rgb[((y / scale) * fb->w + sx1) * 3];
             uint8_t *p = &out->rgb[(y * out->w + x) * 3];
             for (int k = 0; k < 3; k++) p[k] = clamp8(a[k] + (b[k] - a[k]) * t);
         }

@@ -149,7 +149,8 @@ static void comet(Grid *g, float time) {
         float k = 1 - (float)s / 15.0f;
         Rgb color = rgb_scale(rgb_mix(COMET_TAIL, COMET_HEAD, k), fade * (0.25f + 0.75f * k * k));
         int ch = s == 0 ? '*' : glyph;
-        Cell *cell = grid_at(g, clampi((int)mixf(x0, x1, u), 0, g->cols - 1), clampi((int)mixf(y0, y1, u), 0, g->rows - 1));
+        Cell *cell =
+            grid_at(g, clampi((int)mixf(x0, x1, u), 0, g->cols - 1), clampi((int)mixf(y0, y1, u), 0, g->rows - 1));
         if (cell->glyph == ' ' || s == 0) *cell = (Cell){(uint8_t)ch, color, 0};
     }
 }

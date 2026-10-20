@@ -61,7 +61,8 @@ void pong_draw(void *state, const Frame *f) {
     int crossing = (int)k, rally = (int)p->rally, miss = crossing % rally == rally - 1;
     int top = 3, bottom = g->rows - 2, left = 3, right = g->cols - 4;
     float span = (float)(bottom - top - 2);
-    Rgbf court = palette_ramp(f->palette, 0.35f), ink = palette_ramp(f->palette, 1.0f), glow = palette_accent(f->palette, 1);
+    Rgbf court = palette_ramp(f->palette, 0.35f), ink = palette_ramp(f->palette, 1.0f),
+         glow = palette_accent(f->palette, 1);
     for (int col = 0; col < g->cols; col++) {
         put_cell(g, col, top - 1, '=', court);
         put_cell(g, col, bottom + 1, '=', court);
@@ -77,7 +78,8 @@ void pong_draw(void *state, const Frame *f) {
     // The receiving paddle heads for where the ball will arrive; the other drifts back to the middle.
     float arrive = (float)top + 1 + pong_y(p, span, (float)crossing + 1), mid = (float)(top + bottom) / 2;
     float chase = miss ? 0.45f : smoothstep(0.0f, 0.8f, phase);
-    float lp = going_right ? mixf(by, mid, phase) : mixf(by, arrive, chase), rp = going_right ? mixf(by, arrive, chase) : mixf(by, mid, phase);
+    float lp = going_right ? mixf(by, mid, phase) : mixf(by, arrive, chase),
+          rp = going_right ? mixf(by, arrive, chase) : mixf(by, mid, phase);
     float hit = frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
     for (int side = 0; side < 2; side++) {
         float y = side ? rp : lp;
@@ -86,9 +88,11 @@ void pong_draw(void *state, const Frame *f) {
         for (int d = -2; d <= 2; d++) put_cell(g, col, (int)(y + 0.5f) + d, '#', c);
     }
     for (int s = 3; s >= 0; s--) {
-        float back = (float)s * 0.06f, tx = mixf(x0, x1, phase - back), ty = (float)top + 1 + pong_y(p, span, (float)crossing + phase - back);
+        float back = (float)s * 0.06f, tx = mixf(x0, x1, phase - back),
+              ty = (float)top + 1 + pong_y(p, span, (float)crossing + phase - back);
         if (miss) tx = mixf(x0, going_right ? (float)g->cols + 4 : -5.0f, phase - back);
-        put_cell(g, (int)(tx + 0.5f), (int)(ty + 0.5f), s ? (s == 1 ? 'o' : '.') : '@', s ? frame_dim(f, ink, 0.6f / (float)s) : ink);
+        put_cell(g, (int)(tx + 0.5f), (int)(ty + 0.5f), s ? (s == 1 ? 'o' : '.') : '@',
+                 s ? frame_dim(f, ink, 0.6f / (float)s) : ink);
     }
     f->fx->glow = 0.5f + 0.3f * hit;
 }
@@ -132,7 +136,9 @@ static Fleet fleet_at(const Grid *g, int steps) {
 void invaders_draw(void *state, const Frame *f) {
     Invaders *v = state;
     Grid *g = f->grid;
+
     dust_stars(f, v->salt, 0.0f, 0.4f);
+
     float beat = f->score->beat, start = f->t - f->local;
     int steps = (int)(f->local / beat);
     Fleet fleet = fleet_at(g, steps);
@@ -140,6 +146,7 @@ void invaders_draw(void *state, const Frame *f) {
     float cannon_x = (float)g->cols * 0.5f + (float)g->cols * 0.38f * msin(f->t * v->cannon_speed);
     int dead[FLEET_ROWS][FLEET_COLS] = {{0}}, score = 0;
     float boom[FLEET_ROWS][FLEET_COLS] = {{0}};
+
     // Replay the shot's bullets: each flies up from where the cannon stood and takes the lowest alien in its column.
     const ScoreEvent *hits[32];
     int n = f->react > 0 ? recent_notes(f->score, ROLE_SNARE, f->t, f->local, hits, 32) : 0;
@@ -167,6 +174,7 @@ void invaders_draw(void *state, const Frame *f) {
             score += (3 - lowest / 2) * 10;
         }
     }
+
     for (int r = 0; r < FLEET_ROWS; r++)
         for (int c = 0; c < FLEET_COLS; c++) {
             int kind = r == 0 ? 0 : r < 3 ? 1 : 2, x = fleet.x + c * 7, y = fleet.y + r * 3;
@@ -184,6 +192,7 @@ void invaders_draw(void *state, const Frame *f) {
             for (int line = 0; line < 2; line++)
                 for (int k = 0; k < 4; k++) put_cell(g, x + k, y + line, sprite[line][k], color);
         }
+
     // Shields, the cannon, the ground.
     Rgbf shield = palette_accent(f->palette, 1);
     for (int s = 0; s < 4; s++) {
@@ -193,19 +202,23 @@ void invaders_draw(void *state, const Frame *f) {
             if (k != 3) put_cell(g, x + k, bottom - 4, '#', frame_dim(f, shield, 0.7f));
         }
     }
+
     Rgbf gun = palette_ramp(f->palette, 0.9f);
     put_cell(g, (int)cannon_x, bottom - 1, '^', gun);
     for (int k = -2; k <= 2; k++) put_cell(g, (int)cannon_x + k, bottom, k ? '=' : 'A', gun);
     for (int col = 0; col < g->cols; col++) put_cell(g, col, bottom + 1, '_', palette_ramp(f->palette, 0.4f));
+
     float saucer = mfract((f->t + (float)(v->salt % 13)) / 9.0f);
     if (saucer < 0.5f) {
         int x = (int)(saucer * 2 * (float)(g->cols + 10)) - 5;
         const char *ufo = "<=O=>";
         for (int k = 0; k < 5; k++) put_cell(g, x + k, 1, ufo[k], palette_accent(f->palette, 0));
     }
+
     char text[24];
     snprintf(text, sizeof text, "SCORE %04d", score);
     for (int k = 0; text[k]; k++) put_cell(g, 2 + k, 0, text[k], palette_ramp(f->palette, 0.7f));
+
     f->fx->glow = 0.55f;
 }
 
@@ -238,7 +251,8 @@ void maze_draw(void *state, const Frame *f) {
     float typed = f->local * 32.0f;
     int header = 0;
     for (int line = 0; line < 3; line++) header += (int)strlen(program[line]) + pause;
-    float poured = typed > (float)header ? (typed - (float)header) / 32.0f * m->rate + (float)notes * 8.0f * f->react : 0;
+    float poured =
+        typed > (float)header ? (typed - (float)header) / 32.0f * m->rate + (float)notes * 8.0f * f->react : 0;
     int rows_used = 3 + (int)(poured / (float)g->cols) + 1, scroll = rows_used > g->rows ? rows_used - g->rows : 0;
     float left = typed;
     for (int line = 0; line < 3 && left > 0; line++) {
@@ -260,7 +274,8 @@ void maze_draw(void *state, const Frame *f) {
     if (total == 0) {
         int line = 0;
         float l2 = typed;
-        while (line < 2 && l2 > (float)((int)strlen(program[line]) + pause)) l2 -= (float)((int)strlen(program[line]) + pause), line++;
+        while (line < 2 && l2 > (float)((int)strlen(program[line]) + pause))
+            l2 -= (float)((int)strlen(program[line]) + pause), line++;
         cursor_row = line - scroll, cursor_col = 1 + (int)mmin(l2, (float)strlen(program[line]));
     }
     if (mfract(f->t * 2.0f) < 0.6f) put_cell(g, cursor_col, cursor_row, '#', text);
@@ -317,7 +332,8 @@ void halo_draw(void *state, const Frame *f) {
         float swell = 0.04f + 0.05f * (0.5f + 0.5f * msin(f->t * 1.3f + (float)b * 0.4f));
         float len = swell + 0.32f * saturate(level[b] * frame_bright(f) * 1.6f);
         float r0 = h->inner * 1.12f, r1 = r0 + len, ca = mcos(a), sa = msin(a);
-        Rgbf color = rgbf_mix(palette_accent(f->palette, b * 3 / HALO_BARS), palette_ramp(f->palette, 1.0f), saturate(len * 1.8f));
+        Rgbf color = rgbf_mix(palette_accent(f->palette, b * 3 / HALO_BARS), palette_ramp(f->palette, 1.0f),
+                              saturate(len * 1.8f));
         StrokePoint bar[2] = {{ca * r0, sa * r0, frame_dim(f, color, 0.6f)}, {ca * r1, sa * r1, color}};
         stroke_draw(f->stroker, bar, 2, 0);
         put_cell(g, cell_col(g, ca * (r1 + 0.03f)), cell_row(g, sa * (r1 + 0.03f)), '.', frame_dim(f, color, 0.7f));
@@ -326,7 +342,8 @@ void halo_draw(void *state, const Frame *f) {
     StrokePoint ring[64];
     for (int k = 0; k < 64; k++) {
         float a = (float)k / 64 * TAU_F;
-        ring[k] = (StrokePoint){mcos(a) * h->inner * 1.08f, msin(a) * h->inner * 1.08f, palette_ramp(f->palette, 0.85f)};
+        ring[k] =
+            (StrokePoint){mcos(a) * h->inner * 1.08f, msin(a) * h->inner * 1.08f, palette_ramp(f->palette, 0.85f)};
     }
     stroke_draw(f->stroker, ring, 64, 1);
     for (int k = 0; k < 40; k++) {
@@ -374,15 +391,19 @@ void pulsar_draw(void *state, const Frame *f) {
         if (base > 0.85f) break;
         // How hard the music hit when this line was drawn sets its height.
         float born = (float)line * every;
-        float hit = born > 0 ? score_pulse(f->score, ROLE_KICK, born, 0.4f) + 0.6f * score_pulse(f->score, ROLE_BASS, born, 0.5f) : 0;
-        float amp = 0.06f + 0.22f * saturate(hit * f->react + (1 - f->react) * 0.5f) + 0.05f * score_energy(f->score, born);
+        float hit = born > 0 ? score_pulse(f->score, ROLE_KICK, born, 0.4f) +
+                                   0.6f * score_pulse(f->score, ROLE_BASS, born, 0.5f)
+                             : 0;
+        float amp =
+            0.06f + 0.22f * saturate(hit * f->react + (1 - f->react) * 0.5f) + 0.05f * score_energy(f->score, born);
         Rgbf color = rgbf_mix(ink, far, saturate(depth / PULSAR_LINES));
         float prev = 0;
         for (int col = 0; col < cols; col++) {
             float x = cell_x(g, col) / g->aspect;
             if (mabs(x) > 0.62f) continue;
             float env = mexp(-x * x / (2 * p->width * p->width));
-            float wave = noise_fbm(x * 7 + (float)(p->salt % 89), (float)line * 0.37f) + 0.5f * noise_fbm(x * 19 + (float)line, 3.7f);
+            float wave = noise_fbm(x * 7 + (float)(p->salt % 89), (float)line * 0.37f) +
+                         0.5f * noise_fbm(x * 19 + (float)line, 3.7f);
             float y = base + amp * env * saturate(wave - 0.35f) * 3.0f + 0.01f * noise_fbm(x * 40, (float)line);
             if (y > skyline[col]) {
                 int glyph = col > 0 && y - prev > 0.035f ? '/' : col > 0 && prev - y > 0.035f ? '\\' : '_';
@@ -447,7 +468,8 @@ void piano_draw(void *state, const Frame *f) {
     float beat = f->score->beat;
     int per_bar = f->score->info->beats_per_bar;
     for (int b = 0; b < 12; b++) {
-        float t_line = mfloor(f->t / beat) * beat + (float)b * beat, y = (float)keys_top - (t_line - f->t) / p->window * height;
+        float t_line = mfloor(f->t / beat) * beat + (float)b * beat,
+              y = (float)keys_top - (t_line - f->t) / p->window * height;
         if (y < (float)roll_top || y >= (float)keys_top) continue;
         int bar = ((int)mfloor(t_line / beat + 0.5f)) % per_bar == 0;
         for (int col = left; col < left + whites * 3; col += bar ? 1 : 2)
@@ -469,8 +491,10 @@ void piano_draw(void *state, const Frame *f) {
                 for (int k = 0; k < (int)len; k++) {
                     int row = (int)y - 1 - k;
                     if (row < roll_top || row >= keys_top) continue;
-                    put_cell(g, col, row, black ? '!' : '#', frame_dim(f, color, 0.5f + 0.5f * (1 - ahead / p->window)));
-                    if (!black) put_cell(g, col + 1, row, '#', frame_dim(f, color, 0.45f + 0.45f * (1 - ahead / p->window)));
+                    put_cell(g, col, row, black ? '!' : '#',
+                             frame_dim(f, color, 0.5f + 0.5f * (1 - ahead / p->window)));
+                    if (!black)
+                        put_cell(g, col + 1, row, '#', frame_dim(f, color, 0.45f + 0.45f * (1 - ahead / p->window)));
                 }
             } else {
                 lit[note & 127] = mmax(lit[note & 127], mexp(ahead / 0.25f) * frame_bright(f));
@@ -478,7 +502,8 @@ void piano_draw(void *state, const Frame *f) {
         }
     }
     // The keyboard: white keys three cells wide, black keys between, lit where notes are sounding.
-    Rgbf ivory = palette_ramp(f->palette, 0.85f), ebony = palette_ramp(f->palette, 0.3f), glow = palette_accent(f->palette, 1);
+    Rgbf ivory = palette_ramp(f->palette, 0.85f), ebony = palette_ramp(f->palette, 0.3f),
+         glow = palette_accent(f->palette, 1);
     for (int w = 0; w < whites; w++) {
         int step = WHITE_STEP[w % 7], note = p->low + (w / 7) * 12 + step, col = left + w * 3;
         float on = lit[note & 127];
@@ -495,6 +520,7 @@ void piano_draw(void *state, const Frame *f) {
         }
     }
     put_cell(g, left + whites * 3, keys_top, '|', frame_dim(f, ivory, 0.7f));
-    for (int col = left; col <= left + whites * 3; col++) put_cell(g, col, keys_top - 1, '=', palette_ramp(f->palette, 0.6f));
+    for (int col = left; col <= left + whites * 3; col++)
+        put_cell(g, col, keys_top - 1, '=', palette_ramp(f->palette, 0.6f));
     f->fx->glow = 0.5f;
 }

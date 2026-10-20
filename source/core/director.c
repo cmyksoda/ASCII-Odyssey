@@ -8,21 +8,22 @@
 #include <string.h>
 
 // Counted from the list itself, so a missing name stops the build.
-static const char *const NAMES[] = {
-    "cut",    "dissolve", "wipe",    "diagonal", "radial", "iris",  "blinds", "checker", "spiral", "melt",
-    "decode", "fade",     "push",    "doors",    "shatter", "typewriter", "swirl", "zoom", "interlace", "mosaic",
-    "slide",  "cascade",  "glitch",  "flip",     "star",   "heart", "kaleido", "tetris", "ripple", "halftone",
-    "pinwheel", "honeycomb", "crt",  "clock",    "diamond", "snake",    "bubbles", "wave", "ink",     "comb",   "bounce"};
+static const char *const NAMES[] = {"cut",     "dissolve",   "wipe",     "diagonal",  "radial",    "iris",    "blinds",
+                                    "checker", "spiral",     "melt",     "decode",    "fade",      "push",    "doors",
+                                    "shatter", "typewriter", "swirl",    "zoom",      "interlace", "mosaic",  "slide",
+                                    "cascade", "glitch",     "flip",     "star",      "heart",     "kaleido", "tetris",
+                                    "ripple",  "halftone",   "pinwheel", "honeycomb", "crt",       "clock",   "diamond",
+                                    "snake",   "bubbles",    "wave",     "ink",       "comb",      "bounce"};
 _Static_assert(sizeof NAMES / sizeof NAMES[0] == ENTRANCES, "every entrance needs a name");
 const char *const *const entrance_names = NAMES;
 
-static const Entrance SOFT[] = {ENTER_DISSOLVE, ENTER_WIPE,    ENTER_DIAGONAL,   ENTER_RADIAL,  ENTER_IRIS,      ENTER_BLINDS,
-                                ENTER_CHECKER,  ENTER_SPIRAL,  ENTER_MELT,       ENTER_DECODE,  ENTER_FADE,      ENTER_PUSH,
-                                ENTER_DOORS,    ENTER_SHATTER, ENTER_TYPEWRITER, ENTER_SWIRL,   ENTER_ZOOM,      ENTER_INTERLACE,
-                                ENTER_MOSAIC,   ENTER_SLIDE,   ENTER_CASCADE,    ENTER_GLITCH,  ENTER_FLIP,      ENTER_STAR,
-                                ENTER_HEART,    ENTER_KALEIDO, ENTER_TETRIS,     ENTER_RIPPLE,  ENTER_HALFTONE,  ENTER_PINWHEEL,
-                                ENTER_HONEYCOMB, ENTER_CRT,    ENTER_CLOCK,      ENTER_DIAMOND, ENTER_SNAKE,     ENTER_BUBBLES,
-                                ENTER_WAVE,     ENTER_INK,     ENTER_COMB,       ENTER_BOUNCE};
+static const Entrance SOFT[] = {
+    ENTER_DISSOLVE,   ENTER_WIPE,     ENTER_DIAGONAL,  ENTER_RADIAL,    ENTER_IRIS,    ENTER_BLINDS,  ENTER_CHECKER,
+    ENTER_SPIRAL,     ENTER_MELT,     ENTER_DECODE,    ENTER_FADE,      ENTER_PUSH,    ENTER_DOORS,   ENTER_SHATTER,
+    ENTER_TYPEWRITER, ENTER_SWIRL,    ENTER_ZOOM,      ENTER_INTERLACE, ENTER_MOSAIC,  ENTER_SLIDE,   ENTER_CASCADE,
+    ENTER_GLITCH,     ENTER_FLIP,     ENTER_STAR,      ENTER_HEART,     ENTER_KALEIDO, ENTER_TETRIS,  ENTER_RIPPLE,
+    ENTER_HALFTONE,   ENTER_PINWHEEL, ENTER_HONEYCOMB, ENTER_CRT,       ENTER_CLOCK,   ENTER_DIAMOND, ENTER_SNAKE,
+    ENTER_BUBBLES,    ENTER_WAVE,     ENTER_INK,       ENTER_COMB,      ENTER_BOUNCE};
 // A drop lands with a burst that opens from the middle or sweeps across in half a beat.
 static const Entrance BURST[] = {ENTER_RADIAL, ENTER_IRIS,   ENTER_CHECKER, ENTER_BLINDS,  ENTER_DIAGONAL,
                                  ENTER_PUSH,   ENTER_DOORS,  ENTER_GLITCH,  ENTER_FLIP,    ENTER_KALEIDO,
@@ -58,7 +59,8 @@ static float scene_drive(const SongInfo *info) {
     return clampf(0.72f + (float)(info->bpm - 95) * 0.0057f, 0.72f, 0.85f);
 }
 
-static int choose_scene(Rng *r, Mood mood, const Section *sec, float target, const int *uses, const int *rolled, int previous) {
+static int choose_scene(Rng *r, Mood mood, const Section *sec, float target, const int *uses, const int *rolled,
+                        int previous) {
     static const struct {
         float window;
         int repeats;
@@ -89,7 +91,8 @@ static int choose_scene(Rng *r, Mood mood, const Section *sec, float target, con
 
 // Each time a piece uses a kind of transition it weighs less there, so the piece wanders through many; the kind just
 // used never comes straight back. When every kind has been worn out, any but the last will do.
-static Entrance pick_from(Rng *r, const Entrance *list, int count, const int *taste, const int used[ENTRANCES], Entrance previous) {
+static Entrance pick_from(Rng *r, const Entrance *list, int count, const int *taste, const int used[ENTRANCES],
+                          Entrance previous) {
     int weights[ENTRANCES], total = 0;
     for (int i = 0; i < count; i++) {
         // Scaled up first, so whole-number weights keep the ratios of the penalty.
@@ -270,9 +273,11 @@ static float heart_cover(float aspect) {
         float reach = 0.5f * msqrt(aspect * aspect + 1);
         cover = 0;
         for (int i = 0; i <= 256; i++) {
-            float u = (float)i / 256 - 0.5f, edge[4][2] = {{u * aspect, 0.5f}, {u * aspect, -0.5f}, {0.5f * aspect, u}, {-0.5f * aspect, u}};
+            float u = (float)i / 256 - 0.5f,
+                  edge[4][2] = {{u * aspect, 0.5f}, {u * aspect, -0.5f}, {0.5f * aspect, u}, {-0.5f * aspect, u}};
             for (int k = 0; k < 4; k++)
-                cover = mmax(cover, mhypot(edge[k][0], edge[k][1]) / reach / heart_reach(matan2(edge[k][1], edge[k][0])));
+                cover =
+                    mmax(cover, mhypot(edge[k][0], edge[k][1]) / reach / heart_reach(matan2(edge[k][1], edge[k][0])));
         }
         for_aspect = aspect;
     }
@@ -320,7 +325,8 @@ static float reveal_key(Entrance how, int direction, int col, int row, const Gri
     case ENTER_HALFTONE: {
         // A printer's screen of dots at 45 degrees, each growing from its middle until they merge, the middle first.
         float u = (dx + dy) * 0.7071f / 0.12f, v = (dx - dy) * 0.7071f / 0.12f;
-        return mhypot(mfract(u) - 0.5f, mfract(v) - 0.5f) / 0.7071f * 0.78f + mhypot(dx, dy) / reach * 0.17f + h * 0.05f;
+        return mhypot(mfract(u) - 0.5f, mfract(v) - 0.5f) / 0.7071f * 0.78f + mhypot(dx, dy) / reach * 0.17f +
+               h * 0.05f;
     }
     case ENTER_PINWHEEL: {
         // Four to seven blades fanning open round the middle, their tips trailing a little.
@@ -402,10 +408,13 @@ static const float *reveal_keys(Entrance how, int direction, const Grid *g) {
     float *grown = make_room(key_cache, &key_cache_cells, g->cols * g->rows, sizeof *key_cache);
     if (!grown) return NULL;
     key_cache = grown;
-    if (how != cached || direction != cached_direction || g->cols != cached_cols || g->rows != cached_rows || g->aspect != cached_aspect) {
+    if (how != cached || direction != cached_direction || g->cols != cached_cols || g->rows != cached_rows ||
+        g->aspect != cached_aspect) {
         for (int row = 0; row < g->rows; row++)
-            for (int col = 0; col < g->cols; col++) key_cache[row * g->cols + col] = reveal_key(how, direction, col, row, g);
-        cached = how, cached_direction = direction, cached_cols = g->cols, cached_rows = g->rows, cached_aspect = g->aspect;
+            for (int col = 0; col < g->cols; col++)
+                key_cache[row * g->cols + col] = reveal_key(how, direction, col, row, g);
+        cached = how, cached_direction = direction, cached_cols = g->cols, cached_rows = g->rows,
+            cached_aspect = g->aspect;
     }
     return key_cache;
 }
@@ -422,6 +431,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
     Cell *grown = make_room(incoming, &incoming_cells, n, sizeof *incoming);
     if (!grown) return 0;
     incoming = grown;
+
     switch (how) {
     case ENTER_PUSH:
     case ENTER_DOORS:
@@ -442,12 +452,14 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
     case ENTER_BOUNCE: break;
     default: return 0;
     }
+
     memcpy(incoming, to->cells, sizeof(Cell) * (size_t)n);
     const float *order = reveal_keys(how, direction, to);
     static const Cell blank = {' ', {0, 0, 0}, 0};
     const Cell *before = from->cells;
     const Cell *in = incoming;
     float cx = (float)cols * 0.5f, cy = (float)rows * 0.5f;
+
     for (int row = 0; row < rows; row++)
         for (int col = 0; col < cols; col++) {
             Cell *dst = grid_at(to, col, row);
@@ -458,6 +470,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = at >= 0 && at < cols ? *cell_or_blank(in, to, at, row) : *cell_or_blank(before, from, col, row);
                 break;
             }
+
             case ENTER_BOUNCE: {
                 // The new picture drops in from above, lands, and bounces once before it settles.
                 float lift = p < 0.6f ? 1 - (p / 0.6f) * (p / 0.6f) : 0.18f * msin((p - 0.6f) / 0.4f * PI_F);
@@ -465,17 +478,21 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = at < rows ? *cell_or_blank(in, to, col, at) : *cell_or_blank(before, from, col, row);
                 break;
             }
+
             case ENTER_PUSH: {
                 // The new picture slides in from one side and shoves the old one off the other.
                 int horizontal = direction < 2, span = horizontal ? cols : rows, sign = direction & 1 ? -1 : 1;
                 int shift = (int)(p * (float)span + 0.5f), at = horizontal ? col : row;
                 int old_at = at + sign * shift, new_at = at + sign * (shift - span);
                 if (horizontal)
-                    *dst = (new_at >= 0 && new_at < span) ? *cell_or_blank(in, to, new_at, row) : *cell_or_blank(from->cells, from, old_at, row);
+                    *dst = (new_at >= 0 && new_at < span) ? *cell_or_blank(in, to, new_at, row)
+                                                          : *cell_or_blank(from->cells, from, old_at, row);
                 else
-                    *dst = (new_at >= 0 && new_at < span) ? *cell_or_blank(in, to, col, new_at) : *cell_or_blank(from->cells, from, col, old_at);
+                    *dst = (new_at >= 0 && new_at < span) ? *cell_or_blank(in, to, col, new_at)
+                                                          : *cell_or_blank(from->cells, from, col, old_at);
                 break;
             }
+
             case ENTER_DOORS: {
                 // The old picture parts down the middle, each half sliding away, the new one waiting behind.
                 int half = cols / 2, shift = (int)(p * (float)half + 0.5f);
@@ -484,12 +501,14 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = inside ? *cell_or_blank(from->cells, from, src, row) : in[row * cols + col];
                 break;
             }
+
             case ENTER_INTERLACE: {
                 // Alternate rows of the new picture race in from opposite sides.
                 int shift = (int)((1 - p) * (float)cols + 0.5f), src = row & 1 ? col + shift : col - shift;
                 *dst = src >= 0 && src < cols ? in[row * cols + src] : *cell_or_blank(from->cells, from, col, row);
                 break;
             }
+
             case ENTER_SWIRL:
             case ENTER_ZOOM: {
                 // The old picture twists like water down a drain, or rushes toward us, as the new one shows through.
@@ -499,7 +518,8 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                     break;
                 }
                 // In row heights, so the swirl turns round rather than oval.
-                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio, dy = (float)row - cy;
+                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio,
+                      dy = (float)row - cy;
                 float sx, sy;
                 if (how == ENTER_SWIRL) {
                     float r = mhypot(dx, dy) / cy, a = p * 3.0f * (1 - saturate(r * 0.8f)), c = mcos(a), s = msin(a);
@@ -512,14 +532,17 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = *cell_or_blank(from->cells, from, src_col, src_row);
                 break;
             }
+
             case ENTER_MOSAIC: {
                 // The old picture coarsens into blocks, and the new one sharpens back out of them.
                 float coarse = 1 - mabs(2 * p - 1);
                 // Blocks as tall as they are wide on screen, given the cells' shape.
-                int bw = 1 + (int)(coarse * 10), bh = 1 + (int)(coarse * 10 * (float)to->cell_w * to->pixel_aspect / (float)to->cell_h);
+                int bw = 1 + (int)(coarse * 10),
+                    bh = 1 + (int)(coarse * 10 * (float)to->cell_w * to->pixel_aspect / (float)to->cell_h);
                 *dst = *cell_or_blank(p < 0.5f ? before : in, to, col / bw * bw + bw / 2, row / bh * bh + bh / 2);
                 break;
             }
+
             case ENTER_SLIDE: {
                 // The new picture slides in over the old one, which stays where it is.
                 int horizontal = direction < 2, span = horizontal ? cols : rows, sign = direction & 1 ? -1 : 1;
@@ -530,6 +553,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                     *dst = before[row * cols + col];
                 break;
             }
+
             case ENTER_CASCADE: {
                 // Column by column the new picture drops in from above, each after its own short wait, under gravity.
                 float age = (p - hash01((uint32_t)col * 2654435761u) * 0.5f) / 0.5f;
@@ -537,6 +561,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = age > 0 && row + fall < rows ? in[(row + fall) * cols + col] : before[row * cols + col];
                 break;
             }
+
             case ENTER_GLITCH: {
                 // Bands of rows tear sideways by ragged amounts that swell and settle, each band jumping to the new
                 // picture at its own moment.
@@ -545,6 +570,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = *cell_or_blank(hash01(band + 7) < p ? in : before, to, col - shift, row);
                 break;
             }
+
             case ENTER_FLIP: {
                 // Like an old television changing channel: the old picture squashes to a line, the new one springs open.
                 float height = mabs(2 * p - 1), rel = ((float)row + 0.5f - cy) / (height * cy + 0.001f);
@@ -554,6 +580,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                     *dst = *cell_or_blank(p < 0.5f ? before : in, to, col, (int)(cy + rel * cy));
                 break;
             }
+
             case ENTER_KALEIDO: {
                 // The old picture folds into a kaleidoscope of more and more mirrors, then the new one unfolds from it.
                 int mirrors = (int)((1 - mabs(2 * p - 1)) * 8.99f);
@@ -562,18 +589,22 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                     *dst = src[row * cols + col];
                     break;
                 }
-                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio, dy = (float)row - cy;
+                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio,
+                      dy = (float)row - cy;
                 float r = mhypot(dx, dy), wedge = PI_F / (float)mirrors, a = matan2(dy, dx) + PI_F;
                 a -= mfloor(a / (2 * wedge)) * 2 * wedge;
                 if (a > wedge) a = 2 * wedge - a;
                 *dst = *cell_or_blank(src, to, (int)(cx + r * mcos(a) / ratio + 0.5f), (int)(cy + r * msin(a) + 0.5f));
                 break;
             }
+
             case ENTER_TETRIS: *dst = before[row * cols + col]; break;
+
             case ENTER_RIPPLE: {
                 // A ring of water spreads from the middle: the new picture lies inside it, and the pictures either side
                 // of the wavefront bend toward and away from it.
-                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio, dy = (float)row - cy;
+                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio,
+                      dy = (float)row - cy;
                 float d = mhypot(dx, dy), reach = mhypot(cx * ratio, cy) * 1.15f, front = p * reach, band = 3.0f;
                 const Cell *src = d < front ? in : before;
                 if (mabs(d - front) < band && d > 0.5f) {
@@ -584,6 +615,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 }
                 break;
             }
+
             case ENTER_CRT: {
                 // An old television warming up: a dot of the new picture stretches into a line across the middle, and
                 // the line opens out into the whole picture, squashed at first and filling out as it grows.
@@ -595,16 +627,20 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                     *dst = before[row * cols + col];
                 break;
             }
+
             default: *dst = in[row * cols + col]; break;
             }
         }
+
     if (how == ENTER_TETRIS) {
         // Blocks of the new picture drop in from above and stack up from the bottom row, each landing exactly in place.
-        int bw = 4, bh = (int)(4.0f * (float)to->cell_w * to->pixel_aspect / (float)to->cell_h + 0.5f), stacks = (rows + bh - 1) / bh;
+        int bw = 4, bh = (int)(4.0f * (float)to->cell_w * to->pixel_aspect / (float)to->cell_h + 0.5f),
+            stacks = (rows + bh - 1) / bh;
         if (bh < 1) bh = 1;
         for (int by = stacks - 1; by >= 0; by--)
             for (int bx = 0; bx * bw < cols; bx++) {
-                float order = (float)(stacks - 1 - by) / (float)stacks * 0.7f + hash01((uint32_t)(by * 977 + bx) ^ 0x7e7u) * 0.3f;
+                float order =
+                    (float)(stacks - 1 - by) / (float)stacks * 0.7f + hash01((uint32_t)(by * 977 + bx) ^ 0x7e7u) * 0.3f;
                 float age = (p - order * 0.75f) / 0.25f;
                 if (age <= 0) continue;
                 int top = by * bh, fall = age >= 1 ? 0 : (int)((1 - age * age) * (float)(top + bh));
@@ -613,6 +649,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                         if (y - fall >= 0) *grid_at(to, x, y - fall) = in[y * cols + x];
             }
     }
+
     if (how == ENTER_SHATTER) {
         // The old picture breaks into tiles, each dropping away under gravity after a moment of its own.
         for (int ty = 0; ty < rows; ty += 3)
@@ -620,7 +657,8 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 uint32_t id = (uint32_t)(ty * 131 + tx * 7919) ^ 0x5ca7u;
                 float start = hash01(id) * 0.45f, age = (p - start) / (1 - start);
                 if (age >= 1) continue;
-                int fall = age > 0 ? (int)(age * age * (float)rows * 1.3f) : 0, drift = age > 0 ? (int)((hash01(id + 1) - 0.5f) * 8 * age) : 0;
+                int fall = age > 0 ? (int)(age * age * (float)rows * 1.3f) : 0,
+                    drift = age > 0 ? (int)((hash01(id + 1) - 0.5f) * 8 * age) : 0;
                 for (int y = ty; y < ty + 3 && y < rows; y++)
                     for (int x = tx; x < tx + 6 && x < cols; x++) {
                         const Cell *c = grid_at(from, x, y);
@@ -629,6 +667,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                     }
             }
     }
+
     return 1;
 }
 
@@ -713,7 +752,8 @@ void direction_draw(Direction *d, Frame *f, Grid *scratch) {
         f->fx->glow = mixf(glow, f->fx->glow, progress);
         f->fx->bg = rgb_mix(d->palettes[d->shots[i - 1].palette]->bg, d->palettes[shot->palette]->bg, progress);
         // A glitch's tearing is a flicker as much as a motion, so reduce flashing calms it too.
-        Entrance how = f->still || (f->calm && shot->entrance == ENTER_GLITCH) ? still_entrance(shot->entrance) : shot->entrance;
+        Entrance how =
+            f->still || (f->calm && shot->entrance == ENTER_GLITCH) ? still_entrance(shot->entrance) : shot->entrance;
         blend(scratch, f->grid, how, shot->direction, progress * 1.05f, f->t, f->fx->bg);
     } else {
         render_shot(d, shot, f, f->grid);

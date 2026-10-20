@@ -8,12 +8,12 @@
 
 static int failures;
 
-#define CHECK(cond)                                                                                                     \
-    do {                                                                                                                \
-        if (!(cond)) {                                                                                                  \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                      \
-            failures++;                                                                                                 \
-        }                                                                                                               \
+#define CHECK(cond)                                                                                                    \
+    do {                                                                                                               \
+        if (!(cond)) {                                                                                                 \
+            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
+            failures++;                                                                                                \
+        }                                                                                                              \
     } while (0)
 
 static void every_face_loads_with_printable_glyphs(void) {

@@ -245,7 +245,8 @@ static void box(Grid *g, int col, int row, int w, Rgb color) {
 
 static void preview(const Keyboard *k, Grid *ui, const Layout *l) {
     char upper[SEED_MAX + 1];
-    for (int i = 0; i <= k->len; i++) upper[i] = k->text[i] >= 'a' && k->text[i] <= 'z' ? (char)(k->text[i] - 32) : k->text[i];
+    for (int i = 0; i <= k->len; i++)
+        upper[i] = k->text[i] >= 'a' && k->text[i] <= 'z' ? (char)(k->text[i] - 32) : k->text[i];
     const FigletFont *font = figlet_font(FIGLET_SMALL);
     static char art[FIGLET_MAX_HEIGHT * 160];
     int w = font && k->len ? figlet_render(font, upper, art, 160) : -1;

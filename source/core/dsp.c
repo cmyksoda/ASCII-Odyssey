@@ -67,8 +67,8 @@ static const int IN_LENGTHS[4] = {142, 107, 379, 277};
 
 int plate_init(Plate *p) {
     memset(p, 0, sizeof *p);
-    int total = scaled(1200) + 4 * 2 + scaled(672 + 32) + scaled(908 + 32) + scaled(4453) + scaled(4217) + scaled(1800) +
-                scaled(2656) + scaled(3720) + scaled(3163) + 40;
+    int total = scaled(1200) + 4 * 2 + scaled(672 + 32) + scaled(908 + 32) + scaled(4453) + scaled(4217) +
+                scaled(1800) + scaled(2656) + scaled(3720) + scaled(3163) + 40;
     for (int i = 0; i < 4; i++) total += scaled(IN_LENGTHS[i]);
     p->memory = calloc((size_t)total, sizeof(float));
     if (!p->memory) return -1;

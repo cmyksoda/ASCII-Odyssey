@@ -187,53 +187,71 @@ typedef struct {
 // Drops run sixteen bars, back to back or across a real breakdown, so a short break never stalls the momentum.
 static const Part FORM_EDM[] = {{SECTION_INTRO, 8, 0.25f, 0}, {SECTION_VERSE, 8, 0.5f, 2}, {SECTION_BUILD, 8, 0.7f, 0},
                                 {SECTION_DROP, 16, 1.0f, 0},  {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 8, 0.3f, 0}};
-static const Part FORM_EDM_JOURNEY[] = {{SECTION_INTRO, 8, 0.25f, 0},    {SECTION_BUILD, 8, 0.7f, 0},     {SECTION_DROP, 16, 1.0f, 0},
-                                        {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_BUILD, 8, 0.75f, 1}, {SECTION_DROP, 16, 1.0f, 1},
+static const Part FORM_EDM_JOURNEY[] = {{SECTION_INTRO, 8, 0.25f, 0}, {SECTION_BUILD, 8, 0.7f, 0},
+                                        {SECTION_DROP, 16, 1.0f, 0},  {SECTION_BREAK, 8, 0.35f, 1},
+                                        {SECTION_BUILD, 8, 0.75f, 1}, {SECTION_DROP, 16, 1.0f, 1},
                                         {SECTION_OUTRO, 8, 0.3f, 0}};
-static const Part FORM_CHIP[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_VERSE, 16, 0.6f, 2}, {SECTION_DROP, 16, 0.9f, 0},
-                                 {SECTION_BREAK, 8, 0.4f, 1}, {SECTION_DROP, 16, 1.0f, 1},  {SECTION_OUTRO, 4, 0.3f, 0}};
-static const Part FORM_CHIP_RUSH[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_DROP, 16, 0.9f, 0}, {SECTION_VERSE, 8, 0.6f, 2},
-                                      {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
-static const Part FORM_AMBIENT[] = {{SECTION_INTRO, 8, 0.2f, 0},    {SECTION_VERSE, 16, 0.4f, 2},    {SECTION_DROP, 16, 0.6f, 0},
-                                    {SECTION_BREAK, 8, 0.3f, 1}, {SECTION_DROP, 16, 0.65f, 1}, {SECTION_OUTRO, 8, 0.2f, 0}};
-static const Part FORM_AMBIENT_TIDE[] = {{SECTION_INTRO, 8, 0.2f, 0},    {SECTION_DROP, 16, 0.5f, 0},     {SECTION_BREAK, 8, 0.3f, 1},
-                                         {SECTION_VERSE, 8, 0.4f, 2}, {SECTION_DROP, 16, 0.65f, 1}, {SECTION_OUTRO, 8, 0.2f, 0}};
-static const Part FORM_LOFI[] = {{SECTION_INTRO, 4, 0.25f, 0},    {SECTION_VERSE, 16, 0.5f, 2},   {SECTION_DROP, 16, 0.65f, 0},
-                                 {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_DROP, 16, 0.7f, 1}, {SECTION_OUTRO, 8, 0.3f, 0}};
-static const Part FORM_LOFI_TAPE[] = {{SECTION_INTRO, 4, 0.25f, 0},   {SECTION_DROP, 16, 0.6f, 0},    {SECTION_BREAK, 8, 0.35f, 1},
-                                      {SECTION_VERSE, 8, 0.5f, 2}, {SECTION_DROP, 16, 0.7f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
+static const Part FORM_CHIP[] = {{SECTION_INTRO, 4, 0.3f, 0}, {SECTION_VERSE, 16, 0.6f, 2},
+                                 {SECTION_DROP, 16, 0.9f, 0}, {SECTION_BREAK, 8, 0.4f, 1},
+                                 {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
+static const Part FORM_CHIP_RUSH[] = {{SECTION_INTRO, 4, 0.3f, 0}, {SECTION_DROP, 16, 0.9f, 0},
+                                      {SECTION_VERSE, 8, 0.6f, 2}, {SECTION_DROP, 16, 1.0f, 1},
+                                      {SECTION_OUTRO, 4, 0.3f, 0}};
+static const Part FORM_AMBIENT[] = {{SECTION_INTRO, 8, 0.2f, 0},  {SECTION_VERSE, 16, 0.4f, 2},
+                                    {SECTION_DROP, 16, 0.6f, 0},  {SECTION_BREAK, 8, 0.3f, 1},
+                                    {SECTION_DROP, 16, 0.65f, 1}, {SECTION_OUTRO, 8, 0.2f, 0}};
+static const Part FORM_AMBIENT_TIDE[] = {{SECTION_INTRO, 8, 0.2f, 0},  {SECTION_DROP, 16, 0.5f, 0},
+                                         {SECTION_BREAK, 8, 0.3f, 1},  {SECTION_VERSE, 8, 0.4f, 2},
+                                         {SECTION_DROP, 16, 0.65f, 1}, {SECTION_OUTRO, 8, 0.2f, 0}};
+static const Part FORM_LOFI[] = {{SECTION_INTRO, 4, 0.25f, 0}, {SECTION_VERSE, 16, 0.5f, 2},
+                                 {SECTION_DROP, 16, 0.65f, 0}, {SECTION_BREAK, 8, 0.35f, 1},
+                                 {SECTION_DROP, 16, 0.7f, 1},  {SECTION_OUTRO, 8, 0.3f, 0}};
+static const Part FORM_LOFI_TAPE[] = {{SECTION_INTRO, 4, 0.25f, 0}, {SECTION_DROP, 16, 0.6f, 0},
+                                      {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_VERSE, 8, 0.5f, 2},
+                                      {SECTION_DROP, 16, 0.7f, 1},  {SECTION_OUTRO, 4, 0.3f, 0}};
 // Trance shows its hook in a breakdown before the first drop lands it.
-static const Part FORM_TRANCE[] = {{SECTION_INTRO, 8, 0.35f, 0}, {SECTION_VERSE, 8, 0.55f, 2}, {SECTION_BREAK, 8, 0.3f, 0},
-                                   {SECTION_BUILD, 8, 0.75f, 0}, {SECTION_DROP, 16, 1.0f, 0},     {SECTION_DROP, 16, 1.0f, 1},
+static const Part FORM_TRANCE[] = {{SECTION_INTRO, 8, 0.35f, 0}, {SECTION_VERSE, 8, 0.55f, 2},
+                                   {SECTION_BREAK, 8, 0.3f, 0},  {SECTION_BUILD, 8, 0.75f, 0},
+                                   {SECTION_DROP, 16, 1.0f, 0},  {SECTION_DROP, 16, 1.0f, 1},
                                    {SECTION_OUTRO, 8, 0.35f, 0}};
-static const Part FORM_TRANCE_DIRECT[] = {{SECTION_INTRO, 8, 0.35f, 0},   {SECTION_BUILD, 8, 0.7f, 0},    {SECTION_DROP, 16, 1.0f, 0},
-                                          {SECTION_BREAK, 8, 0.3f, 1}, {SECTION_BUILD, 8, 0.8f, 1}, {SECTION_DROP, 16, 1.0f, 1},
+static const Part FORM_TRANCE_DIRECT[] = {{SECTION_INTRO, 8, 0.35f, 0}, {SECTION_BUILD, 8, 0.7f, 0},
+                                          {SECTION_DROP, 16, 1.0f, 0},  {SECTION_BREAK, 8, 0.3f, 1},
+                                          {SECTION_BUILD, 8, 0.8f, 1},  {SECTION_DROP, 16, 1.0f, 1},
                                           {SECTION_OUTRO, 8, 0.35f, 0}};
 // A game tune's theme and its answer, looped, with no builds: the drops are the theme at full tilt.
-static const Part FORM_8BIT[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_VERSE, 8, 0.6f, 2},  {SECTION_DROP, 16, 0.9f, 0},
+static const Part FORM_8BIT[] = {{SECTION_INTRO, 4, 0.3f, 0},  {SECTION_VERSE, 8, 0.6f, 2}, {SECTION_DROP, 16, 0.9f, 0},
                                  {SECTION_BREAK, 8, 0.45f, 1}, {SECTION_VERSE, 8, 0.6f, 2}, {SECTION_DROP, 16, 1.0f, 1},
                                  {SECTION_OUTRO, 4, 0.3f, 0}};
-static const Part FORM_8BIT_LOOP[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_DROP, 16, 0.9f, 0},  {SECTION_VERSE, 8, 0.6f, 2},
-                                      {SECTION_BREAK, 8, 0.45f, 1}, {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
+static const Part FORM_8BIT_LOOP[] = {{SECTION_INTRO, 4, 0.3f, 0}, {SECTION_DROP, 16, 0.9f, 0},
+                                      {SECTION_VERSE, 8, 0.6f, 2}, {SECTION_BREAK, 8, 0.45f, 1},
+                                      {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
 // An adventure's theme: the strings and harp set out, the flute sings a verse, and the whole band takes the theme up.
-static const Part FORM_16BIT[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_VERSE, 8, 0.55f, 2}, {SECTION_DROP, 16, 0.85f, 0},
-                                  {SECTION_BREAK, 8, 0.4f, 1}, {SECTION_VERSE, 8, 0.6f, 2},  {SECTION_DROP, 16, 1.0f, 1},
+static const Part FORM_16BIT[] = {{SECTION_INTRO, 4, 0.3f, 0},  {SECTION_VERSE, 8, 0.55f, 2},
+                                  {SECTION_DROP, 16, 0.85f, 0}, {SECTION_BREAK, 8, 0.4f, 1},
+                                  {SECTION_VERSE, 8, 0.6f, 2},  {SECTION_DROP, 16, 1.0f, 1},
                                   {SECTION_OUTRO, 4, 0.3f, 0}};
-static const Part FORM_16BIT_QUEST[] = {{SECTION_INTRO, 4, 0.3f, 0},  {SECTION_VERSE, 16, 0.55f, 2}, {SECTION_DROP, 16, 0.85f, 0},
-                                        {SECTION_BREAK, 8, 0.4f, 1}, {SECTION_DROP, 16, 1.0f, 1},   {SECTION_OUTRO, 4, 0.3f, 0}};
-static const Part FORM_WALTZ[] = {{SECTION_INTRO, 4, 0.2f, 0},    {SECTION_VERSE, 16, 0.4f, 2},   {SECTION_DROP, 16, 0.55f, 0},
-                                  {SECTION_BREAK, 8, 0.3f, 1}, {SECTION_DROP, 16, 0.6f, 1}, {SECTION_OUTRO, 4, 0.2f, 0}};
-static const Part FORM_WALTZ_ROUND[] = {{SECTION_INTRO, 4, 0.2f, 0},    {SECTION_DROP, 16, 0.5f, 0}, {SECTION_VERSE, 8, 0.4f, 2},
-                                        {SECTION_DROP, 16, 0.6f, 1}, {SECTION_OUTRO, 4, 0.2f, 0}};
-static const Part FORM_DUB[] = {{SECTION_INTRO, 8, 0.3f, 0},     {SECTION_VERSE, 16, 0.5f, 2},   {SECTION_DROP, 16, 0.75f, 0},
-                                {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_DROP, 16, 0.8f, 1}, {SECTION_OUTRO, 8, 0.3f, 0}};
-static const Part FORM_DUBSTEP[] = {{SECTION_INTRO, 8, 0.3f, 0},    {SECTION_BUILD, 8, 0.75f, 0}, {SECTION_DROP, 16, 1.0f, 0},
-                                    {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_BUILD, 8, 0.8f, 1},  {SECTION_DROP, 16, 1.0f, 1},
+static const Part FORM_16BIT_QUEST[] = {{SECTION_INTRO, 4, 0.3f, 0},  {SECTION_VERSE, 16, 0.55f, 2},
+                                        {SECTION_DROP, 16, 0.85f, 0}, {SECTION_BREAK, 8, 0.4f, 1},
+                                        {SECTION_DROP, 16, 1.0f, 1},  {SECTION_OUTRO, 4, 0.3f, 0}};
+static const Part FORM_WALTZ[] = {{SECTION_INTRO, 4, 0.2f, 0},  {SECTION_VERSE, 16, 0.4f, 2},
+                                  {SECTION_DROP, 16, 0.55f, 0}, {SECTION_BREAK, 8, 0.3f, 1},
+                                  {SECTION_DROP, 16, 0.6f, 1},  {SECTION_OUTRO, 4, 0.2f, 0}};
+static const Part FORM_WALTZ_ROUND[] = {{SECTION_INTRO, 4, 0.2f, 0}, {SECTION_DROP, 16, 0.5f, 0},
+                                        {SECTION_VERSE, 8, 0.4f, 2}, {SECTION_DROP, 16, 0.6f, 1},
+                                        {SECTION_OUTRO, 4, 0.2f, 0}};
+static const Part FORM_DUB[] = {{SECTION_INTRO, 8, 0.3f, 0},  {SECTION_VERSE, 16, 0.5f, 2},
+                                {SECTION_DROP, 16, 0.75f, 0}, {SECTION_BREAK, 8, 0.35f, 1},
+                                {SECTION_DROP, 16, 0.8f, 1},  {SECTION_OUTRO, 8, 0.3f, 0}};
+static const Part FORM_DUBSTEP[] = {{SECTION_INTRO, 8, 0.3f, 0}, {SECTION_BUILD, 8, 0.75f, 0},
+                                    {SECTION_DROP, 16, 1.0f, 0}, {SECTION_BREAK, 8, 0.35f, 1},
+                                    {SECTION_BUILD, 8, 0.8f, 1}, {SECTION_DROP, 16, 1.0f, 1},
                                     {SECTION_OUTRO, 4, 0.3f, 0}};
-static const Part FORM_DUBSTEP_GROOVE[] = {{SECTION_INTRO, 8, 0.3f, 0}, {SECTION_VERSE, 8, 0.5f, 2},  {SECTION_BUILD, 8, 0.75f, 0},
-                                           {SECTION_DROP, 16, 1.0f, 0}, {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 8, 0.3f, 0}};
-static const Part FORM_DUB_DEEP[] = {{SECTION_INTRO, 8, 0.3f, 0},      {SECTION_VERSE, 8, 0.5f, 2}, {SECTION_DROP, 16, 0.75f, 0},
-                                     {SECTION_BREAK, 16, 0.35f, 1}, {SECTION_DROP, 16, 0.8f, 1}, {SECTION_OUTRO, 8, 0.3f, 0}};
+static const Part FORM_DUBSTEP_GROOVE[] = {{SECTION_INTRO, 8, 0.3f, 0},  {SECTION_VERSE, 8, 0.5f, 2},
+                                           {SECTION_BUILD, 8, 0.75f, 0}, {SECTION_DROP, 16, 1.0f, 0},
+                                           {SECTION_DROP, 16, 1.0f, 1},  {SECTION_OUTRO, 8, 0.3f, 0}};
+static const Part FORM_DUB_DEEP[] = {{SECTION_INTRO, 8, 0.3f, 0},  {SECTION_VERSE, 8, 0.5f, 2},
+                                     {SECTION_DROP, 16, 0.75f, 0}, {SECTION_BREAK, 16, 0.35f, 1},
+                                     {SECTION_DROP, 16, 0.8f, 1},  {SECTION_OUTRO, 8, 0.3f, 0}};
 
 typedef struct {
     int bpm_lo, bpm_hi;
@@ -258,133 +276,305 @@ typedef struct {
 #define FORM(f) {(f), COUNT(f)}
 
 static const MoodSpec MOODS[MOOD_COUNT] = {
-    [MOOD_KEYGEN] = {.bpm_lo = 125, .bpm_hi = 150, .scales = {[SCALE_MAJOR] = 35, [SCALE_MINOR] = 45, [SCALE_DORIAN] = 20},
-                     .chord_bars = 1, .forms = {FORM(FORM_CHIP), FORM(FORM_CHIP_RUSH)},
-                     .voices = {[SL_KICK] = V(VOICE_KICK_CHIP), [SL_SNARE] = V(VOICE_SNARE_CHIP), [SL_HAT] = V(VOICE_HAT_CHIP),
-                                [SL_BASS] = V(VOICE_BASS_CHIP), [SL_LEAD] = V(VOICE_LEAD_CHIP), [SL_ARP] = V(VOICE_ARP_CHIP),
+    [MOOD_KEYGEN] = {.bpm_lo = 125,
+                     .bpm_hi = 150,
+                     .scales = {[SCALE_MAJOR] = 35, [SCALE_MINOR] = 45, [SCALE_DORIAN] = 20},
+                     .chord_bars = 1,
+                     .forms = {FORM(FORM_CHIP), FORM(FORM_CHIP_RUSH)},
+                     .voices = {[SL_KICK] = V(VOICE_KICK_CHIP),
+                                [SL_SNARE] = V(VOICE_SNARE_CHIP),
+                                [SL_HAT] = V(VOICE_HAT_CHIP),
+                                [SL_BASS] = V(VOICE_BASS_CHIP),
+                                [SL_LEAD] = V(VOICE_LEAD_CHIP),
+                                [SL_ARP] = V(VOICE_ARP_CHIP),
                                 [SL_SUB] = V(VOICE_BASS_CHIP)},
-                     .mix = {.reverb_size = 0.5f, .reverb_damping = 0.5f, .reverb_mix = 0.5f, .delay_beats = 0.75f,
-                             .delay_feedback = 0.3f, .delay_mix = 0.45f, .duck_depth = 0, .duck_release = 0.1f,
-                             .drive = 0.08f, .pre_gain = 0.85f, .master_gain = 0.667f},
+                     .mix = {.reverb_size = 0.5f,
+                             .reverb_damping = 0.5f,
+                             .reverb_mix = 0.5f,
+                             .delay_beats = 0.75f,
+                             .delay_feedback = 0.3f,
+                             .delay_mix = 0.45f,
+                             .duck_depth = 0,
+                             .duck_release = 0.1f,
+                             .drive = 0.08f,
+                             .pre_gain = 0.85f,
+                             .master_gain = 0.667f},
                      .lift_chance = 25},
-    [MOOD_AMBIENT] = {.bpm_lo = 62, .bpm_hi = 84,
+
+    [MOOD_AMBIENT] = {.bpm_lo = 62,
+                      .bpm_hi = 84,
                       .scales = {[SCALE_MAJOR] = 30, [SCALE_LYDIAN] = 30, [SCALE_DORIAN] = 20, [SCALE_MINOR] = 20},
-                      .chord_bars = 2, .forms = {FORM(FORM_AMBIENT), FORM(FORM_AMBIENT_TIDE)},
-                      .voices = {[SL_KICK] = V(VOICE_KICK_SOFT), [SL_SHAKER] = V(VOICE_SHAKER), [SL_BASS] = V(VOICE_BASS_SUB),
-                                 [SL_PAD] = V(VOICE_PAD_GLASS, VOICE_PAD_WARM, VOICE_PAD_CHOIR, VOICE_PAD_FM, VOICE_PAD_STRINGS),
+                      .chord_bars = 2,
+                      .forms = {FORM(FORM_AMBIENT), FORM(FORM_AMBIENT_TIDE)},
+                      .voices = {[SL_KICK] = V(VOICE_KICK_SOFT),
+                                 [SL_SHAKER] = V(VOICE_SHAKER),
+                                 [SL_BASS] = V(VOICE_BASS_SUB),
+                                 [SL_PAD] = V(VOICE_PAD_GLASS, VOICE_PAD_WARM, VOICE_PAD_CHOIR, VOICE_PAD_FM,
+                                              VOICE_PAD_STRINGS),
                                  [SL_LEAD] = V(VOICE_LEAD_SINE, VOICE_LEAD_VOX, VOICE_LEAD_FM),
                                  [SL_ARP] = V(VOICE_HARP, VOICE_PLUCK_KS, VOICE_MALLET),
-                                 [SL_BELL] = V(VOICE_BELL_FM, VOICE_CELESTA, VOICE_VIBES), [SL_TEXTURE] = V(VOICE_FX_WIND)},
-                      .mix = {.reverb_size = 0.86f, .reverb_damping = 0.45f, .reverb_mix = 1.0f, .delay_beats = 1.5f,
-                              .delay_feedback = 0.48f, .delay_mix = 0.55f, .duck_depth = 0, .duck_release = 0.2f,
-                              .drive = 0, .pre_gain = 0.6f, .master_gain = 0.987f},
+                                 [SL_BELL] = V(VOICE_BELL_FM, VOICE_CELESTA, VOICE_VIBES),
+                                 [SL_TEXTURE] = V(VOICE_FX_WIND)},
+                      .mix = {.reverb_size = 0.86f,
+                              .reverb_damping = 0.45f,
+                              .reverb_mix = 1.0f,
+                              .delay_beats = 1.5f,
+                              .delay_feedback = 0.48f,
+                              .delay_mix = 0.55f,
+                              .duck_depth = 0,
+                              .duck_release = 0.2f,
+                              .drive = 0,
+                              .pre_gain = 0.6f,
+                              .master_gain = 0.987f},
                       .lift_chance = 0},
-    [MOOD_SYNTHWAVE] = {.bpm_lo = 92, .bpm_hi = 116,
+
+    [MOOD_SYNTHWAVE] = {.bpm_lo = 92,
+                        .bpm_hi = 116,
                         .scales = {[SCALE_MINOR] = 60, [SCALE_DORIAN] = 25, [SCALE_HARMONIC_MINOR] = 15},
-                        .chord_bars = 1, .forms = {FORM(FORM_EDM), FORM(FORM_EDM_JOURNEY)},
-                        .voices = {[SL_KICK] = V(VOICE_KICK), [SL_SNARE] = V(VOICE_SNARE_GATED), [SL_HAT] = V(VOICE_HAT_CLOSED),
-                                   [SL_OHAT] = V(VOICE_HAT_OPEN), [SL_TOM] = V(VOICE_TOM), [SL_CRASH] = V(VOICE_CRASH),
+                        .chord_bars = 1,
+                        .forms = {FORM(FORM_EDM), FORM(FORM_EDM_JOURNEY)},
+                        .voices = {[SL_KICK] = V(VOICE_KICK),
+                                   [SL_SNARE] = V(VOICE_SNARE_GATED),
+                                   [SL_HAT] = V(VOICE_HAT_CLOSED),
+                                   [SL_OHAT] = V(VOICE_HAT_OPEN),
+                                   [SL_TOM] = V(VOICE_TOM),
+                                   [SL_CRASH] = V(VOICE_CRASH),
                                    [SL_BASS] = V(VOICE_BASS_SAW, VOICE_BASS_FM, VOICE_BASS_SQUARE),
                                    [SL_PAD] = V(VOICE_PAD_SUPERSAW, VOICE_PAD_WARM, VOICE_PAD_STRINGS, VOICE_PAD_FM),
                                    [SL_LEAD] = V(VOICE_LEAD_SAW, VOICE_LEAD_SQUARE, VOICE_LEAD_FM, VOICE_LEAD_VOX),
                                    [SL_ARP] = V(VOICE_ARP_PLUCK, VOICE_MALLET),
-                                   [SL_BELL] = V(VOICE_BELL_FM, VOICE_VIBES), [SL_RISER] = V(VOICE_FX_RISER),
-                                   [SL_IMPACT] = V(VOICE_FX_IMPACT), [SL_REVERSE] = V(VOICE_FX_REVERSE_CRASH),
-                                   [SL_DOWN] = V(VOICE_FX_DOWNLIFTER), [SL_SUB] = V(VOICE_BASS_SUB)},
-                        .mix = {.reverb_size = 0.8f, .reverb_damping = 0.42f, .reverb_mix = 0.85f, .delay_beats = 0.75f,
-                                .delay_feedback = 0.42f, .delay_mix = 0.6f, .duck_depth = 0.45f, .duck_release = 0.14f,
-                                .drive = 0.18f, .pre_gain = 0.9f, .master_gain = 0.774f},
+                                   [SL_BELL] = V(VOICE_BELL_FM, VOICE_VIBES),
+                                   [SL_RISER] = V(VOICE_FX_RISER),
+                                   [SL_IMPACT] = V(VOICE_FX_IMPACT),
+                                   [SL_REVERSE] = V(VOICE_FX_REVERSE_CRASH),
+                                   [SL_DOWN] = V(VOICE_FX_DOWNLIFTER),
+                                   [SL_SUB] = V(VOICE_BASS_SUB)},
+                        .mix = {.reverb_size = 0.8f,
+                                .reverb_damping = 0.42f,
+                                .reverb_mix = 0.85f,
+                                .delay_beats = 0.75f,
+                                .delay_feedback = 0.42f,
+                                .delay_mix = 0.6f,
+                                .duck_depth = 0.45f,
+                                .duck_release = 0.14f,
+                                .drive = 0.18f,
+                                .pre_gain = 0.9f,
+                                .master_gain = 0.774f},
                         .lift_chance = 30},
-    [MOOD_LOFI] = {.bpm_lo = 70, .bpm_hi = 88, .swing_lo = 2, .swing_hi = 3, .swing_eighths = 1,
+
+    [MOOD_LOFI] = {.bpm_lo = 70,
+                   .bpm_hi = 88,
+                   .swing_lo = 2,
+                   .swing_hi = 3,
+                   .swing_eighths = 1,
                    .scales = {[SCALE_DORIAN] = 35, [SCALE_MAJOR] = 25, [SCALE_MINOR] = 25, [SCALE_MIXOLYDIAN] = 15},
-                   .chord_bars = 1, .forms = {FORM(FORM_LOFI), FORM(FORM_LOFI_TAPE)},
-                   .voices = {[SL_KICK] = V(VOICE_KICK_SOFT, VOICE_KICK), [SL_SNARE] = V(VOICE_SNARE_BRUSH, VOICE_SNARE),
-                              [SL_HAT] = V(VOICE_HAT_CLOSED), [SL_RIM] = V(VOICE_RIM), [SL_SHAKER] = V(VOICE_SHAKER),
-                              [SL_BASS] = V(VOICE_BASS_SUB, VOICE_BASS_FM, VOICE_BASS_SQUARE), [SL_KEYS] = V(VOICE_KEYS_EPIANO),
+                   .chord_bars = 1,
+                   .forms = {FORM(FORM_LOFI), FORM(FORM_LOFI_TAPE)},
+                   .voices = {[SL_KICK] = V(VOICE_KICK_SOFT, VOICE_KICK),
+                              [SL_SNARE] = V(VOICE_SNARE_BRUSH, VOICE_SNARE),
+                              [SL_HAT] = V(VOICE_HAT_CLOSED),
+                              [SL_RIM] = V(VOICE_RIM),
+                              [SL_SHAKER] = V(VOICE_SHAKER),
+                              [SL_BASS] = V(VOICE_BASS_SUB, VOICE_BASS_FM, VOICE_BASS_SQUARE),
+                              [SL_KEYS] = V(VOICE_KEYS_EPIANO),
                               [SL_LEAD] = V(VOICE_LEAD_SINE, VOICE_PLUCK_KS, VOICE_BELL_FM, VOICE_VIBES, VOICE_MALLET),
                               [SL_BELL] = V(VOICE_CELESTA, VOICE_VIBES),
                               [SL_TEXTURE] = V(VOICE_FX_CRACKLE)},
-                   .mix = {.reverb_size = 0.62f, .reverb_damping = 0.6f, .reverb_mix = 0.6f, .delay_beats = 0.75f,
-                           .delay_feedback = 0.3f, .delay_mix = 0.35f, .duck_depth = 0.18f, .duck_release = 0.16f,
-                           .drive = 0.2f, .pre_gain = 0.9f, .master_gain = 0.813f},
+                   .mix = {.reverb_size = 0.62f,
+                           .reverb_damping = 0.6f,
+                           .reverb_mix = 0.6f,
+                           .delay_beats = 0.75f,
+                           .delay_feedback = 0.3f,
+                           .delay_mix = 0.35f,
+                           .duck_depth = 0.18f,
+                           .duck_release = 0.16f,
+                           .drive = 0.2f,
+                           .pre_gain = 0.9f,
+                           .master_gain = 0.813f},
                    .lift_chance = 0},
-    [MOOD_TRANCE] = {.bpm_lo = 132, .bpm_hi = 140,
-                     .scales = {[SCALE_MINOR] = 55, [SCALE_HARMONIC_MINOR] = 15, [SCALE_MAJOR] = 20, [SCALE_DORIAN] = 10},
-                     .chord_bars = 2, .forms = {FORM(FORM_TRANCE), FORM(FORM_TRANCE_DIRECT)},
-                     .voices = {[SL_KICK] = V(VOICE_KICK), [SL_SNARE] = V(VOICE_SNARE), [SL_CLAP] = V(VOICE_CLAP),
-                                [SL_HAT] = V(VOICE_HAT_CLOSED), [SL_OHAT] = V(VOICE_HAT_OPEN), [SL_CRASH] = V(VOICE_CRASH),
-                                [SL_BASS] = V(VOICE_BASS_SAW, VOICE_BASS_FM, VOICE_BASS_ACID),
-                                [SL_PAD] = V(VOICE_PAD_SUPERSAW, VOICE_PAD_STRINGS), [SL_KEYS] = V(VOICE_STAB_SAW),
-                                [SL_LEAD] = V(VOICE_LEAD_SAW, VOICE_LEAD_FM, VOICE_LEAD_VOX), [SL_ARP] = V(VOICE_ARP_PLUCK, VOICE_MALLET),
-                                [SL_BELL] = V(VOICE_BELL_FM, VOICE_PLUCK_KS, VOICE_CELESTA, VOICE_VIBES), [SL_RISER] = V(VOICE_FX_RISER),
-                                [SL_DOWN] = V(VOICE_FX_DOWNLIFTER), [SL_IMPACT] = V(VOICE_FX_IMPACT),
-                                [SL_REVERSE] = V(VOICE_FX_REVERSE_CRASH), [SL_SUB] = V(VOICE_BASS_SUB)},
-                     .mix = {.reverb_size = 0.86f, .reverb_damping = 0.35f, .reverb_mix = 0.9f, .delay_beats = 0.75f,
-                             .delay_feedback = 0.45f, .delay_mix = 0.55f, .duck_depth = 0.6f, .duck_release = 0.12f,
-                             .drive = 0.2f, .pre_gain = 0.85f, .master_gain = 0.794f},
-                     .lift_chance = 45},
+
+    [MOOD_TRANCE] =
+        {.bpm_lo = 132,
+         .bpm_hi = 140,
+         .scales = {[SCALE_MINOR] = 55, [SCALE_HARMONIC_MINOR] = 15, [SCALE_MAJOR] = 20, [SCALE_DORIAN] = 10},
+         .chord_bars = 2,
+         .forms = {FORM(FORM_TRANCE), FORM(FORM_TRANCE_DIRECT)},
+         .voices = {[SL_KICK] = V(VOICE_KICK),
+                    [SL_SNARE] = V(VOICE_SNARE),
+                    [SL_CLAP] = V(VOICE_CLAP),
+                    [SL_HAT] = V(VOICE_HAT_CLOSED),
+                    [SL_OHAT] = V(VOICE_HAT_OPEN),
+                    [SL_CRASH] = V(VOICE_CRASH),
+                    [SL_BASS] = V(VOICE_BASS_SAW, VOICE_BASS_FM, VOICE_BASS_ACID),
+                    [SL_PAD] = V(VOICE_PAD_SUPERSAW, VOICE_PAD_STRINGS),
+                    [SL_KEYS] = V(VOICE_STAB_SAW),
+                    [SL_LEAD] = V(VOICE_LEAD_SAW, VOICE_LEAD_FM, VOICE_LEAD_VOX),
+                    [SL_ARP] = V(VOICE_ARP_PLUCK, VOICE_MALLET),
+                    [SL_BELL] = V(VOICE_BELL_FM, VOICE_PLUCK_KS, VOICE_CELESTA, VOICE_VIBES),
+                    [SL_RISER] = V(VOICE_FX_RISER),
+                    [SL_DOWN] = V(VOICE_FX_DOWNLIFTER),
+                    [SL_IMPACT] = V(VOICE_FX_IMPACT),
+                    [SL_REVERSE] = V(VOICE_FX_REVERSE_CRASH),
+                    [SL_SUB] = V(VOICE_BASS_SUB)},
+         .mix = {.reverb_size = 0.86f,
+                 .reverb_damping = 0.35f,
+                 .reverb_mix = 0.9f,
+                 .delay_beats = 0.75f,
+                 .delay_feedback = 0.45f,
+                 .delay_mix = 0.55f,
+                 .duck_depth = 0.6f,
+                 .duck_release = 0.12f,
+                 .drive = 0.2f,
+                 .pre_gain = 0.85f,
+                 .master_gain = 0.794f},
+         .lift_chance = 45},
     // Four voices, as on an NES: two pulses, the triangle and the noise channel, played dry.
-    [MOOD_8BIT] = {.bpm_lo = 118, .bpm_hi = 150,
+
+    [MOOD_8BIT] = {.bpm_lo = 118,
+                   .bpm_hi = 150,
                    .scales = {[SCALE_MAJOR] = 45, [SCALE_MINOR] = 25, [SCALE_DORIAN] = 15, [SCALE_MIXOLYDIAN] = 15},
-                   .chord_bars = 1, .forms = {FORM(FORM_8BIT), FORM(FORM_8BIT_LOOP)},
-                   .voices = {[SL_KICK] = V(VOICE_KICK_CHIP), [SL_SNARE] = V(VOICE_SNARE_CHIP), [SL_HAT] = V(VOICE_HAT_CHIP),
-                              [SL_BASS] = V(VOICE_BASS_CHIP), [SL_LEAD] = V(VOICE_LEAD_CHIP), [SL_ARP] = V(VOICE_ARP_CHIP)},
-                   .mix = {.reverb_size = 0.3f, .reverb_damping = 0.6f, .reverb_mix = 0.12f, .delay_beats = 0.75f,
-                           .delay_feedback = 0, .delay_mix = 0, .duck_depth = 0, .duck_release = 0.1f,
-                           .drive = 0, .pre_gain = 0.85f, .master_gain = 0.75f},
+                   .chord_bars = 1,
+                   .forms = {FORM(FORM_8BIT), FORM(FORM_8BIT_LOOP)},
+                   .voices = {[SL_KICK] = V(VOICE_KICK_CHIP),
+                              [SL_SNARE] = V(VOICE_SNARE_CHIP),
+                              [SL_HAT] = V(VOICE_HAT_CHIP),
+                              [SL_BASS] = V(VOICE_BASS_CHIP),
+                              [SL_LEAD] = V(VOICE_LEAD_CHIP),
+                              [SL_ARP] = V(VOICE_ARP_CHIP)},
+                   .mix = {.reverb_size = 0.3f,
+                           .reverb_damping = 0.6f,
+                           .reverb_mix = 0.12f,
+                           .delay_beats = 0.75f,
+                           .delay_feedback = 0,
+                           .delay_mix = 0,
+                           .duck_depth = 0,
+                           .duck_release = 0.1f,
+                           .drive = 0,
+                           .pre_gain = 0.85f,
+                           .master_gain = 0.75f},
                    .lift_chance = 0},
     // The SNES's sampled band: strings and harp under a flute, slap bass and orchestra hits, all through its echo.
-    [MOOD_16BIT] = {.bpm_lo = 92, .bpm_hi = 136,
-                    .scales = {[SCALE_MAJOR] = 35, [SCALE_MINOR] = 25, [SCALE_DORIAN] = 15, [SCALE_LYDIAN] = 10,
-                               [SCALE_MIXOLYDIAN] = 10, [SCALE_HARMONIC_MINOR] = 5},
-                    .chord_bars = 1, .forms = {FORM(FORM_16BIT), FORM(FORM_16BIT_QUEST)},
-                    .voices = {[SL_KICK] = V(VOICE_KICK), [SL_SNARE] = V(VOICE_SNARE), [SL_HAT] = V(VOICE_HAT_CLOSED),
-                               [SL_TOM] = V(VOICE_TOM), [SL_CRASH] = V(VOICE_CRASH), [SL_BASS] = V(VOICE_BASS_SLAP),
-                               [SL_PAD] = V(VOICE_PAD_STRINGS, VOICE_PAD_CHOIR), [SL_LEAD] = V(VOICE_FLUTE),
-                               [SL_ARP] = V(VOICE_HARP), [SL_BELL] = V(VOICE_BELL_FM, VOICE_CELESTA),
+
+    [MOOD_16BIT] = {.bpm_lo = 92,
+                    .bpm_hi = 136,
+                    .scales = {[SCALE_MAJOR] = 35,
+                               [SCALE_MINOR] = 25,
+                               [SCALE_DORIAN] = 15,
+                               [SCALE_LYDIAN] = 10,
+                               [SCALE_MIXOLYDIAN] = 10,
+                               [SCALE_HARMONIC_MINOR] = 5},
+                    .chord_bars = 1,
+                    .forms = {FORM(FORM_16BIT), FORM(FORM_16BIT_QUEST)},
+                    .voices = {[SL_KICK] = V(VOICE_KICK),
+                               [SL_SNARE] = V(VOICE_SNARE),
+                               [SL_HAT] = V(VOICE_HAT_CLOSED),
+                               [SL_TOM] = V(VOICE_TOM),
+                               [SL_CRASH] = V(VOICE_CRASH),
+                               [SL_BASS] = V(VOICE_BASS_SLAP),
+                               [SL_PAD] = V(VOICE_PAD_STRINGS, VOICE_PAD_CHOIR),
+                               [SL_LEAD] = V(VOICE_FLUTE),
+                               [SL_ARP] = V(VOICE_HARP),
+                               [SL_BELL] = V(VOICE_BELL_FM, VOICE_CELESTA),
                                [SL_KEYS] = V(VOICE_ORCH_HIT)},
-                    .mix = {.reverb_size = 0.4f, .reverb_damping = 0.6f, .reverb_mix = 0.15f, .delay_beats = 0.375f,
-                            .delay_feedback = 0.45f, .delay_mix = 0.4f, .duck_depth = 0, .duck_release = 0.1f,
-                            .drive = 0.05f, .pre_gain = 0.85f, .master_gain = 1.05f},
+                    .mix = {.reverb_size = 0.4f,
+                            .reverb_damping = 0.6f,
+                            .reverb_mix = 0.15f,
+                            .delay_beats = 0.375f,
+                            .delay_feedback = 0.45f,
+                            .delay_mix = 0.4f,
+                            .duck_depth = 0,
+                            .duck_release = 0.1f,
+                            .drive = 0.05f,
+                            .pre_gain = 0.85f,
+                            .master_gain = 1.05f},
                     .lift_chance = 20},
-    [MOOD_MUSICBOX] = {.bpm_lo = 72, .bpm_hi = 100, .meter = 3,
-                       .scales = {[SCALE_MAJOR] = 50, [SCALE_LYDIAN] = 20, [SCALE_HARMONIC_MINOR] = 15, [SCALE_MINOR] = 15},
-                       .chord_bars = 1, .forms = {FORM(FORM_WALTZ), FORM(FORM_WALTZ_ROUND)},
-                       .voices = {[SL_LEAD] = V(VOICE_MUSICBOX), [SL_KEYS] = V(VOICE_CELESTA, VOICE_VIBES),
-                                  [SL_BASS] = V(VOICE_HARP, VOICE_PLUCK_KS), [SL_ARP] = V(VOICE_HARP, VOICE_MALLET),
-                                  [SL_PAD] = V(VOICE_PAD_GLASS, VOICE_PAD_CHOIR, VOICE_PAD_STRINGS),
-                                  [SL_BELL] = V(VOICE_BELL_FM, VOICE_CELESTA, VOICE_VIBES)},
-                       .mix = {.reverb_size = 0.88f, .reverb_damping = 0.5f, .reverb_mix = 1.0f, .delay_beats = 1.0f,
-                               .delay_feedback = 0.25f, .delay_mix = 0.25f, .duck_depth = 0, .duck_release = 0.2f,
-                               .drive = 0, .pre_gain = 0.7f, .master_gain = 0.933f},
-                       .lift_chance = 20},
-    [MOOD_DUB] = {.bpm_lo = 116, .bpm_hi = 124, .swing_lo = 0, .swing_hi = 1,
+
+    [MOOD_MUSICBOX] =
+        {.bpm_lo = 72,
+         .bpm_hi = 100,
+         .meter = 3,
+         .scales = {[SCALE_MAJOR] = 50, [SCALE_LYDIAN] = 20, [SCALE_HARMONIC_MINOR] = 15, [SCALE_MINOR] = 15},
+         .chord_bars = 1,
+         .forms = {FORM(FORM_WALTZ), FORM(FORM_WALTZ_ROUND)},
+         .voices = {[SL_LEAD] = V(VOICE_MUSICBOX),
+                    [SL_KEYS] = V(VOICE_CELESTA, VOICE_VIBES),
+                    [SL_BASS] = V(VOICE_HARP, VOICE_PLUCK_KS),
+                    [SL_ARP] = V(VOICE_HARP, VOICE_MALLET),
+                    [SL_PAD] = V(VOICE_PAD_GLASS, VOICE_PAD_CHOIR, VOICE_PAD_STRINGS),
+                    [SL_BELL] = V(VOICE_BELL_FM, VOICE_CELESTA, VOICE_VIBES)},
+         .mix = {.reverb_size = 0.88f,
+                 .reverb_damping = 0.5f,
+                 .reverb_mix = 1.0f,
+                 .delay_beats = 1.0f,
+                 .delay_feedback = 0.25f,
+                 .delay_mix = 0.25f,
+                 .duck_depth = 0,
+                 .duck_release = 0.2f,
+                 .drive = 0,
+                 .pre_gain = 0.7f,
+                 .master_gain = 0.933f},
+         .lift_chance = 20},
+
+    [MOOD_DUB] = {.bpm_lo = 116,
+                  .bpm_hi = 124,
+                  .swing_lo = 0,
+                  .swing_hi = 1,
                   .scales = {[SCALE_MINOR] = 45, [SCALE_DORIAN] = 45, [SCALE_PHRYGIAN] = 10},
-                  .chord_bars = 2, .forms = {FORM(FORM_DUB), FORM(FORM_DUB_DEEP)},
-                  .voices = {[SL_KICK] = V(VOICE_KICK, VOICE_KICK_SOFT), [SL_RIM] = V(VOICE_RIM),
-                             [SL_HAT] = V(VOICE_HAT_CLOSED), [SL_SHAKER] = V(VOICE_SHAKER),
-                             [SL_BASS] = V(VOICE_BASS_SUB, VOICE_BASS_SQUARE), [SL_KEYS] = V(VOICE_STAB_DUB),
+                  .chord_bars = 2,
+                  .forms = {FORM(FORM_DUB), FORM(FORM_DUB_DEEP)},
+                  .voices = {[SL_KICK] = V(VOICE_KICK, VOICE_KICK_SOFT),
+                             [SL_RIM] = V(VOICE_RIM),
+                             [SL_HAT] = V(VOICE_HAT_CLOSED),
+                             [SL_SHAKER] = V(VOICE_SHAKER),
+                             [SL_BASS] = V(VOICE_BASS_SUB, VOICE_BASS_SQUARE),
+                             [SL_KEYS] = V(VOICE_STAB_DUB),
                              [SL_PAD] = V(VOICE_PAD_WARM, VOICE_PAD_CHOIR, VOICE_PAD_FM),
                              [SL_BELL] = V(VOICE_BELL_FM, VOICE_PLUCK_KS, VOICE_VIBES, VOICE_MALLET),
                              [SL_TEXTURE] = V(VOICE_FX_CRACKLE, VOICE_FX_WIND)},
-                  .mix = {.reverb_size = 0.82f, .reverb_damping = 0.55f, .reverb_mix = 0.85f, .delay_beats = 0.75f,
-                          .delay_feedback = 0.62f, .delay_mix = 0.75f, .duck_depth = 0.3f, .duck_release = 0.18f,
-                          .drive = 0.1f, .pre_gain = 0.85f, .master_gain = 1.033f},
+                  .mix = {.reverb_size = 0.82f,
+                          .reverb_damping = 0.55f,
+                          .reverb_mix = 0.85f,
+                          .delay_beats = 0.75f,
+                          .delay_feedback = 0.62f,
+                          .delay_mix = 0.75f,
+                          .duck_depth = 0.3f,
+                          .duck_release = 0.18f,
+                          .drive = 0.1f,
+                          .pre_gain = 0.85f,
+                          .master_gain = 1.033f},
                   .lift_chance = 0},
-    [MOOD_DUBSTEP] = {.bpm_lo = 138, .bpm_hi = 142,
+
+    [MOOD_DUBSTEP] = {.bpm_lo = 138,
+                      .bpm_hi = 142,
                       .scales = {[SCALE_MINOR] = 45, [SCALE_PHRYGIAN] = 35, [SCALE_HARMONIC_MINOR] = 20},
-                      .chord_bars = 2, .forms = {FORM(FORM_DUBSTEP), FORM(FORM_DUBSTEP_GROOVE)},
-                      .voices = {[SL_KICK] = V(VOICE_KICK), [SL_SNARE] = V(VOICE_SNARE, VOICE_SNARE_GATED), [SL_CLAP] = V(VOICE_CLAP),
-                                 [SL_HAT] = V(VOICE_HAT_CLOSED), [SL_OHAT] = V(VOICE_HAT_OPEN), [SL_CRASH] = V(VOICE_CRASH),
-                                 [SL_BASS] = V(VOICE_BASS_WOBBLE), [SL_SUB] = V(VOICE_BASS_SUB),
+                      .chord_bars = 2,
+                      .forms = {FORM(FORM_DUBSTEP), FORM(FORM_DUBSTEP_GROOVE)},
+                      .voices = {[SL_KICK] = V(VOICE_KICK),
+                                 [SL_SNARE] = V(VOICE_SNARE, VOICE_SNARE_GATED),
+                                 [SL_CLAP] = V(VOICE_CLAP),
+                                 [SL_HAT] = V(VOICE_HAT_CLOSED),
+                                 [SL_OHAT] = V(VOICE_HAT_OPEN),
+                                 [SL_CRASH] = V(VOICE_CRASH),
+                                 [SL_BASS] = V(VOICE_BASS_WOBBLE),
+                                 [SL_SUB] = V(VOICE_BASS_SUB),
                                  [SL_PAD] = V(VOICE_PAD_WARM, VOICE_PAD_STRINGS, VOICE_PAD_CHOIR, VOICE_PAD_FM),
                                  [SL_LEAD] = V(VOICE_LEAD_SAW, VOICE_LEAD_FM, VOICE_LEAD_VOX, VOICE_LEAD_SQUARE),
-                                 [SL_BELL] = V(VOICE_BELL_FM, VOICE_PLUCK_KS, VOICE_VIBES), [SL_RISER] = V(VOICE_FX_RISER),
-                                 [SL_DOWN] = V(VOICE_FX_DOWNLIFTER), [SL_IMPACT] = V(VOICE_FX_IMPACT),
+                                 [SL_BELL] = V(VOICE_BELL_FM, VOICE_PLUCK_KS, VOICE_VIBES),
+                                 [SL_RISER] = V(VOICE_FX_RISER),
+                                 [SL_DOWN] = V(VOICE_FX_DOWNLIFTER),
+                                 [SL_IMPACT] = V(VOICE_FX_IMPACT),
                                  [SL_REVERSE] = V(VOICE_FX_REVERSE_CRASH)},
-                      .mix = {.reverb_size = 0.75f, .reverb_damping = 0.45f, .reverb_mix = 0.8f, .delay_beats = 0.75f,
-                              .delay_feedback = 0.4f, .delay_mix = 0.45f, .duck_depth = 0.5f, .duck_release = 0.14f,
-                              .drive = 0.28f, .pre_gain = 0.85f, .master_gain = 0.708f},
+                      .mix = {.reverb_size = 0.75f,
+                              .reverb_damping = 0.45f,
+                              .reverb_mix = 0.8f,
+                              .delay_beats = 0.75f,
+                              .delay_feedback = 0.4f,
+                              .delay_mix = 0.45f,
+                              .duck_depth = 0.5f,
+                              .duck_release = 0.14f,
+                              .drive = 0.28f,
+                              .pre_gain = 0.85f,
+                              .master_gain = 0.708f},
                       .lift_chance = 20},
 };
 
@@ -497,10 +687,12 @@ static const int PROG_MAJOR[][4] = {{0, 4, 5, 3}, {0, 5, 3, 4}, {3, 4, 2, 5}, {0
 static const int PROG_LYDIAN[][4] = {{0, 1, 0, 1}, {0, 1, 4, 1}, {0, 4, 1, 0}, {5, 1, 0, 0}, {0, 2, 1, 0}};
 static const int PROG_LOFI_MAJOR[][4] = {{1, 4, 0, 5}, {0, 5, 1, 4}, {3, 2, 1, 0}, {5, 1, 4, 0}, {3, 4, 2, 5}};
 static const int PROG_LOFI_MINOR[][4] = {{0, 3, 0, 3}, {0, 3, 6, 2}, {3, 6, 2, 5}, {0, 5, 3, 4}, {5, 6, 0, 0}};
-static const int PROG_TRANCE[][4] = {{0, 5, 2, 6}, {5, 6, 0, 0}, {0, 5, 3, 6}, {5, 3, 0, 6}, {0, 3, 5, 6}, {0, 6, 5, 4}};
+static const int PROG_TRANCE[][4] = {{0, 5, 2, 6}, {5, 6, 0, 0}, {0, 5, 3, 6},
+                                     {5, 3, 0, 6}, {0, 3, 5, 6}, {0, 6, 5, 4}};
 // Dub sits on its home chord and only leans away.
 static const int PROG_DUB[][4] = {{0, 0, 3, 0}, {0, 6, 0, 6}, {0, 0, 5, 6}, {0, 3, 0, 6}, {0, 0, 0, 3}, {0, 5, 0, 5}};
-static const int PROG_WALTZ_MAJOR[][4] = {{0, 3, 4, 0}, {0, 5, 3, 4}, {0, 4, 5, 3}, {0, 1, 4, 0}, {0, 3, 0, 4}, {0, 5, 1, 4}};
+static const int PROG_WALTZ_MAJOR[][4] = {{0, 3, 4, 0}, {0, 5, 3, 4}, {0, 4, 5, 3},
+                                          {0, 1, 4, 0}, {0, 3, 0, 4}, {0, 5, 1, 4}};
 // Phrygian's flat second is the darkest step there is, and dubstep leans on it.
 static const int PROG_PHRYGIAN[][4] = {{0, 1, 0, 1}, {0, 0, 1, 0}, {0, 5, 1, 0}, {0, 6, 1, 0}, {0, 1, 6, 0}};
 static const int PROG_WALTZ_MINOR[][4] = {{0, 3, 4, 0}, {0, 5, 3, 4}, {0, 3, 6, 2}, {0, 4, 0, 4}};
@@ -701,7 +893,10 @@ static void make_instruments(Composer *c) {
 // One bar of hits, one character per step: X accent, x normal, o ghost, . rest.
 static void drum_line(Composer *c, int bar, int ch, Slot slot, const char *pattern, int volume) {
     for (int row = 0; pattern[row] && row < c->rows_per_bar; row++) {
-        int v = pattern[row] == 'X' ? volume : pattern[row] == 'x' ? volume * 3 / 4 : pattern[row] == 'o' ? volume * 2 / 5 : 0;
+        int v = pattern[row] == 'X'   ? volume
+                : pattern[row] == 'x' ? volume * 3 / 4
+                : pattern[row] == 'o' ? volume * 2 / 5
+                                      : 0;
         if (v) drum(c, bar, row, ch, slot, v);
     }
 }
@@ -744,11 +939,16 @@ static void drums_build(Composer *c, int bar) {
     if (from_end > 2) drum_line(c, bar, CH_HAT, SL_HAT, "..x...x...x...x.", 30);
 }
 
-static const char *const SYNTH_KICKS[] = {"x...x...x...x...", "x...x...x...x.x.", "x...x...x..xx...", "x..x..x.x...x..."};
-static const char *const SYNTH_KICKS_CALM[] = {"x.......x.......", "x.........x.....", "x.......x..x....", "x.....x...x....."};
-static const char *const SYNTH_SNARES[] = {"....x.......x...", "....x.......x..o", "....x..o....x...", "....x.......xo.."};
-static const char *const SYNTH_HATS[] = {"x.X.x.X.x.X.x.X.", "xxXxxxXxxxXxxxXx", "..X...X...X...X.", "x.XxX.X.x.XxX.X."};
-static const char *const SYNTH_HATS_CALM[] = {"x.x.x.x.x.x.x.x.", "x...x...x...x...", "..x...x...x...x.", "x.xxx.x.x.xxx.x."};
+static const char *const SYNTH_KICKS[] = {"x...x...x...x...", "x...x...x...x.x.", "x...x...x..xx...",
+                                          "x..x..x.x...x..."};
+static const char *const SYNTH_KICKS_CALM[] = {"x.......x.......", "x.........x.....", "x.......x..x....",
+                                               "x.....x...x....."};
+static const char *const SYNTH_SNARES[] = {"....x.......x...", "....x.......x..o", "....x..o....x...",
+                                           "....x.......xo.."};
+static const char *const SYNTH_HATS[] = {"x.X.x.X.x.X.x.X.", "xxXxxxXxxxXxxxXx", "..X...X...X...X.",
+                                         "x.XxX.X.x.XxX.X."};
+static const char *const SYNTH_HATS_CALM[] = {"x.x.x.x.x.x.x.x.", "x...x...x...x...", "..x...x...x...x.",
+                                              "x.xxx.x.x.xxx.x."};
 
 static void drums_synthwave(Composer *c, int bar) {
     SectionKind k = c->kind_of[bar];
@@ -766,7 +966,8 @@ static void drums_synthwave(Composer *c, int bar) {
         const char *kick = full ? SYNTH_KICKS[groove(c, G_KICK, bar)] : SYNTH_KICKS_CALM[groove(c, G_KICK_CALM, bar)];
         const char *hats = full ? SYNTH_HATS[groove(c, G_HATS, bar)] : SYNTH_HATS_CALM[groove(c, G_HATS_CALM, bar)];
         drum_line(c, bar, CH_KICK, SL_KICK, kick, 60);
-        drum_line(c, bar, CH_SNARE, SL_SNARE, phrase_end && full ? "....x.......x.xx" : SYNTH_SNARES[groove(c, G_SNARE, bar)], 54);
+        drum_line(c, bar, CH_SNARE, SL_SNARE,
+                  phrase_end && full ? "....x.......x.xx" : SYNTH_SNARES[groove(c, G_SNARE, bar)], 54);
         drum_line(c, bar, CH_HAT, SL_HAT, hats, 36);
         // The back half's drops open their hats on every offbeat, on the tom channel so the crash rings on.
         if (full && bar >= c->half_bar)
@@ -788,7 +989,8 @@ static void drums_synthwave(Composer *c, int bar) {
     }
 }
 
-static const char *const CHIP_KICKS[] = {"x.....x.x.....x.", "x...x...x...x...", "x.x...x.x.x...x.", "x.....x...x.x..."};
+static const char *const CHIP_KICKS[] = {"x.....x.x.....x.", "x...x...x...x...", "x.x...x.x.x...x.",
+                                         "x.....x...x.x..."};
 static const char *const CHIP_KICKS_CALM[] = {"x.......x.......", "x.....x.x.......", "x.......x.x....."};
 static const char *const CHIP_HATS[] = {"xxXxxxXxxxXxxxXx", "x.Xxx.Xxx.Xxx.Xx", "XxxXxxXxXxxXxxXx"};
 static const char *const CHIP_HATS_CALM[] = {"x.X.x.X.x.X.x.X.", "x.x.X.x.x.x.X.x.", "..X...X...X...X."};
@@ -805,10 +1007,14 @@ static void drums_keygen(Composer *c, int bar) {
     case SECTION_VERSE:
     case SECTION_DROP: {
         int full = k == SECTION_DROP;
-        drum_line(c, bar, CH_KICK, SL_KICK, full ? CHIP_KICKS[groove(c, G_KICK, bar)] : CHIP_KICKS_CALM[groove(c, G_KICK_CALM, bar)], 60);
-        const char *snare = phrase_end ? "....x.......x.xx" : full && bar >= c->half_bar ? "....x..o....x.o." : "....x.......x...";
+        drum_line(c, bar, CH_KICK, SL_KICK,
+                  full ? CHIP_KICKS[groove(c, G_KICK, bar)] : CHIP_KICKS_CALM[groove(c, G_KICK_CALM, bar)], 60);
+        const char *snare = phrase_end                   ? "....x.......x.xx"
+                            : full && bar >= c->half_bar ? "....x..o....x.o."
+                                                         : "....x.......x...";
         drum_line(c, bar, CH_SNARE, SL_SNARE, snare, 52);
-        drum_line(c, bar, CH_HAT, SL_HAT, full ? CHIP_HATS[groove(c, G_HATS, bar)] : CHIP_HATS_CALM[groove(c, G_HATS_CALM, bar)], 30);
+        drum_line(c, bar, CH_HAT, SL_HAT,
+                  full ? CHIP_HATS[groove(c, G_HATS, bar)] : CHIP_HATS_CALM[groove(c, G_HATS_CALM, bar)], 30);
         if (last && k == SECTION_VERSE) snare_roll(c, bar, 8, 16, 1, 34, 60);
         break;
     }
@@ -822,7 +1028,8 @@ static void drums_keygen(Composer *c, int bar) {
 }
 
 static const char *const AMBIENT_KICKS[] = {"x...............", "x.......x.......", "x.........x....."};
-static const char *const AMBIENT_SHAKERS[] = {"..x...x...x...x.", "x.o.x.o.x.o.x.o.", "......x.......x.", "..x.......x.o..."};
+static const char *const AMBIENT_SHAKERS[] = {"..x...x...x...x.", "x.o.x.o.x.o.x.o.", "......x.......x.",
+                                              "..x.......x.o..."};
 
 static void drums_ambient(Composer *c, int bar) {
     SectionKind k = c->kind_of[bar];
@@ -836,7 +1043,8 @@ static void drums_ambient(Composer *c, int bar) {
 
 static const char *const LOFI_KICKS[] = {"x.........x.....", "x......x..x.....", "x.........x..x..", "x.....x...x.....",
                                          "x..x......x....."};
-static const char *const LOFI_SNARES[] = {"....x.......x...", "....x..o....x...", "....x.......x..o", "....x.....o.x..."};
+static const char *const LOFI_SNARES[] = {"....x.......x...", "....x..o....x...", "....x.......x..o",
+                                          "....x.....o.x..."};
 static const char *const LOFI_HATS[] = {"x.o.x.o.x.o.x.o.", "x.oox.o.x.oox.o.", "x.o.x.oox.o.x.oo", "o.x.o.x.o.x.o.x."};
 
 static void drums_lofi(Composer *c, int bar) {
@@ -883,7 +1091,8 @@ static void drums_trance(Composer *c, int bar) {
 }
 
 // The noise channel's bars: s the long-noise snare, h a short-noise tick, H an accented one.
-static const char *const NOISE_DRIVE[] = {"h.h.s.h.h.h.s.h.", "hhHhshHhhhHhshHh", "h.hhs.h.h.hhs.hh", "H.h.s.h.H.h.s.hs"};
+static const char *const NOISE_DRIVE[] = {"h.h.s.h.h.h.s.h.", "hhHhshHhhhHhshHh", "h.hhs.h.h.hhs.hh",
+                                          "H.h.s.h.H.h.s.hs"};
 static const char *const NOISE_CALM[] = {"h...s...h...s...", "h.h.s.h.h.h.s.h.", "....s.......s..."};
 
 static void noise_line(Composer *c, int bar, const char *p, int vol) {
@@ -919,7 +1128,8 @@ static void drums_8bit(Composer *c, int bar) {
     }
 }
 
-static const char *const MARCH_KICKS[] = {"x.......x.......", "x.....x.x.......", "x...x...x...x...", "x.....x...x.x..."};
+static const char *const MARCH_KICKS[] = {"x.......x.......", "x.....x.x.......", "x...x...x...x...",
+                                          "x.....x...x.x..."};
 static const char *const MARCH_HATS[] = {"x.x.x.x.x.x.x.x.", "x.xxx.x.x.xxx.x.", "..x...x...x...x."};
 
 // An adventure's kit: a march under the theme, quiet hats elsewhere, and timpani rolling into each new section.
@@ -930,8 +1140,10 @@ static void drums_16bit(Composer *c, int bar) {
     case SECTION_VERSE:
     case SECTION_DROP: {
         int full = k == SECTION_DROP;
-        drum_line(c, bar, CH_KICK, SL_KICK, full ? MARCH_KICKS[groove(c, G_KICK, bar)] : "x.......x.......", full ? 56 : 48);
-        drum_line(c, bar, CH_SNARE, SL_SNARE, full && pos % 4 == 3 ? "....x.......x.xx" : "....x.......x...", full ? 50 : 40);
+        drum_line(c, bar, CH_KICK, SL_KICK, full ? MARCH_KICKS[groove(c, G_KICK, bar)] : "x.......x.......",
+                  full ? 56 : 48);
+        drum_line(c, bar, CH_SNARE, SL_SNARE, full && pos % 4 == 3 ? "....x.......x.xx" : "....x.......x...",
+                  full ? 50 : 40);
         drum_line(c, bar, CH_HAT, SL_HAT, MARCH_HATS[groove(c, G_HATS, bar)], full ? 28 : 22);
         if (last) tom_fill(c, bar);
         break;
@@ -947,7 +1159,8 @@ static void drums_16bit(Composer *c, int bar) {
     }
 }
 
-static const char *const STEP_KICKS[] = {"x.........x.....", "x.......x.x.....", "x.....x...x.....", "x.........x..x.."};
+static const char *const STEP_KICKS[] = {"x.........x.....", "x.......x.x.....", "x.....x...x.....",
+                                         "x.........x..x.."};
 static const char *const STEP_HATS[] = {"x.x.x.x.x.x.x.x.", "x..x..x..x..x.x.", "xxx.x.xxx.x.x.x.", "..x...x...x...x."};
 
 static void drums_dubstep(Composer *c, int bar) {
@@ -1015,18 +1228,22 @@ typedef struct {
     const char *notes, *rates;
 } Wobble;
 
-static const Wobble WOBBLES[] = {{"r.......r.......", "qqee"}, {"r...r...r...o...", "eets"}, {"r.......f...r...", "tttq"},
-                                 {"r.r.r.r.o...r...", "ssqe"}, {"r.......x.r.....", "hhes"}, {"r...m...r...o...", "eeee"}};
-static const Wobble WOBBLE_FILLS[] = {{"r.r.r.r.r.r.r.r.", "ssss"}, {"o...r...o...r...", "ttss"}, {"r.......o.r.o.r.", "qqss"}};
+static const Wobble WOBBLES[] = {{"r.......r.......", "qqee"}, {"r...r...r...o...", "eets"},
+                                 {"r.......f...r...", "tttq"}, {"r.r.r.r.o...r...", "ssqe"},
+                                 {"r.......x.r.....", "hhes"}, {"r...m...r...o...", "eeee"}};
+static const Wobble WOBBLE_FILLS[] = {
+    {"r.r.r.r.r.r.r.r.", "ssss"}, {"o...r...o...r...", "ttss"}, {"r.......o.r.o.r.", "qqss"}};
 // More bars for the phrases after the first: long growls that speed up, dotted and triplet rhythms, stutters, and
 // held notes that stop wobbling to breathe.
 static const Wobble WOBBLES_MORE[] = {
-    {"r...............", "hhqq"}, {"r.......r.r.....", "eeqs"}, {"r..r..r..r..r...", "tttt"}, {"r.....r.....r...", "qeqe"},
-    {"o.......r.......", "sseq"}, {"r...x...r...x...", "eeee"}, {"r.r.....o.o.....", "sstt"}, {"r...........f...", "qqqs"},
-    {"r.......m...r...", "teqe"}, {"r.r.r.r.r.......", "s-eq"}, {"r...r...........", "ee--"}, {"o...o...r...r...", "qqss"}};
+    {"r...............", "hhqq"}, {"r.......r.r.....", "eeqs"}, {"r..r..r..r..r...", "tttt"},
+    {"r.....r.....r...", "qeqe"}, {"o.......r.......", "sseq"}, {"r...x...r...x...", "eeee"},
+    {"r.r.....o.o.....", "sstt"}, {"r...........f...", "qqqs"}, {"r.......m...r...", "teqe"},
+    {"r.r.r.r.r.......", "s-eq"}, {"r...r...........", "ee--"}, {"o...o...r...r...", "qqss"}};
 // Phrase endings: rolls, a dead stop for half a bar, and a run that speeds up into the next downbeat.
-static const Wobble FILLS_MORE[] = {{"r.......x.......", "ss--"}, {"rrrrrrrrrrrrrrrr", "eest"}, {"o.o.o.o.r.r.r.r.", "ssss"},
-                                    {"r.r.r.r.x...o...", "tt-s"}, {"r.r.r.r.o...V---", "ssq-"}, {"o.o.o.o.v...^---", "sss-"}};
+static const Wobble FILLS_MORE[] = {{"r.......x.......", "ss--"}, {"rrrrrrrrrrrrrrrr", "eest"},
+                                    {"o.o.o.o.r.r.r.r.", "ssss"}, {"r.r.r.r.x...o...", "tt-s"},
+                                    {"r.r.r.r.o...V---", "ssq-"}, {"o.o.o.o.v...^---", "sss-"}};
 // Riffs that move: climbing and falling through the scale, jumping octaves, and diving home.
 static const Wobble RIFFS[] = {{"r...t...u...o...", "eeqq"}, {"o...u...t...r...", "qqee"}, {"r.r.b...r.r.u...", "sses"},
                                {"o.......V---r...", "qq-e"}, {"r...^---o...v...", "e-qs"}, {"r.t.u.t.r...o...", "ssqe"},
@@ -1141,9 +1358,11 @@ static int bass_rests(const Composer *c, int bar) {
 
 static const char *const SYNTH_BASS[] = {"r.o.r.o.r.o.r.oa", "rr.rrr.rrr.rrr.a", "r.r.o.r.r.r.o.ra", "rrrrrrrrrrrrrrra",
                                          "r..r..r.o..r..ra"};
-static const char *const SYNTH_BASS_CALM[] = {"r.r.r.r.r.r.r.ra", "r.......r.....a.", "r..r..r...r..r.a", "r...r...r...r..a"};
+static const char *const SYNTH_BASS_CALM[] = {"r.r.r.r.r.r.r.ra", "r.......r.....a.", "r..r..r...r..r.a",
+                                              "r...r...r...r..a"};
 static const char *const CHIP_BASS[] = {"r.o.r.o.f.o.r.o.", "r.r.o.r.r.r.o.r.", "r..r..o.r..r..f.", "r.f.o.f.r.f.o.f."};
-static const char *const SLAP_DRIVE[] = {"r..r.o.r..r.o.r.", "r.o.r..or.o.r..o", "r..ro..rr..ro..r", "r.r.o.r.f.r.o.ra"};
+static const char *const SLAP_DRIVE[] = {"r..r.o.r..r.o.r.", "r.o.r..or.o.r..o", "r..ro..rr..ro..r",
+                                         "r.r.o.r.f.r.o.ra"};
 static const char *const SLAP_CALM[] = {"r.......r...f...", "r.....r.r.....f.", "r...o...r...o..."};
 static const char *const LOFI_BASS[] = {"r.........f.....", "r.....f...o.....", "r.......f.....c.", "r.........f...c."};
 static const char *const DUB_BASS[] = {"r.........f.....", "r.....f.........", "r......f..o.....", "r.........f...o."};
@@ -1176,7 +1395,8 @@ static void bass_pattern(Composer *c, int bar, const char *p, int octave) {
 
 // The triangle's bars: bass as in bass_pattern, plus k, the triangle's own pitch-swept kick, cutting into the bass
 // on the beat the way NES drivers play it.
-static const char *const TRIANGLE_DRIVE[] = {"k.r.o.r.k.r.o.r.", "k.o.r.o.k.o.f.o.", "k.r.r.o.k.r.o.ra", "k.o.f.o.k.r.o.a."};
+static const char *const TRIANGLE_DRIVE[] = {"k.r.o.r.k.r.o.r.", "k.o.r.o.k.o.f.o.", "k.r.r.o.k.r.o.ra",
+                                             "k.o.f.o.k.r.o.a."};
 static const char *const TRIANGLE_CALM[] = {"k...r...k...r...", "k.r...o.k.r...o.", "k...r.o.k...r.o."};
 
 static void triangle(Composer *c, int bar, const char *p) {
@@ -1236,11 +1456,13 @@ static void bass_part(Composer *c, int bar) {
                                               : TRIANGLE_CALM[groove(c, G_BASS_CALM, bar)]);
         break;
     case MOOD_AMBIENT:
-        if (c->bar_in_section[bar] % MOODS[c->mood].chord_bars == 0) put(c, bar, 0, CH_BASS, root, SL_BASS, 52, FX_NONE, 0);
+        if (c->bar_in_section[bar] % MOODS[c->mood].chord_bars == 0)
+            put(c, bar, 0, CH_BASS, root, SL_BASS, 52, FX_NONE, 0);
         break;
     case MOOD_KEYGEN: bass_pattern(c, bar, CHIP_BASS[groove(c, G_BASS, bar)], 1); break;
     case MOOD_16BIT:
-        bass_pattern(c, bar, k == SECTION_DROP ? SLAP_DRIVE[groove(c, G_BASS, bar)] : SLAP_CALM[groove(c, G_BASS_CALM, bar)], 0);
+        bass_pattern(
+            c, bar, k == SECTION_DROP ? SLAP_DRIVE[groove(c, G_BASS, bar)] : SLAP_CALM[groove(c, G_BASS_CALM, bar)], 0);
         break;
     default:
         if (build_end) {
@@ -1279,7 +1501,8 @@ static void pads(Composer *c, int bar, int channel, int percent) {
     int fresh = bar == 0 || c->section_of[bar] != c->section_of[bar - 1];
     if (!start && !fresh) return;
     int vol = (38 + (int)(c->energy_of[bar] * 18)) * percent / 100;
-    for (int v = 0; v < c->pad_voices; v++) put(c, bar, 0, channel + v, c->pad_voicing[bar][v], SL_PAD, vol, FX_NONE, 0);
+    for (int v = 0; v < c->pad_voices; v++)
+        put(c, bar, 0, channel + v, c->pad_voicing[bar][v], SL_PAD, vol, FX_NONE, 0);
 }
 
 // Looping pads ring until told to stop, so a part that pauses lets go of its voices.
@@ -1294,7 +1517,8 @@ static void keys_lofi(Composer *c, int bar) {
     if (!c->slot[SL_KEYS]) return;
     SectionKind k = c->kind_of[bar];
     voice_chord(c, bar, c->keys_voicing, 4, 50, 74);
-    const char *comp = k == SECTION_VERSE || k == SECTION_DROP ? LOFI_COMPS[groove(c, G_CHORDS, bar)] : "x...............";
+    const char *comp =
+        k == SECTION_VERSE || k == SECTION_DROP ? LOFI_COMPS[groove(c, G_CHORDS, bar)] : "x...............";
     for (int row = 0; row < c->rows_per_bar; row++) {
         if (comp[row] != 'x') continue;
         for (int v = 0; v < 4; v++) {
@@ -1317,7 +1541,8 @@ static void gates(Composer *c, int bar) {
     for (int row = 0; row < c->rows_per_bar; row++)
         if (gate[row] == 'x')
             for (int v = 0; v < 3; v++)
-                put(c, bar, row, CH_CHORD + v, c->keys_voicing[bar][v], SL_KEYS, (row % 4 == 0 ? 42 : 34) - v * 2, FX_NONE, 0);
+                put(c, bar, row, CH_CHORD + v, c->keys_voicing[bar][v], SL_KEYS, (row % 4 == 0 ? 42 : 34) - v * 2,
+                    FX_NONE, 0);
 }
 
 static const char *const DUB_STABS[] = {"..x.............", "......x.........", "..x.......x.....", "......x.....x...",
@@ -1342,7 +1567,8 @@ static void stabs(Composer *c, int bar) {
     }
 }
 
-static const char *const PULSE_ARPS[] = {"x.x.x.x.x.x.x.x.", "x..x..x.x..x..x.", "x...x...x...x...", "x.xx.xx.x.xx.xx."};
+static const char *const PULSE_ARPS[] = {"x.x.x.x.x.x.x.x.", "x..x..x.x..x..x.", "x...x...x...x...",
+                                         "x.xx.xx.x.xx.xx."};
 
 // Pulse two carries the chords between the drops with the 0xy arpeggio, then gives the channel to the hook's echo.
 static void pulse_chords(Composer *c, int bar) {
@@ -1377,10 +1603,12 @@ static void waltz(Composer *c, int bar) {
     voice_chord(c, bar, c->keys_voicing, 2, 56, 70);
     for (int beat = 1; beat < 3; beat++)
         for (int v = 0; v < 2; v++)
-            put(c, bar, beat * 4, CH_HAT + v, c->keys_voicing[bar][v], SL_KEYS, (beat == 1 ? 30 : 26) - v * 2, FX_NONE, 0);
+            put(c, bar, beat * 4, CH_HAT + v, c->keys_voicing[bar][v], SL_KEYS, (beat == 1 ? 30 : 26) - v * 2, FX_NONE,
+                0);
 }
 
-static const char *const CHIP_STABS[] = {"x..x..x...x..x..", "x.x..x.x.x..x.x.", "x...x.x...x.x...", "xx.x.x.xx.x.x.x."};
+static const char *const CHIP_STABS[] = {"x..x..x...x..x..", "x.x..x.x.x..x.x.", "x...x.x...x.x...",
+                                         "xx.x.x.xx.x.x.x."};
 static const char *const CHIP_STABS_CALM[] = {"x.x.x.x.x.x.x.x.", "x..x..x.x..x..x.", "x...x...x...x..."};
 
 // The classic chip chord: one channel cycling root, third and fifth every tick with the 0xy effect.
@@ -1436,16 +1664,17 @@ typedef struct {
     int count;
 } Melody;
 
-static const char *const RHYTHMS_POP[] = {"x..x..x.x...x.x.", "x.x.x...x..x..x.", "x...x.x...x.x...", "..x.x.x.x...x...",
-                                         "x..x..x...x.x...", "x.x...x.x.x...x."};
-static const char *const RHYTHMS_CHIP[] = {"x.xxx.x.x.xxx.x.", "xx.x.x.xx.x.x.x.", "x.x.xx.xx.x.x.x.", "x.x.x.xxx.x.x.x."};
-static const char *const RHYTHMS_SPARSE[] = {"x.......x...x...", "x...........x...", "x.....x...x.....", "x.......x.......",
-                                            "x...x.......x..."};
-static const char *const RHYTHMS_LOFI[] = {"x.....x...x.....", "x...x.....x.x...", "x.......x.x.x...", "x.x.....x.......",
-                                          "x.....x.x.......", "x...x...x.....x."};
+static const char *const RHYTHMS_POP[] = {"x..x..x.x...x.x.", "x.x.x...x..x..x.", "x...x.x...x.x...",
+                                          "..x.x.x.x...x...", "x..x..x...x.x...", "x.x...x.x.x...x."};
+static const char *const RHYTHMS_CHIP[] = {"x.xxx.x.x.xxx.x.", "xx.x.x.xx.x.x.x.", "x.x.xx.xx.x.x.x.",
+                                           "x.x.x.xxx.x.x.x."};
+static const char *const RHYTHMS_SPARSE[] = {"x.......x...x...", "x...........x...", "x.....x...x.....",
+                                             "x.......x.......", "x...x.......x..."};
+static const char *const RHYTHMS_LOFI[] = {"x.....x...x.....", "x...x.....x.x...", "x.......x.x.x...",
+                                           "x.x.....x.......", "x.....x.x.......", "x...x...x.....x."};
 // Trance hooks lean on the 3+3+2 dotted rhythm.
-static const char *const RHYTHMS_TRANCE[] = {"x..x..x.x..x..x.", "x..x..x...x..x..", "x.x.x..x..x.x...", "x..x..x..x..x.x.",
-                                            "x...x..x..x.x..."};
+static const char *const RHYTHMS_TRANCE[] = {"x..x..x.x..x..x.", "x..x..x...x..x..", "x.x.x..x..x.x...",
+                                             "x..x..x..x..x.x.", "x...x..x..x.x..."};
 static const char *const RHYTHMS_WALTZ[] = {"x...x...x...", "x.......x...", "x.x.x...x...", "x...x.x.x...",
                                            "x.....x.x...", "x...x.......", "x.x.x.x.x...", "x.......x.x."};
 
@@ -1471,7 +1700,8 @@ static void make_rhythm(Composer *c, int cells, char *out) {
     int beats = c->beats_per_bar, onsets;
     do {
         onsets = 0;
-        for (int b = 0; b < beats; b++) memcpy(out + b * 4, CELLS[rng_weighted(&c->rng, CELL_WEIGHTS[cells], COUNT(CELLS))], 4);
+        for (int b = 0; b < beats; b++)
+            memcpy(out + b * 4, CELLS[rng_weighted(&c->rng, CELL_WEIGHTS[cells], COUNT(CELLS))], 4);
         out[0] = 'x';
         for (int i = 0; i < beats * 4; i++) onsets += out[i] == 'x';
     } while (onsets < 2);
@@ -1569,8 +1799,8 @@ typedef enum { CADENCE_NONE, CADENCE_HALF, CADENCE_HOME } Cadence;
 
 // Gives pitches to onsets spanning two bars: chord tones on the beats following an arch or a fall,
 // stepwise fills between them, and an ending that rests on the fifth or comes home to the tonic.
-static void realize(Composer *c, int start_bar, MelodyNote *notes, int count, int low, int high, float rise, int start_note,
-                    Cadence cadence) {
+static void realize(Composer *c, int start_bar, MelodyNote *notes, int count, int low, int high, float rise,
+                    int start_note, Cadence cadence) {
     int rpb = c->rows_per_bar, span = rpb * 2;
     int strong[64], skeleton[64], n_strong = 0;
     float center = (float)(low + high) / 2, amplitude = (float)(high - low) * 0.45f;
@@ -1665,7 +1895,8 @@ static void write_period(Composer *c, int start_bar, const MelodyStyle *style, M
     }
 }
 
-static void play_melody(Composer *c, int start_bar, const Melody *m, int ch, Slot slot, int vol, int octave, int glide) {
+static void play_melody(Composer *c, int start_bar, const Melody *m, int ch, Slot slot, int vol, int octave,
+                        int glide) {
     for (int i = 0; i < m->count; i++) {
         int bar = start_bar + m->notes[i].row / c->rows_per_bar, row = m->notes[i].row % c->rows_per_bar;
         int note = m->notes[i].note + octave * 12;
@@ -1902,7 +2133,8 @@ static void effects(Composer *c) {
             put(c, start + sec->bars - 1, 0, sweep_ch, 49, SL_REVERSE, 40, FX_NONE, 0);
         }
         if (sec->kind == SECTION_BREAK) put(c, start, 0, CH_FX, 49, SL_DOWN, 40, FX_NONE, 0);
-        if (sec->kind == SECTION_INTRO && c->slot[SL_TEXTURE]) put(c, start, 0, CH_TEXTURE, 49, SL_TEXTURE, 40, FX_NONE, 0);
+        if (sec->kind == SECTION_INTRO && c->slot[SL_TEXTURE])
+            put(c, start, 0, CH_TEXTURE, 49, SL_TEXTURE, 40, FX_NONE, 0);
     }
     // Lo-fi's crackle runs to the very last bar; other textures bow out two bars early.
     if (c->slot[SL_TEXTURE]) put_off(c, c->bars - (c->mood == MOOD_LOFI ? 1 : 2), 0, CH_TEXTURE);
@@ -2106,7 +2338,9 @@ static void write_parts(Composer *c) {
             if (k == SECTION_DROP) gates(c, bar);
             if (k != SECTION_INTRO) pads(c, bar, CH_PAD, k == SECTION_DROP ? 70 : 100);
             if (k == SECTION_VERSE || k == SECTION_DROP || (k == SECTION_BUILD && !section_last_bar(c, bar)))
-                arpeggio(c, bar, k == SECTION_DROP ? ARPS_DRIVE[groove(c, G_ARP, bar)] : ARPS_CALM[groove(c, G_ARP_CALM, bar)], 1, 0, 28);
+                arpeggio(c, bar,
+                         k == SECTION_DROP ? ARPS_DRIVE[groove(c, G_ARP, bar)] : ARPS_CALM[groove(c, G_ARP_CALM, bar)],
+                         1, 0, 28);
             break;
         case MOOD_8BIT:
             drums_8bit(c, bar);
@@ -2124,7 +2358,8 @@ static void write_parts(Composer *c) {
         case MOOD_16BIT:
             drums_16bit(c, bar);
             pads(c, bar, CH_PAD, k == SECTION_DROP ? 80 : 100);
-            arpeggio(c, bar, HARP_ARPS[groove(c, G_ARP, bar)], k == SECTION_DROP ? 1 : 2, 0, k == SECTION_DROP ? 22 : 28);
+            arpeggio(c, bar, HARP_ARPS[groove(c, G_ARP, bar)], k == SECTION_DROP ? 1 : 2, 0,
+                     k == SECTION_DROP ? 22 : 28);
             orch_hits(c, bar);
             break;
         case MOOD_DUBSTEP:
@@ -2143,7 +2378,8 @@ static void write_parts(Composer *c) {
             drums_synthwave(c, bar);
             pads(c, bar, CH_PAD, 100);
             if (k == SECTION_VERSE || k == SECTION_DROP || (k == SECTION_BUILD && !section_last_bar(c, bar)))
-                arpeggio(c, bar, k == SECTION_DROP ? ARPS_DRIVE[groove(c, G_ARP, bar)] : ARPS_CALM[groove(c, G_ARP_CALM, bar)],
+                arpeggio(c, bar,
+                         k == SECTION_DROP ? ARPS_DRIVE[groove(c, G_ARP, bar)] : ARPS_CALM[groove(c, G_ARP_CALM, bar)],
                          k == SECTION_DROP ? 1 : 1 + groove(c, G_ARP_RATE, bar), 0, 30);
             break;
         }

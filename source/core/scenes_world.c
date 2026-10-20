@@ -52,7 +52,8 @@ void turntable_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     static const char ramp[] = " .:-=+*";
     float turn = f->t * 0.5556f * TAU_F, cy = -0.02f;
-    Rgbf vinyl = palette_ramp(f->palette, 0.3f), shine = palette_ramp(f->palette, 0.95f), label = palette_accent(f->palette, 0);
+    Rgbf vinyl = palette_ramp(f->palette, 0.3f), shine = palette_ramp(f->palette, 0.95f),
+         label = palette_accent(f->palette, 0);
     for (int row = 0; row < g->rows; row++) {
         float y = cell_y(g, row) - cy;
         for (int col = 0; col < g->cols; col++) {
@@ -80,12 +81,13 @@ void turntable_draw(void *state, const Frame *f) {
     // The platter's strobe dots.
     for (int k = 0; k < 72; k++) {
         float a = (float)k / 72 * TAU_F + f->t * 0.05f;
-        put_cell_under(g, cell_col(g, t->cx + mcos(a) * t->radius * 1.07f), cell_row(g, cy + msin(a) * t->radius * 1.07f),
-                       k % 2 ? '.' : ':', frame_dim(f, shine, 0.5f));
+        put_cell_under(g, cell_col(g, t->cx + mcos(a) * t->radius * 1.07f),
+                       cell_row(g, cy + msin(a) * t->radius * 1.07f), k % 2 ? '.' : ':', frame_dim(f, shine, 0.5f));
     }
     // A speck of dust riding the record round.
     float da = turn * 1.0f + (float)(t->salt % 100);
-    put_cell(g, cell_col(g, t->cx + mcos(da) * t->radius * 0.62f), cell_row(g, cy + msin(da) * t->radius * 0.62f), '*', shine);
+    put_cell(g, cell_col(g, t->cx + mcos(da) * t->radius * 0.62f), cell_row(g, cy + msin(da) * t->radius * 0.62f), '*',
+             shine);
     // The tonearm: from its pivot beside the platter to a needle that moves toward the label over the piece.
     float progress = saturate(f->t / mmax(f->score->length, 1)), reach = t->radius * mixf(0.95f, 0.36f, progress);
     float px = t->cx + t->radius * 1.25f, py = cy + t->radius * 0.85f, na = -0.25f;
@@ -128,10 +130,12 @@ void cassette_draw(void *state, const Frame *f) {
     Cassette *c = state;
     Grid *g = f->grid;
     float w = mmin(1.25f, g->aspect * 0.92f), h = w * 0.62f;
-    Rgbf shell = palette_ramp(f->palette, 0.7f), paper = palette_accent(f->palette, 1), ink = palette_ramp(f->palette, 0.25f);
+    Rgbf shell = palette_ramp(f->palette, 0.7f), paper = palette_accent(f->palette, 1),
+         ink = palette_ramp(f->palette, 0.25f);
     Rgbf tape = palette_ramp(f->palette, 0.35f), hub = palette_ramp(f->palette, 0.95f);
     // The tape packs go down first: resolving the canvas rewrites the whole grid.
-    float wy = -h * 0.25f, wh = h * 0.28f, ww = w * 0.62f, length = mmax(f->score->length, 1), progress = saturate(f->t / length);
+    float wy = -h * 0.25f, wh = h * 0.28f, ww = w * 0.62f, length = mmax(f->score->length, 1),
+          progress = saturate(f->t / length);
     Canvas *cv = f->canvas;
     canvas_clear(cv);
     for (int side = 0; side < 2; side++)
@@ -144,7 +148,11 @@ void cassette_draw(void *state, const Frame *f) {
     int left = cell_col(g, -w * 0.88f), right = cell_col(g, w * 0.88f);
     for (int row = top; row <= bottom; row++)
         for (int col = left; col <= right; col++)
-            put_cell(g, col, row, row == top || row == bottom ? '_' : (row - top) % 2 ? ' ' : '.', frame_dim(f, paper, 0.55f));
+            put_cell(g, col, row,
+                     row == top || row == bottom ? '_'
+                     : (row - top) % 2           ? ' '
+                                                 : '.',
+                     frame_dim(f, paper, 0.55f));
     const char *title = f->score->info->title;
     int len = (int)strlen(title), trow = (top + bottom) / 2, tcol = (left + right - len) / 2;
     for (int i = 0; i < len; i++) put_cell(g, tcol + i, trow, title[i], ink);
@@ -179,10 +187,13 @@ void cassette_draw(void *state, const Frame *f) {
         int k = 0;
         while (k < 2 && s > legs[k]) s -= legs[k++];
         float u = s / legs[k];
-        put_cell(g, cell_col(g, mixf(run[k].x, run[k + 1].x, u)), cell_row(g, mixf(run[k].y, run[k + 1].y, u)), 'o', frame_dim(f, tape, 1.8f));
+        put_cell(g, cell_col(g, mixf(run[k].x, run[k + 1].x, u)), cell_row(g, mixf(run[k].y, run[k + 1].y, u)), 'o',
+                 frame_dim(f, tape, 1.8f));
     }
     // The head opening along the bottom, and a screw in each corner.
-    for (int k = -2; k <= 2; k++) put_cell(g, cell_col(g, (float)k * w * 0.18f), cell_row(g, -h * 0.82f), k ? 'o' : '#', frame_dim(f, shell, 0.8f));
+    for (int k = -2; k <= 2; k++)
+        put_cell(g, cell_col(g, (float)k * w * 0.18f), cell_row(g, -h * 0.82f), k ? 'o' : '#',
+                 frame_dim(f, shell, 0.8f));
     for (int k = 0; k < 4; k++)
         put_cell(g, cell_col(g, (k & 1 ? 1 : -1) * w * 0.93f), cell_row(g, (k & 2 ? 1 : -1) * h * 0.88f), '+', hub);
     f->fx->glow = 0.5f;
@@ -214,16 +225,22 @@ void cylinder_draw(void *state, const Frame *f) {
     Cylinder *cy = state;
     Grid *g = f->grid;
     float span = g->aspect * 0.82f, center = 0.25f, radius = 0.42f;
-    Rgbf brass = palette_accent(f->palette, 1), steel = palette_ramp(f->palette, 0.75f), pin = palette_ramp(f->palette, 1.0f);
+    Rgbf brass = palette_accent(f->palette, 1), steel = palette_ramp(f->palette, 0.75f),
+         pin = palette_ramp(f->palette, 1.0f);
     // The drum: brushed metal turning toward the comb at the pins' pace, brightest across its middle where it faces us.
-    int r0 = cell_row(g, center + radius), r1 = cell_row(g, center - radius), c0 = cell_col(g, -span), c1 = cell_col(g, span);
+    int r0 = cell_row(g, center + radius), r1 = cell_row(g, center - radius), c0 = cell_col(g, -span),
+        c1 = cell_col(g, span);
     float turned = f->t * PI_F / cy->window;
     for (int row = r0; row <= r1; row++) {
         float v = (cell_y(g, row) - center) / radius, face = msqrt(saturate(1 - v * v));
         int band = mfract((matan2(face, -v) + turned) * 6 / PI_F) < 0.25f;
         for (int col = c0; col <= c1; col++) {
             int edge = col == c0 || col == c1;
-            put_cell(g, col, row, edge ? (col == c0 ? '(' : ')') : band ? '~' : '-', frame_dim(f, brass, 0.2f + 0.45f * face));
+            put_cell(g, col, row,
+                     edge   ? (col == c0 ? '(' : ')')
+                     : band ? '~'
+                            : '-',
+                     frame_dim(f, brass, 0.2f + 0.45f * face));
         }
     }
     static const Role sung[4] = {ROLE_LEAD, ROLE_BELL, ROLE_PLUCK, ROLE_ARP};
@@ -237,13 +254,15 @@ void cylinder_draw(void *state, const Frame *f) {
             if (phase < 0 || phase > 1) continue;
             float y = center - radius * mcos(phase * PI_F), face = msin(phase * PI_F);
             float x = ((float)tooth_of(ahead[i]->note) + 0.5f) / TEETH * 2 * span - span;
-            put_cell(g, cell_col(g, x), cell_row(g, y), face > 0.5f ? 'o' : '.', frame_dim(f, pin, 0.35f + 0.65f * face));
+            put_cell(g, cell_col(g, x), cell_row(g, y), face > 0.5f ? 'o' : '.',
+                     frame_dim(f, pin, 0.35f + 0.65f * face));
         }
         const ScoreEvent *played[16];
         n = recent_notes(f->score, sung[v], f->t, 0.8f, played, 16);
         for (int i = 0; i < n; i++) {
             int k = tooth_of(played[i]->note);
-            ring[k] = mmax(ring[k], played[i]->velocity * mexp(-(f->t - played[i]->time) / 0.3f) * (0.35f + 0.65f * f->react));
+            ring[k] = mmax(ring[k],
+                           played[i]->velocity * mexp(-(f->t - played[i]->time) / 0.3f) * (0.35f + 0.65f * f->react));
         }
     }
     // The comb: a bar under the drum, and teeth that shorten toward the high notes.
@@ -262,7 +281,8 @@ void cylinder_draw(void *state, const Frame *f) {
     // The governor's little fan on the side, spinning steadily.
     float fx = span + 0.18f, fan = f->t * 3.0f;
     for (int k = 0; k < 4; k++)
-        line(f, fx, center, fx + mcos(fan + (float)k * PI_F * 0.5f) * 0.12f, center + msin(fan + (float)k * PI_F * 0.5f) * 0.12f, brass);
+        line(f, fx, center, fx + mcos(fan + (float)k * PI_F * 0.5f) * 0.12f,
+             center + msin(fan + (float)k * PI_F * 0.5f) * 0.12f, brass);
     f->fx->glow = 0.55f;
 }
 
@@ -323,7 +343,8 @@ void mobile_draw(void *state, const Frame *f) {
         line(f, 0, hub, x, arm_y, string);
         line(f, x, arm_y, x, arm_y - drop, frame_dim(f, string, 0.6f + 0.4f * near));
         Rgbf color = rgbf_mix(palette_accent(f->palette, k), palette_ramp(f->palette, 1.0f), 0.3f);
-        sprite(g, cell_col(g, x), cell_row(g, arm_y - drop - 0.12f), kinds[(int)m->kinds[k]], 5, frame_dim(f, color, 0.35f + 0.65f * near));
+        sprite(g, cell_col(g, x), cell_row(g, arm_y - drop - 0.12f), kinds[(int)m->kinds[k]], 5,
+               frame_dim(f, color, 0.35f + 0.65f * near));
     }
     // The cot's rail along the bottom.
     for (int col = 0; col < g->cols; col++) {
@@ -382,7 +403,8 @@ void gears_draw(void *state, const Frame *f) {
         for (int s = 0; s < 4; s++) {
             float a = spin + (float)s * PI_F * 0.5f;
             line(f, gs->x[i] + mcos(a) * gs->radius[i] * 0.14f, gs->y[i] + msin(a) * gs->radius[i] * 0.14f,
-                 gs->x[i] + mcos(a) * gs->radius[i] * 0.55f, gs->y[i] + msin(a) * gs->radius[i] * 0.55f, frame_dim(f, metal, 0.7f));
+                 gs->x[i] + mcos(a) * gs->radius[i] * 0.55f, gs->y[i] + msin(a) * gs->radius[i] * 0.55f,
+                 frame_dim(f, metal, 0.7f));
         }
     }
     f->fx->glow = 0.45f;
@@ -404,7 +426,8 @@ void canopy_setup(void *state, Rng *r, const Frame *f) {
     for (int i = 0; i < LEAVES; i++) {
         // Leaves hang in from the top and the sides, pointing down and inward.
         int side = i % 3;
-        c->x[i] = side == 0 ? rng_between(r, -1, 1) * aspect : (side == 1 ? -aspect : aspect) * rng_between(r, 0.85f, 1.05f);
+        c->x[i] =
+            side == 0 ? rng_between(r, -1, 1) * aspect : (side == 1 ? -aspect : aspect) * rng_between(r, 0.85f, 1.05f);
         c->y[i] = side == 0 ? rng_between(r, 0.85f, 1.1f) : rng_between(r, -0.2f, 0.9f);
         float inward = side == 1 ? -0.6f : side == 2 ? -2.5f : -1.57f;
         c->angle[i] = inward + rng_between(r, -0.5f, 0.5f);
@@ -421,7 +444,8 @@ void canopy_setup(void *state, Rng *r, const Frame *f) {
 void canopy_draw(void *state, const Frame *f) {
     Canopy *c = state;
     Grid *g = f->grid;
-    Rgbf dark = palette_ramp(f->palette, 0.3f), light = palette_ramp(f->palette, 0.8f), drip = palette_ramp(f->palette, 0.95f);
+    Rgbf dark = palette_ramp(f->palette, 0.3f), light = palette_ramp(f->palette, 0.8f),
+         drip = palette_ramp(f->palette, 0.95f);
     // Beams lean about twenty degrees off upright, each a soft band that brightens and fades on its own, shown as the
     // dust and damp lit up in the air, drifting slowly down.
     const float lean_c = 0.94f, lean_s = 0.34f, reach = g->aspect * lean_c + lean_s;
@@ -435,11 +459,14 @@ void canopy_draw(void *state, const Frame *f) {
     for (int row = 0; row < g->rows; row++)
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), y = cell_y(g, row), across = x * lean_c - y * lean_s;
-            float beam = beams[(int)((across / reach * 0.5f + 0.5f) * (CANOPY_BEAM_SAMPLES - 1) + 0.5f)] * (0.5f + 0.3f * y);
+            float beam =
+                beams[(int)((across / reach * 0.5f + 0.5f) * (CANOPY_BEAM_SAMPLES - 1) + 0.5f)] * (0.5f + 0.3f * y);
             if (beam <= 0.05f) continue;
-            uint32_t mote = (uint32_t)(row + (int)mfloor(f->t * 0.8f + hash01((uint32_t)col * 7919u) * 9) * 61) * 977u + (uint32_t)col;
+            uint32_t mote = (uint32_t)(row + (int)mfloor(f->t * 0.8f + hash01((uint32_t)col * 7919u) * 9) * 61) * 977u +
+                            (uint32_t)col;
             if (hash01(mote ^ c->salt) < beam * 1.1f)
-                put_cell(g, col, row, hash01(mote * 3u) < beam * 0.5f ? ':' : '.', frame_dim(f, sun, 0.25f + 0.45f * beam));
+                put_cell(g, col, row, hash01(mote * 3u) < beam * 0.5f ? ':' : '.',
+                         frame_dim(f, sun, 0.25f + 0.45f * beam));
         }
     // Mist along the floor.
     for (int row = g->rows * 3 / 4; row < g->rows; row++)
@@ -448,7 +475,8 @@ void canopy_draw(void *state, const Frame *f) {
             if (m > 0.55f) put_cell(g, col, row, m > 0.65f ? '~' : '-', frame_dim(f, light, 0.25f + (m - 0.55f)));
         }
     for (int i = 0; i < LEAVES; i++) {
-        float sway = 0.08f * msin(f->t * 0.5f + c->phase[i]) + 0.025f * msin(f->t * 1.9f + c->phase[i] * 2), a = c->angle[i] + sway;
+        float sway = 0.08f * msin(f->t * 0.5f + c->phase[i]) + 0.025f * msin(f->t * 1.9f + c->phase[i] * 2),
+              a = c->angle[i] + sway;
         float dx = mcos(a), dy = msin(a), tipx = c->x[i] + dx * c->length[i], tipy = c->y[i] + dy * c->length[i];
         // Bounding box, then each cell tests itself against the leaf's lens shape.
         float minx = mmin(c->x[i], tipx) - c->width[i], maxx = mmax(c->x[i], tipx) + c->width[i];
@@ -461,13 +489,16 @@ void canopy_draw(void *state, const Frame *f) {
                 float half = c->width[i] * msin(along * PI_F) * (1 - 0.3f * along);
                 if (mabs(across) > half) continue;
                 // The midrib, then veins slanting back from it on either side.
-                int glyph = mabs(across) < 0.025f ? (mabs(dx) > mabs(dy) ? '-' : '|') : (across > 0) == (dx * dy > 0) ? '/' : '\\';
+                int glyph = mabs(across) < 0.025f           ? (mabs(dx) > mabs(dy) ? '-' : '|')
+                            : (across > 0) == (dx * dy > 0) ? '/'
+                                                            : '\\';
                 float shade = 0.5f + 0.5f * (1 - mabs(across) / (half + 0.001f));
                 put_cell(g, col, row, glyph, rgbf_mix(dark, light, shade * (0.6f + 0.4f * along)));
             }
         // A drop gathers at the tip and falls now and then.
         float period = 1.8f + 0.8f * (float)(i % 4), age = mfract((f->t + c->phase[i]) / period) * period;
-        if (age < 1.2f) put_cell(g, cell_col(g, tipx), cell_row(g, tipy - age * age * 0.8f), age < 0.2f ? 'o' : '.', drip);
+        if (age < 1.2f)
+            put_cell(g, cell_col(g, tipx), cell_row(g, tipy - age * age * 0.8f), age < 0.2f ? 'o' : '.', drip);
     }
     for (int k = 0; k < 2; k++) {
         float p = c->phase[k] + (float)k * 2.1f, t = f->t;
@@ -511,7 +542,8 @@ void trails_draw(void *state, const Frame *f) {
             put_cell(g, col, row, hash01((uint32_t)(row * 131 + col) ^ t->salt) < 0.08f ? '.' : ':',
                      frame_dim(f, palette_ramp(f->palette, 0.3f), 0.6f));
     }
-    Rgbf lane = palette_ramp(f->palette, 0.35f), head = palette_ramp(f->palette, 1.0f), tail = palette_accent(f->palette, 0);
+    Rgbf lane = palette_ramp(f->palette, 0.35f), head = palette_ramp(f->palette, 1.0f),
+         tail = palette_accent(f->palette, 0);
     // Road edges and dashed lane lines, rushing toward us.
     for (int l = -3; l <= 3; l += 2) {
         float x = (float)l * 0.55f;
@@ -558,20 +590,28 @@ void speakers_setup(void *state, Rng *r, const Frame *f) {
 // A stack of speaker cabinets playing the whole piece: the upper cones push out on the kick and the tune, the lower on
 // the bass and the pads, every note sends a ring of air off its cone, and the tweeters glint on the hats.
 void speakers_draw(void *state, const Frame *f) {
-    static const Role UPPER[4] = {ROLE_KICK, ROLE_LEAD, ROLE_BELL, ROLE_ARP}, LOWER[4] = {ROLE_BASS, ROLE_PAD, ROLE_PLUCK, ROLE_CHORD};
+    static const Role UPPER[4] = {ROLE_KICK, ROLE_LEAD, ROLE_BELL, ROLE_ARP},
+                      LOWER[4] = {ROLE_BASS, ROLE_PAD, ROLE_PLUCK, ROLE_CHORD};
     Speakers *s = state;
     Grid *g = f->grid;
-    float kick = frame_pulse(f, ROLE_KICK, 0.18f, 1.0f), bass = frame_pulse(f, ROLE_BASS, 0.25f, 0.7f), hat = frame_pulse(f, ROLE_HAT, 0.08f, 1.0f);
-    float tune = frame_pulse(f, ROLE_LEAD, 0.2f, 0.5f) + frame_pulse(f, ROLE_BELL, 0.25f, 0.5f) + frame_pulse(f, ROLE_ARP, 0.12f, 0.3f);
-    float swell = frame_pulse(f, ROLE_PAD, 0.8f, 0.35f) + frame_pulse(f, ROLE_PLUCK, 0.2f, 0.4f) + frame_pulse(f, ROLE_CHORD, 0.3f, 0.5f);
+    float kick = frame_pulse(f, ROLE_KICK, 0.18f, 1.0f), bass = frame_pulse(f, ROLE_BASS, 0.25f, 0.7f),
+          hat = frame_pulse(f, ROLE_HAT, 0.08f, 1.0f);
+    float tune = frame_pulse(f, ROLE_LEAD, 0.2f, 0.5f) + frame_pulse(f, ROLE_BELL, 0.25f, 0.5f) +
+                 frame_pulse(f, ROLE_ARP, 0.12f, 0.3f);
+    float swell = frame_pulse(f, ROLE_PAD, 0.8f, 0.35f) + frame_pulse(f, ROLE_PLUCK, 0.2f, 0.4f) +
+                  frame_pulse(f, ROLE_CHORD, 0.3f, 0.5f);
     // Air keeps rolling off the cones between notes too, faster as the music gathers energy.
     float air = frame_travel(f, 0.6f, 1.2f);
-    Rgbf box = palette_ramp(f->palette, 0.4f), cone = palette_accent(f->palette, 0), cap = palette_ramp(f->palette, 0.95f);
+    Rgbf box = palette_ramp(f->palette, 0.4f), cone = palette_accent(f->palette, 0),
+         cap = palette_ramp(f->palette, 0.95f);
     float cw = g->aspect * 1.7f / (float)s->columns, ch = 1.7f / (float)s->rows;
     for (int i = 0; i < s->columns; i++)
         for (int j = 0; j < s->rows; j++) {
-            float x0 = -g->aspect * 0.85f + (float)i * cw, y1 = 0.85f - (float)j * ch, cx = x0 + cw * 0.5f, cy = y1 - ch * 0.56f;
-            StrokePoint frame[4] = {{x0 + 0.02f, y1, box}, {x0 + cw - 0.02f, y1, box}, {x0 + cw - 0.02f, y1 - ch + 0.03f, box},
+            float x0 = -g->aspect * 0.85f + (float)i * cw, y1 = 0.85f - (float)j * ch, cx = x0 + cw * 0.5f,
+                  cy = y1 - ch * 0.56f;
+            StrokePoint frame[4] = {{x0 + 0.02f, y1, box},
+                                    {x0 + cw - 0.02f, y1, box},
+                                    {x0 + cw - 0.02f, y1 - ch + 0.03f, box},
                                     {x0 + 0.02f, y1 - ch + 0.03f, box}};
             stroke_draw(f->stroker, frame, 4, 1);
             float push = mmin(1, j ? bass + swell : kick + tune), r = mmin(cw, ch) * 0.34f;
@@ -584,7 +624,9 @@ void speakers_draw(void *state, const Frame *f) {
             for (int k = 0; k < 4; k++) {
                 const ScoreEvent *e = score_last(f->score, j ? LOWER[k] : UPPER[k], f->t);
                 float age = e ? (f->t - e->time) / 0.5f : 1;
-                if (age < 1) circle(f, cx, cy, r * (1.12f + 0.35f * age), frame_dim(f, cone, (1 - age) * 0.8f * frame_bright(f)), 40);
+                if (age < 1)
+                    circle(f, cx, cy, r * (1.12f + 0.35f * age), frame_dim(f, cone, (1 - age) * 0.8f * frame_bright(f)),
+                           40);
             }
             float tx = cx + cw * 0.3f, ty = y1 - ch * 0.14f;
             put_cell(g, cell_col(g, tx), cell_row(g, ty), hat > 0.2f ? '*' : 'o', frame_dim(f, cap, 0.5f + 0.5f * hat));
@@ -632,7 +674,8 @@ static void storm_corner(const void *ctx, const Frame *f, float x, float y, floa
 void lightning_draw(void *state, const Frame *f) {
     Lightning *l = state;
     Grid *g = f->grid;
-    Rgbf cloud = palette_ramp(f->palette, 0.35f), rain = palette_ramp(f->palette, 0.5f), white = palette_ramp(f->palette, 1.0f);
+    Rgbf cloud = palette_ramp(f->palette, 0.35f), rain = palette_ramp(f->palette, 0.5f),
+         white = palette_ramp(f->palette, 1.0f);
     float glow = 0;
     canvas_clear(f->canvas);
     canvas_from_corners(f, storm_corner, l);
@@ -646,7 +689,8 @@ void lightning_draw(void *state, const Frame *f) {
         float age = f->t - hits[i]->time, bright = (1 - age / 0.45f) * frame_bright(f);
         if (bright <= 0) continue;
         float x = (hash01(id + 1) * 1.6f - 0.8f) * g->aspect;
-        bolt(f, id, x, l->cloud_base, l->ground, frame_dim(f, rgbf_mix(white, palette_accent(f->palette, 2), 0.3f), bright * 1.2f), 1);
+        bolt(f, id, x, l->cloud_base, l->ground,
+             frame_dim(f, rgbf_mix(white, palette_accent(f->palette, 2), 0.3f), bright * 1.2f), 1);
         if (bright > glow) {
             glow = bright;
             bolt_x = x;
@@ -708,7 +752,8 @@ void dunes_draw(void *state, const Frame *f) {
     moon_disc(f, d->moon_x, 0.55f, 0.15f, palette_ramp(f->palette, 1.0f), (uint32_t)(d->seed * 37), 0);
     static const char ripple[] = "~-~-=~-~";
     for (int layer = 0; layer < 3; layer++) {
-        Rgbf sand = palette_ramp(f->palette, 0.65f - 0.15f * (float)layer), shade = palette_ramp(f->palette, 0.3f - 0.06f * (float)layer);
+        Rgbf sand = palette_ramp(f->palette, 0.65f - 0.15f * (float)layer),
+             shade = palette_ramp(f->palette, 0.3f - 0.06f * (float)layer);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), h = dune_height(d, layer, x), slope = dune_height(d, layer, x + 0.05f) - h;
             // The flank facing the moon catches its light.
@@ -716,7 +761,11 @@ void dunes_draw(void *state, const Frame *f) {
             for (int row = cell_row(g, h); row < g->rows; row++) {
                 float y = cell_y(g, row), depth = h - y;
                 if (row == cell_row(g, h)) {
-                    put_cell(g, col, row, slope > 0.006f ? '/' : slope < -0.006f ? '\\' : '_', rgbf_mix(shade, sand, 0.4f + 0.6f * lit));
+                    put_cell(g, col, row,
+                             slope > 0.006f    ? '/'
+                             : slope < -0.006f ? '\\'
+                                               : '_',
+                             rgbf_mix(shade, sand, 0.4f + 0.6f * lit));
                     continue;
                 }
                 int i = (int)(mfract(x * 3 + depth * 9 + d->seed - f->t * 0.08f) * 8);
@@ -727,19 +776,21 @@ void dunes_draw(void *state, const Frame *f) {
             if (hash01((uint32_t)col * 2654435761u + (uint32_t)layer) < 0.4f) {
                 float drift = mfract(f->t * d->wind * 2 + hash01((uint32_t)col)) * 0.3f;
                 for (int k = 0; k < 2; k++)
-                    put_cell_under(g, cell_col(g, x + drift - (float)k * 0.035f), cell_row(g, h + 0.03f + drift * 0.2f), k ? '.' : '\'',
-                                   frame_dim(f, sand, 0.6f - 0.25f * (float)k));
+                    put_cell_under(g, cell_col(g, x + drift - (float)k * 0.035f), cell_row(g, h + 0.03f + drift * 0.2f),
+                                   k ? '.' : '\'', frame_dim(f, sand, 0.6f - 0.25f * (float)k));
             }
         }
         if (layer != 1) continue;
         float wrap = 2 * g->aspect + 0.6f;
         for (int k = 0; k < 4; k++) {
-            float x = mfract((d->seed * 0.01f + f->t * 0.05f - (float)k * 0.25f + g->aspect + 0.3f) / wrap) * wrap - g->aspect - 0.3f;
+            float x = mfract((d->seed * 0.01f + f->t * 0.05f - (float)k * 0.25f + g->aspect + 0.3f) / wrap) * wrap -
+                      g->aspect - 0.3f;
             int feet = cell_row(g, dune_height(d, 1, x)) - 1, stride = (int)mfloor(f->t * 1.6f + (float)k * 0.5f) & 1;
             for (int r = 0; r < 3; r++)
                 for (int c = 0; CAMEL[stride][r][c]; c++)
                     if (CAMEL[stride][r][c] != ' ')
-                        put_cell(g, cell_col(g, x) + c - 3, feet - 2 + r, CAMEL[stride][r][c], palette_ramp(f->palette, 0.9f));
+                        put_cell(g, cell_col(g, x) + c - 3, feet - 2 + r, CAMEL[stride][r][c],
+                                 palette_ramp(f->palette, 0.9f));
         }
     }
     f->fx->glow = 0.45f;
@@ -769,22 +820,27 @@ void kelp_setup(void *state, Rng *r, const Frame *f) {
 void kelp_draw(void *state, const Frame *f) {
     Kelp *k = state;
     Grid *g = f->grid;
-    Rgbf ray = palette_ramp(f->palette, 0.5f), weed = palette_accent(f->palette, 1), fish = palette_ramp(f->palette, 0.9f);
+    Rgbf ray = palette_ramp(f->palette, 0.5f), weed = palette_accent(f->palette, 1),
+         fish = palette_ramp(f->palette, 0.9f);
     for (int row = 0; row < g->rows; row++)
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), y = cell_y(g, row);
             float band = msin((x + y * 0.5f) * 5 + f->t * 0.15f) * msin((x + y * 0.5f) * 1.7f - f->t * 0.07f);
-            if (band > 0.55f && y > -0.6f) put_cell(g, col, row, '/', frame_dim(f, ray, (band - 0.55f) * 1.4f * (0.4f + 0.6f * y)));
+            if (band > 0.55f && y > -0.6f)
+                put_cell(g, col, row, '/', frame_dim(f, ray, (band - 0.55f) * 1.4f * (0.4f + 0.6f * y)));
         }
     for (int col = 0; col < g->cols; col++)
-        put_cell(g, col, g->rows - 1, hash01((uint32_t)col * 977u ^ k->salt) < 0.3f ? '~' : '_', frame_dim(f, ray, 0.8f));
+        put_cell(g, col, g->rows - 1, hash01((uint32_t)col * 977u ^ k->salt) < 0.3f ? '~' : '_',
+                 frame_dim(f, ray, 0.8f));
     for (int i = 0; i < STALKS; i++) {
         StrokePoint pts[24];
         for (int s = 0; s < 24; s++) {
             float t = (float)s / 23, y = -1 + t * k->height[i];
             float x = k->x[i] + 0.12f * t * msin(f->t * 0.6f + k->phase[i] + t * 2.5f);
             pts[s] = (StrokePoint){x, y, frame_dim(f, weed, 0.5f + 0.4f * t)};
-            if (s % 3 == 1) put_cell(g, cell_col(g, x) + (s % 2 ? 1 : -1), cell_row(g, y), s % 2 ? ')' : '(', frame_dim(f, weed, 0.7f));
+            if (s % 3 == 1)
+                put_cell(g, cell_col(g, x) + (s % 2 ? 1 : -1), cell_row(g, y), s % 2 ? ')' : '(',
+                         frame_dim(f, weed, 0.7f));
         }
         stroke_draw(f->stroker, pts, 24, 0);
     }
@@ -797,7 +853,8 @@ void kelp_draw(void *state, const Frame *f) {
     for (int s = 0; s < 6; s++) {
         uint32_t id = k->salt * 7u + (uint32_t)s;
         int right = s % 2;
-        float speed = 0.08f + 0.1f * hash01(id), y = hash01(id + 1) * 1.2f - 0.4f + 0.03f * msin(f->t * 1.5f + (float)s);
+        float speed = 0.08f + 0.1f * hash01(id),
+              y = hash01(id + 1) * 1.2f - 0.4f + 0.03f * msin(f->t * 1.5f + (float)s);
         float span = g->aspect * 2.6f, x = mfract(hash01(id + 2) + f->t * speed / span) * span - span * 0.5f;
         if (!right) x = -x;
         int size = (int)(hash01(id + 3) * 3), col = cell_col(g, x), row = cell_row(g, y);
@@ -805,7 +862,8 @@ void kelp_draw(void *state, const Frame *f) {
         for (int m = 0; m < (size ? 1 : 4); m++) {
             const char *body = size == 2 ? (right ? "><((('>" : "<')))><") : right ? "><>" : "<><";
             int w = (int)strlen(body);
-            for (int c = 0; c < w; c++) put_cell(g, col + c - w / 2 + m * (right ? -5 : 5), row + (m % 2), body[c], fish);
+            for (int c = 0; c < w; c++)
+                put_cell(g, col + c - w / 2 + m * (right ? -5 : 5), row + (m % 2), body[c], fish);
         }
     }
     f->fx->glow = 0.5f;
@@ -833,15 +891,19 @@ void meteors_setup(void *state, Rng *r, const Frame *f) {
 void meteors_draw(void *state, const Frame *f) {
     Meteors *m = state;
     Grid *g = f->grid;
-    Rgbf hot = palette_ramp(f->palette, 1.0f), trail = palette_accent(f->palette, 2), land = palette_ramp(f->palette, 0.25f);
+    Rgbf hot = palette_ramp(f->palette, 1.0f), trail = palette_accent(f->palette, 2),
+         land = palette_ramp(f->palette, 0.25f);
     float turn = f->t * 0.004f, nx = -msin(m->band_tilt), ny = mcos(m->band_tilt);
     for (int row = 0; row < cell_row(g, m->ridge); row++)
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col) - turn * 8, y = cell_y(g, row), d = x * nx + y * ny - m->band_at;
             if (d * d > 0.06f) continue;
-            float clump = noise_value((x * ny - y * nx) * 4 + (float)(m->salt % 89), d * 6), dense = mexp(-d * d * 60) * clump;
+            float clump = noise_value((x * ny - y * nx) * 4 + (float)(m->salt % 89), d * 6),
+                  dense = mexp(-d * d * 60) * clump;
             uint32_t id = (uint32_t)(row * 977 + col) ^ m->salt;
-            if (hash01(id) < dense * 1.1f) put_cell(g, col, row, hash01(id + 1) < 0.35f ? ':' : '.', frame_dim(f, palette_ramp(f->palette, 0.6f + 0.4f * dense), 0.3f + 0.5f * dense));
+            if (hash01(id) < dense * 1.1f)
+                put_cell(g, col, row, hash01(id + 1) < 0.35f ? ':' : '.',
+                         frame_dim(f, palette_ramp(f->palette, 0.6f + 0.4f * dense), 0.3f + 0.5f * dense));
         }
     dust_stars(f, m->salt, 0.03f, 0.9f);
     for (int k = 0; k < 8; k++) {
@@ -858,8 +920,12 @@ void meteors_draw(void *state, const Frame *f) {
         float fade = 1 - age / life;
         for (int s = 0; s < (fireball ? 14 : 8); s++) {
             float back = (float)s * 0.035f;
-            put_cell(g, cell_col(g, hx - dx * back * g->aspect * 0.8f), cell_row(g, hy - dy * back), s ? (s < 3 ? (fireball ? '=' : '-') : '.') : fireball ? '@' : '*',
-                     frame_dim(f, s ? trail : hot, fade * (1 - (float)s / (fireball ? 15 : 9)) * (fireball ? 1.3f : 1.0f)));
+            put_cell(
+                g, cell_col(g, hx - dx * back * g->aspect * 0.8f), cell_row(g, hy - dy * back),
+                s          ? (s < 3 ? (fireball ? '=' : '-') : '.')
+                : fireball ? '@'
+                           : '*',
+                frame_dim(f, s ? trail : hot, fade * (1 - (float)s / (fireball ? 15 : 9)) * (fireball ? 1.3f : 1.0f)));
         }
     }
     // A treeline along the shore, dark against the sky.
@@ -869,7 +935,8 @@ void meteors_draw(void *state, const Frame *f) {
             int top = shore - 3 - (int)(hash01((uint32_t)col * 31u) * 4);
             for (int row = top; row < shore; row++) {
                 int w = (row - top) / 2;
-                for (int c = -w; c <= w; c++) put_cell(g, col + c, row, c < 0 ? '/' : c > 0 ? '\\' : '^', frame_dim(f, land, 1.3f));
+                for (int c = -w; c <= w; c++)
+                    put_cell(g, col + c, row, c < 0 ? '/' : c > 0 ? '\\' : '^', frame_dim(f, land, 1.3f));
             }
         }
     }
@@ -883,7 +950,11 @@ void meteors_draw(void *state, const Frame *f) {
         for (int col = 0; src >= 0 && col < g->cols; col++) {
             const Cell *c = grid_at(g, clampi(col + wobble, 0, g->cols - 1), src);
             if (c->glyph == ' ') continue;
-            int glyph = c->glyph == '/' ? '\\' : c->glyph == '\\' ? '/' : c->glyph == '^' ? 'v' : c->glyph == '_' ? '-' : c->glyph;
+            int glyph = c->glyph == '/'    ? '\\'
+                        : c->glyph == '\\' ? '/'
+                        : c->glyph == '^'  ? 'v'
+                        : c->glyph == '_'  ? '-'
+                                           : c->glyph;
             put_cell(g, col, row, glyph, frame_dim(f, rgbf(c->fg), 0.4f));
         }
     }
@@ -925,7 +996,8 @@ static void reel(const Frame *f, float x, float y, float radius, float pack, flo
 void reels_draw(void *state, const Frame *f) {
     Reels *t = state;
     Grid *g = f->grid;
-    float length = mmax(f->score->length, 1), progress = saturate(f->t / length), radius = 0.36f, ry = 0.46f, rx = g->aspect * 0.52f;
+    float length = mmax(f->score->length, 1), progress = saturate(f->t / length), radius = 0.36f, ry = 0.46f,
+          rx = g->aspect * 0.52f;
     canvas_clear(f->canvas);
     for (int side = 0; side < 2; side++) {
         // The tape runs at a steady speed, so a reel turns faster the less it holds: the angle is the integral of
@@ -935,35 +1007,43 @@ void reels_draw(void *state, const Frame *f) {
         reel(f, side ? rx : -rx, ry, radius, radius * fill, -turned);
     }
     frame_resolve(f);
-    Rgbf metal = palette_ramp(f->palette, 0.75f), tape = palette_ramp(f->palette, 0.45f), panel = palette_ramp(f->palette, 0.3f);
+    Rgbf metal = palette_ramp(f->palette, 0.75f), tape = palette_ramp(f->palette, 0.45f),
+         panel = palette_ramp(f->palette, 0.3f);
     for (int side = 0; side < 2; side++) {
         float x = side ? rx : -rx;
         circle(f, x, ry, radius, metal, 48);
         // Tape from the reel's pack down round a guide roller to the head block.
-        float pack = radius * (0.3f + 0.6f * (side ? progress : 1 - progress)), gx = (side ? 1 : -1) * 0.36f, gy = -0.08f;
+        float pack = radius * (0.3f + 0.6f * (side ? progress : 1 - progress)), gx = (side ? 1 : -1) * 0.36f,
+              gy = -0.08f;
         line(f, x + (side ? -1 : 1) * pack, ry, gx, gy, tape);
         circle(f, gx, gy, 0.04f, metal, 12);
         line(f, gx, gy - 0.04f, (side ? 1 : -1) * 0.12f, -0.16f, tape);
     }
     // The head block.
-    StrokePoint head[4] = {{-0.14f, -0.12f, metal}, {0.14f, -0.12f, metal}, {0.14f, -0.24f, metal}, {-0.14f, -0.24f, metal}};
+    StrokePoint head[4] = {
+        {-0.14f, -0.12f, metal}, {0.14f, -0.12f, metal}, {0.14f, -0.24f, metal}, {-0.14f, -0.24f, metal}};
     stroke_draw(f->stroker, head, 4, 1);
     for (int k = -1; k <= 1; k++) put_cell(g, cell_col(g, (float)k * 0.08f), cell_row(g, -0.15f), '#', metal);
     // VU meters: how hard the music is hitting, each side its own blend of parts.
     for (int side = 0; side < 2; side++) {
         float cx = (side ? 1 : -1) * g->aspect * 0.42f, cy = -0.62f, w = 0.5f, h = 0.24f;
-        StrokePoint box[4] = {{cx - w, cy + h, panel}, {cx + w, cy + h, panel}, {cx + w, cy - h, panel}, {cx - w, cy - h, panel}};
+        StrokePoint box[4] = {
+            {cx - w, cy + h, panel}, {cx + w, cy + h, panel}, {cx + w, cy - h, panel}, {cx - w, cy - h, panel}};
         stroke_draw(f->stroker, box, 4, 1);
-        float level = side ? frame_pulse(f, ROLE_SNARE, 0.25f, 0.5f) + frame_pulse(f, ROLE_LEAD, 0.4f, 0.4f) + frame_pulse(f, ROLE_PAD, 0.8f, 0.2f)
+        float level = side ? frame_pulse(f, ROLE_SNARE, 0.25f, 0.5f) + frame_pulse(f, ROLE_LEAD, 0.4f, 0.4f) +
+                                 frame_pulse(f, ROLE_PAD, 0.8f, 0.2f)
                            : frame_pulse(f, ROLE_KICK, 0.25f, 0.6f) + frame_pulse(f, ROLE_BASS, 0.4f, 0.4f);
         level = saturate(0.08f + level * 0.65f + 0.04f * msin(f->t * 3.1f + (float)side));
         // The scale: an arc of ticks, red at the top end.
         for (int k = 0; k <= 10; k++) {
-            float a = PI_F * (0.75f - 0.5f * (float)k / 10), tx = cx + mcos(a) * w * 0.8f, ty = cy - h * 0.7f + msin(a) * h * 1.3f;
-            put_cell(g, cell_col(g, tx), cell_row(g, ty), k % 5 == 0 ? '|' : '\'', k > 7 ? palette_accent(f->palette, 0) : metal);
+            float a = PI_F * (0.75f - 0.5f * (float)k / 10), tx = cx + mcos(a) * w * 0.8f,
+                  ty = cy - h * 0.7f + msin(a) * h * 1.3f;
+            put_cell(g, cell_col(g, tx), cell_row(g, ty), k % 5 == 0 ? '|' : '\'',
+                     k > 7 ? palette_accent(f->palette, 0) : metal);
         }
         float a = PI_F * (0.75f - 0.5f * level);
-        line(f, cx, cy - h * 0.7f, cx + mcos(a) * w * 0.72f, cy - h * 0.7f + msin(a) * h * 1.15f, palette_ramp(f->palette, 1.0f));
+        line(f, cx, cy - h * 0.7f, cx + mcos(a) * w * 0.72f, cy - h * 0.7f + msin(a) * h * 1.15f,
+             palette_ramp(f->palette, 1.0f));
         const char *label = side ? "R" : "L";
         put_cell(g, cell_col(g, cx), cell_row(g, cy - h * 0.6f), label[0], panel);
     }
@@ -1006,7 +1086,8 @@ static void horse(Grid *g, int col, int row, int left, Rgbf body, Rgbf brass) {
         for (int c = 0; c < 11; c++) {
             int src = left ? 10 - c : c;
             char ch = HORSE[r][src];
-            if (ch != ' ') put_cell(g, col + c - (left ? 6 : 4), row + r, left ? mirror_glyph(ch) : ch, src == 4 ? brass : body);
+            if (ch != ' ')
+                put_cell(g, col + c - (left ? 6 : 4), row + r, left ? mirror_glyph(ch) : ch, src == 4 ? brass : body);
         }
 }
 
@@ -1036,9 +1117,12 @@ void carousel_draw(void *state, const Frame *f) {
     float turn = TAU_F * f->t * gentle / (bar * c->bars_per_turn);
     int beat_no = (int)mfloor(f->t / beat);
     float chase = 0.4f + 0.6f * mexp(-(f->t - (float)beat_no * beat) / (beat * 0.6f)) * frame_bright(f);
-    Rgbf brass = palette_ramp(f->palette, 0.8f), cloth = palette_accent(f->palette, 0), cream = palette_ramp(f->palette, 0.92f);
+    Rgbf brass = palette_ramp(f->palette, 0.8f), cloth = palette_accent(f->palette, 0),
+         cream = palette_ramp(f->palette, 0.92f);
     Rgbf bulb = palette_ramp(f->palette, 1.0f);
+
     dust_stars(f, c->salt, 0.0f, 0.55f);
+
     int ground = cell_row(g, deck - tilt - 0.12f);
     for (int row = ground; row < g->rows; row++)
         for (int col = 0; col < g->cols; col++) {
@@ -1046,28 +1130,33 @@ void carousel_draw(void *state, const Frame *f) {
             cell->glyph = hash01((uint32_t)(row * 977 + col) ^ c->salt) < 0.12f ? '.' : ' ';
             cell->fg = rgb_from_f(frame_dim(f, brass, 0.25f));
         }
+
     // Strings of bulbs from the flag out to the edges of the night, every other one lit in turn.
     for (int side = -1; side <= 1; side += 2) {
         StrokePoint wire[21];
         for (int k = 0; k < 21; k++) {
             float u = (float)k / 20;
-            wire[k] = (StrokePoint){(float)side * u * (g->aspect + 0.05f), mixf(peak + 0.1f, 0.62f, u) - c->sag * 4 * u * (1 - u),
-                                    frame_dim(f, brass, 0.3f)};
+            wire[k] = (StrokePoint){(float)side * u * (g->aspect + 0.05f),
+                                    mixf(peak + 0.1f, 0.62f, u) - c->sag * 4 * u * (1 - u), frame_dim(f, brass, 0.3f)};
         }
         stroke_draw(f->stroker, wire, 21, 0);
         for (int k = 3; k < 21; k += 2) {
             int lit = (k / 2 + beat_no) % 2 == 0;
             Rgbf color = rgbf_mix(palette_accent(f->palette, k / 2), bulb, 0.3f);
-            put_cell(g, cell_col(g, wire[k].x), cell_row(g, wire[k].y) + 1, 'o', frame_dim(f, color, lit ? chase : 0.4f));
+            put_cell(g, cell_col(g, wire[k].x), cell_row(g, wire[k].y) + 1, 'o',
+                     frame_dim(f, color, lit ? chase : 0.4f));
         }
     }
+
     // The deck, seen from a little above, the seams of its boards turning with it.
     for (int row = cell_row(g, deck + tilt); row <= cell_row(g, deck - tilt); row++)
         for (int col = 0; col < g->cols; col++) {
             float u = cell_x(g, col) / rim, v = (cell_y(g, row) - deck) / tilt;
             if (u * u + v * v > 1) continue;
-            if (mfract((matan2(v, u) - turn) * 16 / TAU_F) < 0.12f) put_cell(g, col, row, '.', frame_dim(f, brass, 0.4f));
+            if (mfract((matan2(v, u) - turn) * 16 / TAU_F) < 0.12f)
+                put_cell(g, col, row, '.', frame_dim(f, brass, 0.4f));
         }
+
     // The horses, back to front: the far side's dimmer and going the other way, the column between the two sides.
     int order[HORSES];
     float depth[HORSES];
@@ -1081,10 +1170,12 @@ void carousel_draw(void *state, const Frame *f) {
             order[j] = order[j - 1];
             order[j - 1] = swap;
         }
+
     int column_drawn = 0;
     for (int i = 0; i < HORSES; i++) {
         int k = order[i];
-        float a = turn + (float)k * TAU_F / HORSES, z = depth[k], lift = orbit * squash * z, near = 1 - 0.45f * (z + 1) / 2;
+        float a = turn + (float)k * TAU_F / HORSES, z = depth[k], lift = orbit * squash * z,
+              near = 1 - 0.45f * (z + 1) / 2;
         if (!column_drawn && z <= 0) {
             carousel_column(f, turn, top, deck, brass, cream);
             column_drawn = 1;
@@ -1101,6 +1192,7 @@ void carousel_draw(void *state, const Frame *f) {
         horse(g, col, ears, z > 0, body, frame_dim(f, brass, near));
     }
     if (!column_drawn) carousel_column(f, turn, top, deck, brass, cream);
+
     // The skirt round the deck and the canopy above, both turning: painted panels below, a striped roof and a
     // scalloped valance above.
     int last_panel = 0, inside = 0;
@@ -1115,12 +1207,14 @@ void carousel_draw(void *state, const Frame *f) {
         int border = inside && panel != last_panel;
         last_panel = panel, inside = 1;
         for (int r = 1; r <= 3; r++)
-            put_cell(g, col, deck_edge + r, border ? '|' : '=', frame_dim(f, panel & 1 ? cloth : brass, border ? 0.8f : 0.6f));
+            put_cell(g, col, deck_edge + r, border ? '|' : '=',
+                     frame_dim(f, panel & 1 ? cloth : brass, border ? 0.8f : 0.6f));
         // Roof: follow the line from the peak through each cell down to the rim to find its stripe.
         int rim_row = cell_row(g, top + tilt * front);
         for (int row = cell_row(g, peak - mabs(u) * rise); row < rim_row; row++) {
             float down = peak - cell_y(g, row), along = x * rise / (down * rim);
-            for (int it = 0; it < 2; it++) along = clampf(x * (rise + tilt * msqrt(1 - clampf(along * along, 0, 1))) / (down * rim), -1, 1);
+            for (int it = 0; it < 2; it++)
+                along = clampf(x * (rise + tilt * msqrt(1 - clampf(along * along, 0, 1))) / (down * rim), -1, 1);
             float a = matan2(-msqrt(1 - along * along), along) - turn, facing = msqrt(1 - along * along);
             int stripe = (int)mfloor(a * 12 / TAU_F) & 1;
             put_cell(g, col, row, stripe ? '#' : ':', frame_dim(f, stripe ? cloth : cream, 0.25f + 0.35f * facing));
@@ -1130,19 +1224,24 @@ void carousel_draw(void *state, const Frame *f) {
         for (int r = 1; r <= 1 + (int)(dip * 2.2f); r++)
             put_cell(g, col, rim_row + r, r == 1 ? '#' : 'V', frame_dim(f, (int)mfloor(k) & 1 ? cloth : cream, 0.75f));
     }
+
     // Bulbs hang from the low point of every scallop, and a mirror shines in every panel of the skirt.
     for (int s = 0; s < 18; s++) {
         float a = ((float)s + 0.5f) * TAU_F / 18 + turn;
         if (msin(a) >= 0) continue;
         int lit = (s + beat_no) % 3 == 0;
         Rgbf color = rgbf_mix(palette_accent(f->palette, s), bulb, 0.4f);
-        put_cell(g, cell_col(g, rim * mcos(a)), cell_row(g, top + tilt * msin(a)) + 4, 'o', frame_dim(f, color, lit ? chase : 0.4f));
+        put_cell(g, cell_col(g, rim * mcos(a)), cell_row(g, top + tilt * msin(a)) + 4, 'o',
+                 frame_dim(f, color, lit ? chase : 0.4f));
     }
+
     for (int s = 0; s < 12; s++) {
         float a = ((float)s + 0.5f) * TAU_F / 12 + turn;
         if (msin(a) >= 0) continue;
-        put_cell(g, cell_col(g, rim * mcos(a)), cell_row(g, deck + tilt * msin(a)) + 2, 'o', frame_dim(f, bulb, 0.5f + 0.5f * chase));
+        put_cell(g, cell_col(g, rim * mcos(a)), cell_row(g, deck + tilt * msin(a)) + 2, 'o',
+                 frame_dim(f, bulb, 0.5f + 0.5f * chase));
     }
+
     // The roof's edges and its flag.
     line(f, 0, peak, -rim, top, brass);
     line(f, 0, peak, rim, top, brass);
@@ -1150,5 +1249,6 @@ void carousel_draw(void *state, const Frame *f) {
     for (int r = 1; r <= 3; r++) put_cell(g, flag_col, flag_row - r, '|', brass);
     put_cell(g, flag_col + 1, flag_row - 3, (int)(f->t * 3) % 2 ? '~' : '=', cloth);
     put_cell(g, flag_col + 2, flag_row - 3, '>', cloth);
+
     f->fx->glow = 0.55f;
 }

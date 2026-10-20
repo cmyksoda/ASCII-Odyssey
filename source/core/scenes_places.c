@@ -57,12 +57,15 @@ static void koi_at(const Koi *k, int i, float t, float *x, float *y) {
 void koi_draw(void *state, const Frame *f) {
     Koi *k = state;
     Grid *g = f->grid;
-    Rgbf water = palette_ramp(f->palette, 0.3f), pad = palette_ramp(f->palette, 0.6f), bloom = palette_accent(f->palette, 0);
+    Rgbf water = palette_ramp(f->palette, 0.3f), pad = palette_ramp(f->palette, 0.6f),
+         bloom = palette_accent(f->palette, 0);
+
     for (int row = 0; row < g->rows; row++)
         for (int col = 0; col < g->cols; col++) {
             float n = noise_fbm(cell_x(g, col) * 2 + f->t * 0.02f, cell_y(g, row) * 3 - f->t * 0.015f);
             if (n > 0.66f) put_cell(g, col, row, n > 0.72f ? '~' : '-', frame_dim(f, water, 0.5f + (n - 0.66f) * 3));
         }
+
     for (int i = 0; i < KOI; i++) {
         // The body: its outline traced along the fish's own wake, widest behind the head and tapering to the tail.
         StrokePoint left[12], right[12];
@@ -80,17 +83,21 @@ void koi_draw(void *state, const Frame *f) {
         stroke_draw(f->stroker, right, 12, 0);
         StrokePoint nose[2] = {left[0], right[0]};
         stroke_draw(f->stroker, nose, 2, 0);
+
         // A fanned tail, and a few white patches along the back.
         float tx = px[10] - px[11], ty = py[10] - py[11], len = mhypot(tx, ty) + 0.0001f;
         for (int side = -1; side <= 1; side += 2) {
             StrokePoint fin[2] = {{px[11], py[11], skin},
-                                  {px[11] - tx / len * 0.06f - ty / len * 0.05f * (float)side, py[11] - ty / len * 0.06f + tx / len * 0.05f * (float)side, skin}};
+                                  {px[11] - tx / len * 0.06f - ty / len * 0.05f * (float)side,
+                                   py[11] - ty / len * 0.06f + tx / len * 0.05f * (float)side, skin}};
             stroke_draw(f->stroker, fin, 2, 0);
         }
         for (int s = 2; s < 9; s += 3)
-            put_cell(g, cell_col(g, px[s]), cell_row(g, py[s]), 'o', hash01((uint32_t)(i * 7 + s)) < 0.6f ? palette_ramp(f->palette, 1.0f) : skin);
+            put_cell(g, cell_col(g, px[s]), cell_row(g, py[s]), 'o',
+                     hash01((uint32_t)(i * 7 + s)) < 0.6f ? palette_ramp(f->palette, 1.0f) : skin);
         put_cell(g, cell_col(g, px[0]), cell_row(g, py[0]), '.', palette_ramp(f->palette, 1.0f));
     }
+
     // Lily pads float over the fish: round, with the notch every pad has, and veins from the middle.
     for (int i = 0; i < PADS; i++) {
         float r = k->pr[i], notch = (float)i * 1.9f;
@@ -101,6 +108,7 @@ void koi_draw(void *state, const Frame *f) {
                 if (mhypot(dx, dy) > r || mabs(a) < 0.3f) continue;
                 put_cell(g, col, row, ' ', pad);
             }
+
         StrokePoint rim[33];
         for (int p = 0; p <= 32; p++) {
             float a = notch + 0.3f + (TAU_F - 0.6f) * (float)p / 32;
@@ -109,10 +117,12 @@ void koi_draw(void *state, const Frame *f) {
         stroke_draw(f->stroker, rim, 33, 0);
         for (int v = 0; v < 5; v++) {
             float a = notch + 0.9f + (float)v * 1.1f;
-            StrokePoint vein[2] = {{k->px[i], k->py[i], frame_dim(f, pad, 0.6f)},
-                                   {k->px[i] + mcos(a) * r * 0.8f, k->py[i] + msin(a) * r * 0.8f, frame_dim(f, pad, 0.6f)}};
+            StrokePoint vein[2] = {
+                {k->px[i], k->py[i], frame_dim(f, pad, 0.6f)},
+                {k->px[i] + mcos(a) * r * 0.8f, k->py[i] + msin(a) * r * 0.8f, frame_dim(f, pad, 0.6f)}};
             stroke_draw(f->stroker, vein, 2, 0);
         }
+
         if (i % 2 == 0) {
             int col = cell_col(g, k->px[i]), row = cell_row(g, k->py[i]);
             put_cell(g, col, row, '*', palette_ramp(f->palette, 1.0f));
@@ -120,6 +130,7 @@ void koi_draw(void *state, const Frame *f) {
             put_cell(g, col + 1, row, '}', bloom);
         }
     }
+
     // A small ring now and then where a fish touches the surface.
     for (int j = 0; j < 2; j++) {
         float slot = mfloor(f->t / 2.3f) - (float)j, age = f->t - slot * 2.3f;
@@ -131,10 +142,12 @@ void koi_draw(void *state, const Frame *f) {
         StrokePoint ring[32];
         for (int p = 0; p < 32; p++) {
             float a = (float)p / 32 * TAU_F;
-            ring[p] = (StrokePoint){x + mcos(a) * radius, y + msin(a) * radius, frame_dim(f, palette_ramp(f->palette, 0.75f), fade * 0.7f)};
+            ring[p] = (StrokePoint){x + mcos(a) * radius, y + msin(a) * radius,
+                                    frame_dim(f, palette_ramp(f->palette, 0.75f), fade * 0.7f)};
         }
         stroke_draw(f->stroker, ring, 32, 1);
     }
+
     f->fx->glow = 0.4f;
 }
 
@@ -160,17 +173,20 @@ void train_draw(void *state, const Frame *f) {
     dust_stars(f, t->salt, 0.0f, 0.7f);
     moon_disc(f, t->moon_x - f->t * 0.004f, 0.55f, 0.12f, palette_ramp(f->palette, 0.95f), t->salt, 0);
     float run = f->t * t->speed;
-    Rgbf far = palette_ramp(f->palette, 0.3f), near = palette_ramp(f->palette, 0.45f), lamp = palette_accent(f->palette, 1);
+    Rgbf far = palette_ramp(f->palette, 0.3f), near = palette_ramp(f->palette, 0.45f),
+         lamp = palette_accent(f->palette, 1);
     for (int col = 0; col < g->cols; col++) {
         float x = cell_x(g, col);
         float h1 = -0.05f + 0.22f * noise_fbm(x * 0.5f + run * 0.03f + (float)(t->salt % 37), 1);
         float h2 = -0.3f + 0.2f * noise_fbm(x * 0.9f + run * 0.12f + (float)(t->salt % 53), 4);
         put_cell(g, col, cell_row(g, h1), '_', far);
-        for (int row = cell_row(g, h2); row < g->rows; row++) put_cell(g, col, row, row == cell_row(g, h2) ? '-' : ' ', near);
+        for (int row = cell_row(g, h2); row < g->rows; row++)
+            put_cell(g, col, row, row == cell_row(g, h2) ? '-' : ' ', near);
         // Windows of a town spread over the nearer hills.
         for (int row = cell_row(g, h2) + 1; row < cell_row(g, h2) + 6 && row < g->rows; row++) {
             uint32_t id = (uint32_t)(row * 977) + (uint32_t)((x + run * 0.12f) * 30.0f) * 2654435761u;
-            if (hash01(id ^ t->salt) < 0.06f) put_cell(g, col, row, '.', frame_dim(f, lamp, 0.6f + 0.4f * hash01(id + 1)));
+            if (hash01(id ^ t->salt) < 0.06f)
+                put_cell(g, col, row, '.', frame_dim(f, lamp, 0.6f + 0.4f * hash01(id + 1)));
         }
     }
     // Poles flick past; between each pair a wire sags, and the sag is what seems to swoop.
@@ -196,7 +212,9 @@ void train_draw(void *state, const Frame *f) {
             int inside = col > l && col < r && row > top && row < bottom;
             int corner = (col <= l + 1 || col >= r - 1) && (row <= top + 1 || row >= bottom - 1);
             if (inside && !corner) continue;
-            int rim = (col == l || col == r) && row >= top && row <= bottom ? 1 : (row == top || row == bottom) && col >= l && col <= r;
+            int rim = (col == l || col == r) && row >= top && row <= bottom
+                          ? 1
+                          : (row == top || row == bottom) && col >= l && col <= r;
             put_cell(g, col, row, rim ? (col == l || col == r ? '|' : '=') : ' ', rim ? frame : wall);
         }
     f->fx->glow = 0.45f;
@@ -223,12 +241,15 @@ void campfire_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     dust_stars(f, c->salt, 0.0f, 0.8f);
     float ground = -0.55f;
-    Rgbf earth = palette_ramp(f->palette, 0.25f), warm = palette_accent(f->palette, 1), hot = palette_ramp(f->palette, 1.0f);
+    Rgbf earth = palette_ramp(f->palette, 0.25f), warm = palette_accent(f->palette, 1),
+         hot = palette_ramp(f->palette, 1.0f);
     for (int col = 0; col < g->cols; col++)
         for (int row = cell_row(g, ground); row < g->rows; row++) {
             // The ground catches the firelight near the middle.
             float x = cell_x(g, col), y = cell_y(g, row), lit = mexp(-(x * x * 2 + (y - ground) * (y - ground) * 8));
-            int glyph = row == cell_row(g, ground) ? '_' : hash01((uint32_t)(row * 131 + col) ^ c->salt) < 0.15f ? '.' : ' ';
+            int glyph = row == cell_row(g, ground)                              ? '_'
+                        : hash01((uint32_t)(row * 131 + col) ^ c->salt) < 0.15f ? '.'
+                                                                                : ' ';
             put_cell(g, col, row, glyph, rgbf_mix(earth, warm, lit * 0.7f));
         }
     // Pines along the back.
@@ -238,7 +259,8 @@ void campfire_draw(void *state, const Frame *f) {
         int top = cell_row(g, ground + 0.35f + 0.25f * hash01((uint32_t)k * 31u)), base = cell_row(g, ground);
         for (int row = top; row < base; row++) {
             int w = (row - top) / 2;
-            for (int d = -w; d <= w; d++) put_cell(g, cell_col(g, x) + d, row, d < 0 ? '/' : d > 0 ? '\\' : '^', frame_dim(f, earth, 1.4f));
+            for (int d = -w; d <= w; d++)
+                put_cell(g, cell_col(g, x) + d, row, d < 0 ? '/' : d > 0 ? '\\' : '^', frame_dim(f, earth, 1.4f));
         }
     }
     // The tent, lit on its fire side.
@@ -261,7 +283,8 @@ void campfire_draw(void *state, const Frame *f) {
     line(f, 0.2f, ground - 0.02f, -0.12f, ground + 0.06f, frame_dim(f, earth, 1.8f));
     for (int s = 0; s < 9; s++) {
         float a = (float)s / 9 * PI_F;
-        put_cell(g, cell_col(g, mcos(a) * 0.3f), cell_row(g, ground - msin(a) * 0.04f), s % 2 ? 'o' : 'O', frame_dim(f, earth, 2.0f));
+        put_cell(g, cell_col(g, mcos(a) * 0.3f), cell_row(g, ground - msin(a) * 0.04f), s % 2 ? 'o' : 'O',
+                 frame_dim(f, earth, 2.0f));
     }
     for (int k = 0; k < 14; k++) {
         uint32_t id = c->salt + (uint32_t)k * 2246822519u;
@@ -303,10 +326,12 @@ void hourglass_draw(void *state, const Frame *f) {
     Hourglass *h = state;
     Grid *g = f->grid;
     float progress = saturate(f->t / mmax(f->score->length, 1));
-    Rgbf wood = palette_accent(f->palette, 1), glass = palette_ramp(f->palette, 0.6f), sand = palette_ramp(f->palette, 0.9f);
+    Rgbf wood = palette_accent(f->palette, 1), glass = palette_ramp(f->palette, 0.6f),
+         sand = palette_ramp(f->palette, 0.9f);
     for (int k = 0; k < 30; k++) {
         uint32_t id = h->salt + (uint32_t)k * 2654435761u;
-        float x = (hash01(id) * 2 - 1) * g->aspect + 0.04f * msin(f->t * 0.4f + (float)k), y = mfract(hash01(id + 1) + f->t * 0.03f) * 2 - 1;
+        float x = (hash01(id) * 2 - 1) * g->aspect + 0.04f * msin(f->t * 0.4f + (float)k),
+              y = mfract(hash01(id + 1) + f->t * 0.03f) * 2 - 1;
         put_cell(g, cell_col(g, x), cell_row(g, y), '.', frame_dim(f, glass, 0.4f));
     }
     // The sand: the top bulb holds what's left, filling from its floor (the neck) upward.
@@ -330,13 +355,15 @@ void hourglass_draw(void *state, const Frame *f) {
     }
     if (progress < 0.999f) {
         for (int row = cell_row(g, 0.0f); row <= cell_row(g, -0.74f + pile); row++)
-            put_cell(g, cell_col(g, 0), row, mfract(f->t * 6 + (float)row * 0.37f) < 0.5f ? '|' : ':', frame_dim(f, sand, 0.7f));
+            put_cell(g, cell_col(g, 0), row, mfract(f->t * 6 + (float)row * 0.37f) < 0.5f ? '|' : ':',
+                     frame_dim(f, sand, 0.7f));
         // Loose grains falling faster as they go, kicking sideways where they land.
         float fall = -0.02f - (-0.74f + pile);
         for (int k = 0; k < 8; k++) {
             float phase = mfract(f->t * 0.9f + (float)k / 8), side = hash01(h->salt + (uint32_t)k) - 0.5f;
             float spray = phase > 0.85f ? (phase - 0.85f) * 2.2f : 0, x = side * 0.04f + side * spray;
-            put_cell(g, cell_col(g, x), cell_row(g, -0.02f - fall * phase * phase + spray * 0.3f), phase > 0.85f ? '\'' : '.', sand);
+            put_cell(g, cell_col(g, x), cell_row(g, -0.02f - fall * phase * phase + spray * 0.3f),
+                     phase > 0.85f ? '\'' : '.', sand);
         }
     }
     // Plates top and bottom, and the posts.
@@ -345,7 +372,8 @@ void hourglass_draw(void *state, const Frame *f) {
         for (int col = cell_col(g, -0.48f); col <= cell_col(g, 0.48f); col++) put_cell(g, col, row, '=', wood);
     }
     for (int s = 0; s < 2; s++)
-        for (int row = cell_row(g, 0.8f) + 1; row < cell_row(g, -0.8f); row++) put_cell(g, cell_col(g, s ? 0.44f : -0.44f), row, '|', frame_dim(f, wood, 0.8f));
+        for (int row = cell_row(g, 0.8f) + 1; row < cell_row(g, -0.8f); row++)
+            put_cell(g, cell_col(g, s ? 0.44f : -0.44f), row, '|', frame_dim(f, wood, 0.8f));
     f->fx->glow = 0.45f;
 }
 
@@ -368,7 +396,8 @@ void birds_setup(void *state, Rng *r, const Frame *f) {
 void birds_draw(void *state, const Frame *f) {
     Birds *b = state;
     Grid *g = f->grid;
-    Rgbf sun = palette_accent(f->palette, 1), cloud = palette_ramp(f->palette, 0.5f), sea = palette_ramp(f->palette, 0.3f);
+    Rgbf sun = palette_accent(f->palette, 1), cloud = palette_ramp(f->palette, 0.5f),
+         sea = palette_ramp(f->palette, 0.3f);
     for (int row = 0; row < cell_row(g, b->horizon); row++)
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), y = cell_y(g, row);
@@ -382,7 +411,8 @@ void birds_draw(void *state, const Frame *f) {
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), w = msin(x * 8 * (1 + near) + f->t * 0.8f + y * 30);
             float path = mabs(x - b->sun_x) / (0.05f + near * 0.3f);
-            if (path < 1 && w > 0) put_cell(g, col, row, w > 0.6f ? '=' : '-', frame_dim(f, sun, 0.4f + 0.5f * (1 - path)));
+            if (path < 1 && w > 0)
+                put_cell(g, col, row, w > 0.6f ? '=' : '-', frame_dim(f, sun, 0.4f + 0.5f * (1 - path)));
             else if (w > 0.85f) put_cell(g, col, row, '~', frame_dim(f, sea, 0.8f));
         }
     }
@@ -391,7 +421,8 @@ void birds_draw(void *state, const Frame *f) {
     for (int k = 0; k < 3; k++) {
         uint32_t id = b->salt + (uint32_t)k * 7919u;
         float speed = 0.06f + 0.05f * hash01(id), span = g->aspect * 2.8f;
-        float lead_x = mfract(hash01(id + 1) + f->t * speed / span) * span - span * 0.5f, lead_y = 0.15f + 0.6f * hash01(id + 2);
+        float lead_x = mfract(hash01(id + 1) + f->t * speed / span) * span - span * 0.5f,
+              lead_y = 0.15f + 0.6f * hash01(id + 2);
         int count = 5 + (int)(hash01(id + 3) * 6);
         for (int i = 0; i < count; i++) {
             int side = i % 2 ? 1 : -1, rank = (i + 1) / 2;
@@ -425,7 +456,8 @@ static void rings(const Frame *f, const Planet *p, int front) {
     Grid *g = f->grid;
     static const float radii[5] = {1.32f, 1.45f, 1.55f, 1.78f, 1.9f};
     for (int band = 0; band < 5; band++) {
-        Rgbf color = frame_dim(f, band == 3 ? palette_accent(f->palette, 1) : palette_ramp(f->palette, 0.8f), band == 0 ? 0.6f : 1.0f);
+        Rgbf color = frame_dim(f, band == 3 ? palette_accent(f->palette, 1) : palette_ramp(f->palette, 0.8f),
+                               band == 0 ? 0.6f : 1.0f);
         float rr = p->radius * radii[band];
         for (int k = 0; k < 200; k++) {
             float a = (float)k / 200 * TAU_F + f->t * 0.01f, s = msin(a);
@@ -434,7 +466,8 @@ static void rings(const Frame *f, const Planet *p, int front) {
             // Where the ring runs steeply on screen it draws as an upright stroke, elsewhere as a flat one.
             int glyph = mabs(mcos(a)) > 0.93f ? (mcos(a) > 0 ? ')' : '(') : s < 0 ? '_' : '-';
             // Now and then an ice grain catches the sun.
-            uint32_t id = (uint32_t)(band * 211 + k) ^ p->salt ^ (uint32_t)mfloor(f->t * 2.5f + (float)k * 0.618f) * 2654435761u;
+            uint32_t id =
+                (uint32_t)(band * 211 + k) ^ p->salt ^ (uint32_t)mfloor(f->t * 2.5f + (float)k * 0.618f) * 2654435761u;
             int glint = hash01(id) < 0.02f;
             (front ? put_cell : put_cell_under)(g, cell_col(g, x), cell_row(g, y), glint ? '*' : glyph,
                                                  glint ? palette_ramp(f->palette, 1.0f) : color);
@@ -461,7 +494,8 @@ void planet_draw(void *state, const Frame *f) {
             float lit = saturate((nx * lx + ny * ly + nz * lz) / ln);
             // Clouds sampled in the planet's own turning frame, so they ride round with it.
             float ux = nx * cs + nz * sn, uz = nz * cs - nx * sn;
-            float bands = 0.5f + 0.5f * msin(ny * 14 + noise_value(ux * 3 + (float)(p->salt % 31), uz * 3 + ny * 8) * 2);
+            float bands =
+                0.5f + 0.5f * msin(ny * 14 + noise_value(ux * 3 + (float)(p->salt % 31), uz * 3 + ny * 8) * 2);
             Rgbf color = rgbf_mix(a, b, bands);
             // The darker belts read in the glyphs too, so the turning shows in the shapes as well as the colors.
             canvas_max(c, i, j, (0.12f + 0.88f * lit) * (0.68f + 0.32f * bands), color);
@@ -502,7 +536,8 @@ void street_draw(void *state, const Frame *f) {
     Street *s = state;
     Grid *g = f->grid;
     float hz = s->horizon, walk = f->t * s->speed;
-    Rgbf lamp = palette_accent(f->palette, 1), road = palette_ramp(f->palette, 0.3f), house = palette_ramp(f->palette, 0.2f);
+    Rgbf lamp = palette_accent(f->palette, 1), road = palette_ramp(f->palette, 0.3f),
+         house = palette_ramp(f->palette, 0.2f);
     // Houses far down the street, a few windows lit.
     for (int col = 0; col < g->cols; col++) {
         float x = cell_x(g, col), h = 0.06f + 0.12f * noise_value(x * 6 + (float)(s->salt % 41), 2);
@@ -527,12 +562,14 @@ void street_draw(void *state, const Frame *f) {
             for (int d = 0; d < 26; d++) {
                 uint32_t id = (uint32_t)(k * 131 + d + (side > 0 ? 7 : 0)) ^ s->salt;
                 float a = hash01(id) * TAU_F, rr = msqrt(hash01(id + 1));
-                put_cell_under(g, cell_col(g, hx + mcos(a) * rr * pool * 1.5f), cell_row(g, base + msin(a) * rr * pool * 0.3f), '.',
+                put_cell_under(g, cell_col(g, hx + mcos(a) * rr * pool * 1.5f),
+                               cell_row(g, base + msin(a) * rr * pool * 0.3f), '.',
                                frame_dim(f, lamp, 0.25f + 0.4f * near * (1 - rr)));
             }
             for (int d = 0; d < 10; d++) {
                 uint32_t id = (uint32_t)(k * 977 + d * 31 + (side > 0 ? 5 : 0)) ^ s->salt;
-                float rx = hx + (hash01(id) - 0.5f) * pool * 1.6f, ry = top - mfract(hash01(id + 1) + f->t * 1.6f) * (top - base);
+                float rx = hx + (hash01(id) - 0.5f) * pool * 1.6f,
+                      ry = top - mfract(hash01(id + 1) + f->t * 1.6f) * (top - base);
                 put_cell(g, cell_col(g, rx), cell_row(g, ry), '/', frame_dim(f, lamp, 0.35f + 0.5f * near));
             }
             // Its reflection, broken by the ripples on the wet road.
@@ -623,7 +660,8 @@ static void palm(const Frame *f, const Palms *p, int i, int carving, Rgbf neon) 
     for (int k = 0; k < 8; k++) {
         int j = k % 4;
         float side = k < 4 ? 1.0f : -1.0f, sway = 0.035f * msin(f->t * 0.8f + (float)i * 1.7f + (float)k * 0.6f);
-        float dx = mcos(ANGLE[j]) * side * REACH[j] * crown, dy = msin(ANGLE[j]) * REACH[j] * crown, droop = (DROOP[j] + sway) * crown;
+        float dx = mcos(ANGLE[j]) * side * REACH[j] * crown, dy = msin(ANGLE[j]) * REACH[j] * crown,
+              droop = (DROOP[j] + sway) * crown;
         StrokePoint frond[12];
         for (int s = 0; s < 12; s++) {
             float u = (float)s / 11;
@@ -632,7 +670,8 @@ static void palm(const Frame *f, const Palms *p, int i, int carving, Rgbf neon) 
         trace(f, frond, 12, carving);
         for (int s = 3; s < 11; s += 2) {
             float drop = 0.05f * crown * (1 - 0.4f * (float)s / 11);
-            StrokePoint leaf[2] = {frond[s], {frond[s].x + side * 0.37f * drop, frond[s].y - 0.93f * drop, frame_dim(f, neon, 0.8f)}};
+            StrokePoint leaf[2] = {
+                frond[s], {frond[s].x + side * 0.37f * drop, frond[s].y - 0.93f * drop, frame_dim(f, neon, 0.8f)}};
             trace(f, leaf, 2, carving);
         }
     }
@@ -651,7 +690,8 @@ void palms_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     float hz = p->horizon, sun_y = hz + p->sun_r * 0.35f;
     static const char glow[] = " .:-=+";
-    Rgbf high = palette_ramp(f->palette, 0.35f), low = palette_accent(f->palette, 1), hot = palette_ramp(f->palette, 1.0f);
+    Rgbf high = palette_ramp(f->palette, 0.35f), low = palette_accent(f->palette, 1),
+         hot = palette_ramp(f->palette, 1.0f);
     dust_stars(f, p->salt, 0.0f, 0.6f);
     for (int row = 0; row <= cell_row(g, hz); row++) {
         float y = cell_y(g, row), up = saturate((y - hz) / (1 - hz));
@@ -688,7 +728,8 @@ void palms_draw(void *state, const Frame *f) {
             if (mabs(x) < p->sun_r * (0.6f + near) && w > 0.2f)
                 put_cell(g, col, row, w > 0.7f ? '=' : '-', frame_dim(f, bottom, 0.5f + 0.4f * (1 - near)));
             else if (w > 0.35f)
-                put_cell(g, col, row, w > 0.8f ? '~' : '-', frame_dim(f, rgbf_mix(low, high, near), 0.3f + 0.25f * (1 - near)));
+                put_cell(g, col, row, w > 0.8f ? '~' : '-',
+                         frame_dim(f, rgbf_mix(low, high, near), 0.3f + 0.25f * (1 - near)));
         }
     }
     for (int col = 0; col < g->cols; col++) put_cell(g, col, cell_row(g, hz), '_', palette_ramp(f->palette, 0.6f));

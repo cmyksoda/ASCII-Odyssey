@@ -8,12 +8,12 @@
 
 static int failures;
 
-#define CHECK(cond)                                                                                                     \
-    do {                                                                                                                \
-        if (!(cond)) {                                                                                                  \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                      \
-            failures++;                                                                                                 \
-        }                                                                                                               \
+#define CHECK(cond)                                                                                                    \
+    do {                                                                                                               \
+        if (!(cond)) {                                                                                                 \
+            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
+            failures++;                                                                                                \
+        }                                                                                                              \
     } while (0)
 
 // Which sixth of the color wheel a color sits in, from red round to magenta, or -1 for a gray.

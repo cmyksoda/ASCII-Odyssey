@@ -28,7 +28,8 @@ static void sphere(Canvas *c, float cx, float cy, float r, float floor_ink) {
             float x = (canvas_x(c, i) - cx) / r, y = (canvas_y(c, j) - cy) / r, d2 = x * x + y * y;
             if (d2 >= 1) continue;
             float z = msqrt(1 - d2), lambert = mmax(0, -0.6f * x + 0.5f * y + 0.62f * z);
-            canvas_max(c, i, j, floor_ink + (1 - floor_ink) * lambert, rgbf_mix((Rgbf){60, 30, 70}, rgbf(ROSE), lambert));
+            canvas_max(c, i, j, floor_ink + (1 - floor_ink) * lambert,
+                       rgbf_mix((Rgbf){60, 30, 70}, rgbf(ROSE), lambert));
         }
 }
 

@@ -10,35 +10,36 @@
 #define TITLE_CHOICES 14
 
 static const FigletId TITLE_FACES[MOOD_COUNT][TITLE_CHOICES] = {
-    [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER, FIGLET_DIGITAL, FIGLET_PIXEL, FIGLET_SCANLINE, FIGLET_WIRE,
-                     FIGLET_DOOM, FIGLET_REV, FIGLET_COMPUTER, FIGLET_RECTANGLES, FIGLET_SPEED, FIGLET_LARRY3D, FIGLET_EPIC},
+    [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER, FIGLET_DIGITAL, FIGLET_PIXEL, FIGLET_SCANLINE,
+                     FIGLET_WIRE, FIGLET_DOOM, FIGLET_REV, FIGLET_COMPUTER, FIGLET_RECTANGLES, FIGLET_SPEED,
+                     FIGLET_LARRY3D, FIGLET_EPIC},
     [MOOD_AMBIENT] = {FIGLET_SCRIPT, FIGLET_LEAN, FIGLET_SLANT, FIGLET_NANCYJ, FIGLET_ROUNDED, FIGLET_NEON, FIGLET_DOTS,
                       FIGLET_STELLAR, FIGLET_PEBBLES, FIGLET_ROMAN, FIGLET_UNIVERS, FIGLET_GRACEFUL, FIGLET_JAZMINE,
                       FIGLET_KBAN},
-    [MOOD_SYNTHWAVE] = {FIGLET_LEAN, FIGLET_SLANT, FIGLET_SHADOW, FIGLET_DOTS, FIGLET_EPIC, FIGLET_SCANLINE, FIGLET_NEON,
-                        FIGLET_JAZMINE, FIGLET_STARWARS, FIGLET_THREE_D, FIGLET_ROUNDED, FIGLET_LARRY3D, FIGLET_FENDER,
-                        FIGLET_SPEED},
-    [MOOD_LOFI] = {FIGLET_SCRIPT, FIGLET_SHADOW, FIGLET_STANDARD, FIGLET_PEBBLES, FIGLET_BUBBLE, FIGLET_NEON, FIGLET_WIRE,
-                   FIGLET_PUFFY, FIGLET_FUZZY, FIGLET_BULBHEAD, FIGLET_GRACEFUL, FIGLET_ROUNDED, FIGLET_DOUBLE,
-                   FIGLET_CRICKET},
+    [MOOD_SYNTHWAVE] = {FIGLET_LEAN, FIGLET_SLANT, FIGLET_SHADOW, FIGLET_DOTS, FIGLET_EPIC, FIGLET_SCANLINE,
+                        FIGLET_NEON, FIGLET_JAZMINE, FIGLET_STARWARS, FIGLET_THREE_D, FIGLET_ROUNDED, FIGLET_LARRY3D,
+                        FIGLET_FENDER, FIGLET_SPEED},
+    [MOOD_LOFI] = {FIGLET_SCRIPT, FIGLET_SHADOW, FIGLET_STANDARD, FIGLET_PEBBLES, FIGLET_BUBBLE, FIGLET_NEON,
+                   FIGLET_WIRE, FIGLET_PUFFY, FIGLET_FUZZY, FIGLET_BULBHEAD, FIGLET_GRACEFUL, FIGLET_ROUNDED,
+                   FIGLET_DOUBLE, FIGLET_CRICKET},
     [MOOD_TRANCE] = {FIGLET_SLANT, FIGLET_LEAN, FIGLET_BIG, FIGLET_EPIC, FIGLET_DOTS, FIGLET_WIRE, FIGLET_NEON,
-                     FIGLET_LARRY3D, FIGLET_STELLAR, FIGLET_UNIVERS, FIGLET_COLOSSAL, FIGLET_STARWARS,
-                     FIGLET_FENDER, FIGLET_DIAMOND},
+                     FIGLET_LARRY3D, FIGLET_STELLAR, FIGLET_UNIVERS, FIGLET_COLOSSAL, FIGLET_STARWARS, FIGLET_FENDER,
+                     FIGLET_DIAMOND},
     [MOOD_8BIT] = {FIGLET_PIXEL, FIGLET_SCANLINE, FIGLET_BLOCK, FIGLET_DIGITAL, FIGLET_BANNER, FIGLET_BIG, FIGLET_DOTS,
                    FIGLET_COMPUTER, FIGLET_RECTANGLES, FIGLET_WIRE, FIGLET_DOOM, FIGLET_LARRY3D, FIGLET_AVATAR,
                    FIGLET_EPIC},
-    [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN, FIGLET_BUBBLE, FIGLET_GRACEFUL, FIGLET_DOTS, FIGLET_NEON,
-                       FIGLET_TINKER_TOY, FIGLET_PEBBLES, FIGLET_BULBHEAD, FIGLET_PUFFY, FIGLET_ROMAN, FIGLET_STELLAR,
-                       FIGLET_NANCYJ},
+    [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN, FIGLET_BUBBLE, FIGLET_GRACEFUL, FIGLET_DOTS,
+                       FIGLET_NEON, FIGLET_TINKER_TOY, FIGLET_PEBBLES, FIGLET_BULBHEAD, FIGLET_PUFFY, FIGLET_ROMAN,
+                       FIGLET_STELLAR, FIGLET_NANCYJ},
     [MOOD_DUB] = {FIGLET_SHADOW, FIGLET_BLOCK, FIGLET_BIG, FIGLET_FUZZY, FIGLET_DOTS, FIGLET_NEON, FIGLET_WIRE,
                   FIGLET_THREE_D, FIGLET_COLOSSAL, FIGLET_NANCYJ_FANCY, FIGLET_BASIC, FIGLET_OGRE, FIGLET_DOTMATRIX,
                   FIGLET_CRICKET},
-    [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_SCANLINE, FIGLET_WIRE,
-                      FIGLET_POISON, FIGLET_REV, FIGLET_GRAFFITI, FIGLET_DOOM, FIGLET_COLOSSAL, FIGLET_NANCYJ_FANCY,
-                      FIGLET_THREE_D},
-    [MOOD_16BIT] = {FIGLET_ROMAN, FIGLET_STARWARS, FIGLET_COLOSSAL, FIGLET_GRACEFUL, FIGLET_STELLAR, FIGLET_NANCYJ_FANCY,
-                    FIGLET_EPIC, FIGLET_LARRY3D, FIGLET_FENDER, FIGLET_BIG, FIGLET_SHADOW, FIGLET_SLANT, FIGLET_PEBBLES,
-                    FIGLET_DOOM}};
+    [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_SCANLINE,
+                      FIGLET_WIRE, FIGLET_POISON, FIGLET_REV, FIGLET_GRAFFITI, FIGLET_DOOM, FIGLET_COLOSSAL,
+                      FIGLET_NANCYJ_FANCY, FIGLET_THREE_D},
+    [MOOD_16BIT] = {FIGLET_ROMAN, FIGLET_STARWARS, FIGLET_COLOSSAL, FIGLET_GRACEFUL, FIGLET_STELLAR,
+                    FIGLET_NANCYJ_FANCY, FIGLET_EPIC, FIGLET_LARRY3D, FIGLET_FENDER, FIGLET_BIG, FIGLET_SHADOW,
+                    FIGLET_SLANT, FIGLET_PEBBLES, FIGLET_DOOM}};
 
 // FIGlet's own space is a sliver; three of them keep the words apart behind the decoding scramble.
 static void title_text(const Piece *p, char *upper) {
@@ -52,7 +53,8 @@ static void title_text(const Piece *p, char *upper) {
 
 static int title_fits(Piece *p, const FigletFont *font, const char *text, int split) {
     int wide = p->grid.cols - 4, tall = p->grid.rows - 4 < PIECE_ART_H ? p->grid.rows - 4 : PIECE_ART_H;
-    p->art_font = font && figlet_wrap(font, text, wide, tall, split, p->art, PIECE_ART_W, &p->art_layout) == 0 ? font : NULL;
+    p->art_font =
+        font && figlet_wrap(font, text, wide, tall, split, p->art, PIECE_ART_W, &p->art_layout) == 0 ? font : NULL;
     return p->art_font != NULL;
 }
 
@@ -73,7 +75,8 @@ static void layout_title(Piece *p, Rng *r) {
     // The mood's own faces in turn from a random one, then plain ones narrow enough for almost any title.
     FigletId fonts[TITLE_CHOICES + 3];
     for (int i = 0; i < TITLE_CHOICES; i++) fonts[i] = own[(first + i) % TITLE_CHOICES];
-    fonts[TITLE_CHOICES] = FIGLET_STANDARD, fonts[TITLE_CHOICES + 1] = FIGLET_SLANT, fonts[TITLE_CHOICES + 2] = FIGLET_SMALL;
+    fonts[TITLE_CHOICES] = FIGLET_STANDARD, fonts[TITLE_CHOICES + 1] = FIGLET_SLANT,
+        fonts[TITLE_CHOICES + 2] = FIGLET_SMALL;
     char upper[SEED_MAX * 3 + 1];
     title_text(p, upper);
     // On a light ground the mood's filled faces get the first try; failing those, the usual order below.
@@ -263,9 +266,20 @@ static void title_card(Piece *p, float t) {
 
 void piece_draw(Piece *p, double t, Screen *out, int calm, int still, const float *scope, int scope_frames) {
     fx_reset(&p->fx, p->palette->bg);
-    Frame f = {.t = (float)t, .energy = score_energy(&p->score, (float)t), .section_react = reactivity_at(p, (float)t),
-               .score = &p->score, .palette = p->palette, .canvas = &p->canvas, .grid = &p->grid, .stroker = &p->stroker,
-               .matcher = &p->matcher, .fx = &p->fx, .calm = calm, .still = still, .scope = scope, .scope_frames = scope_frames};
+    Frame f = {.t = (float)t,
+               .energy = score_energy(&p->score, (float)t),
+               .section_react = reactivity_at(p, (float)t),
+               .score = &p->score,
+               .palette = p->palette,
+               .canvas = &p->canvas,
+               .grid = &p->grid,
+               .stroker = &p->stroker,
+               .matcher = &p->matcher,
+               .fx = &p->fx,
+               .calm = calm,
+               .still = still,
+               .scope = scope,
+               .scope_frames = scope_frames};
     direction_draw(&p->direction, &f, &p->scratch);
     title_card(p, (float)t);
     // A reactive scene's whole picture also breathes with the beat: a little glow on the kick and a nudge of motion.
@@ -277,7 +291,8 @@ void piece_draw(Piece *p, double t, Screen *out, int calm, int still, const floa
     if (f.palette->light) p->fx.glow = 0;
     // Fade in from black at the start and out into the tail at the end.
     float end = (float)p->comp.info.length;
-    p->fx.gain = smoothstep(0.0f, 1.2f, (float)t) * (1 - smoothstep(end + 1.0f, end + 5.0f, (float)t)) * (1 + answer * 0.1f * kick);
+    p->fx.gain = smoothstep(0.0f, 1.2f, (float)t) * (1 - smoothstep(end + 1.0f, end + 5.0f, (float)t)) *
+                 (1 + answer * 0.1f * kick);
     out->scene = &p->grid;
     out->ui = NULL;
     out->fx = p->fx;

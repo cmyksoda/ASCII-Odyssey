@@ -81,7 +81,11 @@ static const Tour TOURS[] = {
     {"title", 6.0, {1.0, 4.0}, 2, 0, NULL},
     {"piece", 95.0, {3.0, 9.0, 20.0, 35.0, 50.0, 65.0, 80.0}, 7, 1, "1.0:confirm"},
     // Into settings, the keyboard types "qwe" with its chimes, then Start sails to that seed.
-    {"keys", 16.0, {1.7, 3.7, 4.5, 12.0}, 4, 0,
+    {"keys",
+     16.0,
+     {1.7, 3.7, 4.5, 12.0},
+     4,
+     0,
      "1.0:down,1.4:confirm,2.2:confirm,2.6:confirm,2.8:right,3.0:confirm,3.2:right,3.4:confirm,3.9:pause,4.2:back,"
      "4.7:up,5.0:confirm"},
     // Start on the first press, then the tracker view, then the info view.
@@ -188,10 +192,12 @@ int main(int argc, char **argv) {
     input_init();
     audio_init();
     storage_init();
+
     const Tour *tour = beacon_start(argc, argv) == 0 ? find_tour() : NULL;
     if (tour) prof_clock(now_us);
     app_boot();
     audio_chimes_prepare();
+
     AppConfig config = {0};
     config.wide = video_wide();
     // Test tours keep their own files, so a hands-free run never changes the player's settings or last seed.
@@ -204,21 +210,26 @@ int main(int argc, char **argv) {
     else
         config.first_boot = !tour;
     read_seed_file(last_file, config.last_seed, sizeof config.last_seed);
+
     // A shot stalls the loop while it uploads, and the music plays on meanwhile, so a timing run can go without them.
     int shots = 1;
     for (int i = 0; i < argc; i++) {
         if (argv[i] && !strcmp(argv[i], "shots=off")) shots = 0;
-        if (argv[i] && !strncmp(argv[i], "seed=", 5)) seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
+        if (argv[i] && !strncmp(argv[i], "seed=", 5))
+            seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
         for (int m = 0; argv[i] && !strncmp(argv[i], "mood=", 5) && m < MOOD_COUNT; m++)
             if (!strcmp(argv[i] + 5, mood_names[m])) config.settings.mood = m;
         if (argv[i] && !strcmp(argv[i], "length=long")) config.settings.length = LENGTH_LONG;
         if (argv[i] && !strcmp(argv[i], "length=short")) config.settings.length = LENGTH_SHORT;
         // A quiet run still mixes every voice, so its audio timings hold; only the console's output is turned down.
-        if (argv[i] && !strncmp(argv[i], "volume=", 7)) config.settings.volume = atoi(argv[i] + 7) < 0 ? 0 : atoi(argv[i] + 7) % 11;
+        if (argv[i] && !strncmp(argv[i], "volume=", 7))
+            config.settings.volume = atoi(argv[i] + 7) < 0 ? 0 : atoi(argv[i] + 7) % 11;
     }
+
     App *app = app_create(&config);
     if (!app) return 1;
     if (tour) beacon_log("video %s, last seed \"%s\"", video_wide() ? "16:9" : "4:3", config.last_seed);
+
     Player player;
     int playing = 0, paused = 0;
     MusicClock music = {0};
@@ -233,11 +244,13 @@ int main(int argc, char **argv) {
     double stalled = 0;
     Stats stats = {0};
     int scene = -1;
+
     for (;;) {
         Input in;
         input_poll(&in);
         double wall = (double)ticks_to_microsecs(gettime() - boot) / 1e6;
         if (script) in.pressed |= scripted(&script, wall - stalled);
+
         if (job.done) {
             if (worker_running) LWP_JoinThread(worker, NULL);
             worker_running = 0;
@@ -247,8 +260,10 @@ int main(int argc, char **argv) {
             if (tour) beacon_log("composed \"%s\" in %.0f ms: %s", job.seed, job.millis,
                                  piece ? mood_names[piece->comp.info.mood] : "failed");
         }
+
         double heard = playing ? (double)audio_played() / AUDIO_RATE : -1;
-        AppClock clock = {.wall = wall, .music = playing ? music_clock(&music, heard, video_time(), !paused && heard > 0) : -1,
+        AppClock clock = {.wall = wall,
+                          .music = playing ? music_clock(&music, heard, video_time(), !paused && heard > 0) : -1,
                           .entropy = (uint64_t)gettime() ^ ((uint64_t)in.held << 40)};
         Screen screen = {0};
         AppRequest req;
@@ -257,15 +272,18 @@ int main(int argc, char **argv) {
         app_frame(app, &clock, &in, &screen, &req);
         prof_pop();
         u64 t1 = gettime();
+
         if (req.stop_music && playing) {
             audio_stop();
             player_free(&player);
             playing = paused = 0;
         }
+
         // The piece the app let go of this frame is still on the screen it just filled, so it's freed only once that
         // screen has been drawn.
         Piece *retired = app_release_piece(app);
         if (retired == piece) piece = NULL;
+
         if (req.compose && !worker_running && !job.done) start_compose(&req, app_viewport(app));
         if (req.save_settings) {
             char settings[1024];
@@ -286,12 +304,14 @@ int main(int argc, char **argv) {
         }
         if (req.pause_music) audio_pause(paused = 1);
         if (req.resume_music) audio_pause(paused = 0);
+
         video_set_interval(playing || worker_running ? 2 : 1);
         int retraces = video_draw(&screen);
         if (retired) {
             piece_free(retired);
             free(retired);
         }
+
         if (tour) {
             unsigned build, gpu;
             video_times(&build, &gpu);
@@ -302,6 +322,7 @@ int main(int argc, char **argv) {
                       !after_shot && retraces > video_interval(), step);
             after_shot = 0;
             last = now;
+
             if (!strcmp(tour->name, "scenes")) {
                 int want = playing ? (int)(clock.music / SCENE_SECONDS) : -1;
                 while (want >= 0 && want < scene_kind_count && !scene_in_use(&scene_kinds[want])) want++;
@@ -328,6 +349,7 @@ int main(int argc, char **argv) {
                 if (wall - stalled >= tour->length) break;
                 continue;
             }
+
             if (stats.frames == 120) stats_report(&stats);
             double mark = tour->music_shots ? clock.music : wall - stalled;
             if (shots && shot < tour->shot_count && mark >= tour->shots[shot]) {
@@ -342,11 +364,14 @@ int main(int argc, char **argv) {
                 stalled += (double)ticks_to_microsecs(sent - now) / 1e6;
                 last = sent;
             }
-            if (wall - stalled >= tour->length || (tour->music_shots && clock.music >= tour->shots[tour->shot_count - 1] + 3))
+            if (wall - stalled >= tour->length ||
+                (tour->music_shots && clock.music >= tour->shots[tour->shot_count - 1] + 3))
                 break;
         }
+
         if (req.quit) break;
     }
+
     if (playing) {
         audio_stop();
         player_free(&player);
@@ -357,6 +382,7 @@ int main(int argc, char **argv) {
         beacon_log("bye");
         beacon_stop();
     }
+
     int power = input_power_off();
     video_shutdown();
     input_shutdown();

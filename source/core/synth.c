@@ -818,7 +818,8 @@ static void pad_strings(Instrument *ins, Rng *r, float bpm) {
 // FM pad: two slightly detuned operator pairs beating gently against each other.
 static void pad_fm(Instrument *ins, Rng *r, float bpm) {
     base(ins, "fm pad", ROLE_PAD, 0.36f);
-    float ratio = rng_chance(r, 50) ? 1.0f : 2.0f, index = rng_between(r, 0.6f, 1.5f), detune = rng_between(r, 0.002f, 0.006f);
+    float ratio = rng_chance(r, 50) ? 1.0f : 2.0f, index = rng_between(r, 0.6f, 1.5f),
+          detune = rng_between(r, 0.002f, 0.006f);
     for (int k = 0; k < 2; k++) {
         float hz = note_hz(37.0f + 24.0f * (float)k), pc[2] = {0, 0.3f}, pm[2] = {0, 0.6f};
         Wave w = wave_new(2.0f);
@@ -895,7 +896,8 @@ static void bass_wobble(Instrument *ins, Rng *r, float bpm) {
 static void mallet(Instrument *ins, Rng *r, float bpm) {
     (void)bpm;
     base(ins, "mallet", ROLE_PLUCK, 0.5f);
-    float ratio = rng_chance(r, 50) ? 4.0f : 3.0f, decay = rng_between(r, 0.35f, 0.7f), index = rng_between(r, 1.2f, 2.4f);
+    float ratio = rng_chance(r, 50) ? 4.0f : 3.0f, decay = rng_between(r, 0.35f, 0.7f),
+          index = rng_between(r, 1.2f, 2.4f);
     for (int k = 0; k < 2; k++) {
         float root = 49.0f + 24.0f * (float)k;
         Wave w = wave_new(decay * 2.2f);

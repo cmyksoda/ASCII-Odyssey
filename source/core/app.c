@@ -66,8 +66,9 @@ typedef enum {
     ROW_COUNT
 } SettingRow;
 
-static const char *const ROW_LABELS[ROW_COUNT] = {"seed", "mood", "length", "after a voyage", "volume", "reduce flashing",
-                                                 "reduce motion", "glow", "screen margin", "save last seed", "done"};
+static const char *const ROW_LABELS[ROW_COUNT] = {"seed", "mood", "length", "after a voyage", "volume",
+                                                 "reduce flashing", "reduce motion", "glow", "screen margin",
+                                                 "save last seed", "done"};
 static const float GLOW_SCALE[GLOW_LEVELS] = {0, 1, 1.6f};
 
 static const Rgb MENU_DIM = {128, 132, 184}, MENU_LIT = {255, 240, 222}, ACCENT = {255, 106, 138};
@@ -311,8 +312,9 @@ static void setting_step(App *a, int row, int dir) {
     switch (row) {
     case ROW_SEED: s->seed_mode = (SeedMode)wrap((int)s->seed_mode + dir, SEED_MODES); break;
     case ROW_MOOD: {
-        static const int ORDER[MOOD_COUNT + 1] = {MOOD_ANY,     MOOD_8BIT,   MOOD_16BIT,    MOOD_AMBIENT,   MOOD_DUB,   MOOD_DUBSTEP,
-                                                  MOOD_KEYGEN, MOOD_LOFI,   MOOD_MUSICBOX, MOOD_SYNTHWAVE, MOOD_TRANCE};
+        static const int ORDER[MOOD_COUNT + 1] = {MOOD_ANY,      MOOD_8BIT,      MOOD_16BIT,  MOOD_AMBIENT,
+                                                  MOOD_DUB,      MOOD_DUBSTEP,   MOOD_KEYGEN, MOOD_LOFI,
+                                                  MOOD_MUSICBOX, MOOD_SYNTHWAVE, MOOD_TRANCE};
         int at = 0;
         while (at < MOOD_COUNT && ORDER[at] != s->mood) at++;
         s->mood = ORDER[wrap(at + dir, MOOD_COUNT + 1)];
@@ -320,7 +322,9 @@ static void setting_step(App *a, int row, int dir) {
     }
     case ROW_LENGTH: s->length = (LengthPref)wrap((int)s->length + dir, 3); break;
     case ROW_AFTER: s->after = (AfterPiece)wrap((int)s->after + dir, AFTER_MODES); break;
-    case ROW_VOLUME: s->volume = s->volume + dir < 0 ? 0 : s->volume + dir > VOLUME_STEPS ? VOLUME_STEPS : s->volume + dir; break;
+    case ROW_VOLUME:
+        s->volume = s->volume + dir < 0 ? 0 : s->volume + dir > VOLUME_STEPS ? VOLUME_STEPS : s->volume + dir;
+        break;
     case ROW_CALM: s->calm = !s->calm; break;
     case ROW_STILL: s->still = !s->still; break;
     case ROW_GLOW: s->glow = (GlowLevel)wrap((int)s->glow + dir, GLOW_LEVELS); break;
@@ -429,8 +433,9 @@ static void settings_frame(App *a, const AppClock *clock, const Input *in, AppRe
             grid_put(g, value_col + (int)strlen(value) + 1, y, '>', arrow);
         }
     }
-    text_center(a, &a->scene, settings_footer_row(a), a->setting == ROW_SEED ? "a  type a seed      left right  change      b  back"
-                                                                  : "left right  change      a  choose      b  back",
+    text_center(a, &a->scene, settings_footer_row(a),
+                a->setting == ROW_SEED ? "a  type a seed      left right  change      b  back"
+                                       : "left right  change      a  choose      b  back",
                 FOOTER);
 }
 
@@ -471,7 +476,8 @@ static void about_frame(App *a, const Input *in) {
 // The first boot's note: either answer is saved, so it never comes back.
 static void notice_frame(App *a, const AppClock *clock, const Input *in, AppRequest *req) {
     int lines = (int)(sizeof NOTICE_LINES / sizeof NOTICE_LINES[0]), widest = 0;
-    for (int i = 0; i < lines; i++) widest = (int)strlen(NOTICE_LINES[i]) > widest ? (int)strlen(NOTICE_LINES[i]) : widest;
+    for (int i = 0; i < lines; i++)
+        widest = (int)strlen(NOTICE_LINES[i]) > widest ? (int)strlen(NOTICE_LINES[i]) : widest;
     for (int i = 0; i < lines; i++) {
         int row = a->menu.top - lines - 2 + i;
         clear_behind(a, &a->scene, a->ui.cols / 2 - widest / 2 - 2, row, widest + 4, 1);
@@ -544,7 +550,8 @@ static void end_card(App *a, Piece *p, float time) {
     static char art[FIGLET_MAX_HEIGHT * 160];
     char name[SEED_MAX + 1];
     int n = 0;
-    for (; info->title[n]; n++) name[n] = info->title[n] >= 'a' && info->title[n] <= 'z' ? (char)(info->title[n] - 32) : info->title[n];
+    for (; info->title[n]; n++)
+        name[n] = info->title[n] >= 'a' && info->title[n] <= 'z' ? (char)(info->title[n] - 32) : info->title[n];
     name[n] = 0;
     int w = font ? figlet_render(font, name, art, 160) : -1;
     int top = a->menu.top - 9;
@@ -554,7 +561,9 @@ static void end_card(App *a, Piece *p, float time) {
         for (int y = 0; y < font->height; y++) {
             for (int x = 0; x < w; x++) {
                 char ch = art[y * 160 + x];
-                if (ch != ' ') grid_put(g, col + x, top + y, ch, rgb_mix(MENU_LIT, rgb(255, 204, 120), (float)y / (float)font->height));
+                if (ch != ' ')
+                    grid_put(g, col + x, top + y, ch,
+                             rgb_mix(MENU_LIT, rgb(255, 204, 120), (float)y / (float)font->height));
             }
             if (nudge) grid_nudge(g, col, top + y, w);
         }
@@ -603,7 +612,8 @@ static void tracker_overlay(App *a, Piece *p, double t) {
     for (int y = top - 1; y < top + rows; y++) clear_behind(a, &p->grid, left, y, width, 0);
     for (int k = 0; k < n; k++) {
         int lit = (int)(channel_level(&p->score, used[k], (float)t) * 6 + 0.5f);
-        for (int i = 0; i < 6; i++) grid_put(g, left + 3 + k * 7 + i, top - 1, i < lit ? '=' : '.', i < lit ? ACCENT : FOOTER);
+        for (int i = 0; i < 6; i++)
+            grid_put(g, left + 3 + k * 7 + i, top - 1, i < lit ? '=' : '.', i < lit ? ACCENT : FOOTER);
     }
     for (int i = 0; i < rows; i++) {
         int row = now - rows / 2 + i;
@@ -617,9 +627,13 @@ static void tracker_overlay(App *a, Piece *p, double t) {
         for (int k = 0; k < n; k++) {
             const PatternCell *cell = &pat->cells[r][used[k]];
             if (cell->note >= 1 && cell->note <= 120)
-                snprintf(text, sizeof text, "%s%d %02X", notes[(cell->note - 1) % 12], (cell->note - 1) / 12, cell->instrument);
+                snprintf(text, sizeof text, "%s%d %02X", notes[(cell->note - 1) % 12], (cell->note - 1) / 12,
+                         cell->instrument);
             else
-                snprintf(text, sizeof text, "%s ..", cell->note == NOTE_OFF ? "===" : cell->note == NOTE_CUT ? "^^^" : "...");
+                snprintf(text, sizeof text, "%s ..",
+                         cell->note == NOTE_OFF   ? "==="
+                         : cell->note == NOTE_CUT ? "^^^"
+                                                  : "...");
             grid_text(g, left + 3 + k * 7, top + i, text, color);
         }
     }
@@ -642,8 +656,8 @@ static void info_overlay(App *a, Piece *p, double t) {
     snprintf(lines[0], sizeof lines[0], "%s", info->title);
     snprintf(lines[1], sizeof lines[1], "%s  %s %s  %d bpm", mood_names[info->mood], note_names[info->key.tonic],
              scale_names[info->key.scale], info->bpm);
-    snprintf(lines[2], sizeof lines[2], "%s  %d:%02d of %d:%02d", sec ? section_names[sec->kind] : "", (int)t / 60, (int)t % 60,
-             (int)info->length / 60, (int)info->length % 60);
+    snprintf(lines[2], sizeof lines[2], "%s  %d:%02d of %d:%02d", sec ? section_names[sec->kind] : "", (int)t / 60,
+             (int)t % 60, (int)info->length / 60, (int)info->length % 60);
     snprintf(lines[3], sizeof lines[3], "%s on %s", scene, palette);
     snprintf(lines[4], sizeof lines[4], "%s", reacts);
     for (int i = 0; i < 5; i++) {
@@ -660,12 +674,14 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
     piece_draw(p, t, out, s->calm, s->still, clock->scope, clock->scope_frames);
     out->fx.glow *= GLOW_SCALE[s->glow];
     out->ui = &a->ui;
+
     if (a->state == STATE_PLAYING) {
         if (in->pressed & INPUT_ALT1) a->overlay = a->overlay == OVERLAY_TRACKER ? OVERLAY_NONE : OVERLAY_TRACKER;
         if (in->pressed & INPUT_ALT2) a->overlay = a->overlay == OVERLAY_INFO ? OVERLAY_NONE : OVERLAY_INFO;
         if (a->overlay == OVERLAY_TRACKER) tracker_overlay(a, p, t);
         if (a->overlay == OVERLAY_INFO) info_overlay(a, p, t);
     }
+
     switch (a->state) {
     case STATE_PLAYING:
         if (in->pressed & (INPUT_CONFIRM | INPUT_PAUSE)) {
@@ -688,6 +704,7 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
             open_menu(a, MENU_END);
         }
         break;
+
     case STATE_PAUSED: {
         text_center(a, &p->grid, a->menu.top - 3, "paused", NOTE);
         int chosen = menu_input(a, in);
@@ -709,6 +726,7 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
         }
         break;
     }
+
     case STATE_ENDED: {
         end_card(a, p, (float)clock->wall);
         // Sailing on counts down beside the menu; any button keeps the card instead.
@@ -740,6 +758,7 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
         }
         break;
     }
+
     default: break;
     }
 }

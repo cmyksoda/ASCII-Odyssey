@@ -21,7 +21,15 @@ typedef enum {
     MOOD_ANY = -1
 } Mood;
 
-typedef enum { SECTION_INTRO, SECTION_VERSE, SECTION_BUILD, SECTION_DROP, SECTION_BREAK, SECTION_OUTRO, SECTION_KINDS } SectionKind;
+typedef enum {
+    SECTION_INTRO,
+    SECTION_VERSE,
+    SECTION_BUILD,
+    SECTION_DROP,
+    SECTION_BREAK,
+    SECTION_OUTRO,
+    SECTION_KINDS
+} SectionKind;
 
 typedef enum { LENGTH_SHORT, LENGTH_MEDIUM, LENGTH_LONG } LengthPref;
 

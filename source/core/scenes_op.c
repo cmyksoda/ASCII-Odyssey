@@ -25,7 +25,8 @@ static void chord_inks(const Frame *f, Rgbf inks[3]) {
     int before = now > f->score->info->chords ? now[-1].chord.root_pc : now->chord.root_pc;
     float ease = smoothstep(0.0f, f->calm ? 1.0f : 0.25f, f->t - (float)now->time);
     for (int k = 0; k < 3; k++)
-        inks[k] = rgbf_mix(palette_accent(f->palette, before + k), palette_accent(f->palette, now->chord.root_pc + k), ease);
+        inks[k] =
+            rgbf_mix(palette_accent(f->palette, before + k), palette_accent(f->palette, now->chord.root_pc + k), ease);
 }
 
 // The glyph for a line running in direction (dx, dy), with y up the screen.
@@ -81,7 +82,8 @@ void vortex_draw(void *state, const Frame *f) {
                 around += mfloor_i(out) & 1 ? wheel : -wheel;
             else
                 out += around * v->twist / (float)v->sectors;
-            int parity = v->rays ? (mfloor_i(around) & 1) && (mfloor_i(out) & 3) : (mfloor_i(out) + mfloor_i(around)) & 1;
+            int parity =
+                v->rays ? (mfloor_i(around) & 1) && (mfloor_i(out) & 3) : (mfloor_i(out) + mfloor_i(around)) & 1;
             int edge = mfract(out) < 0.12f || mfract(around) < 0.12f;
             float fade = smoothstep(0.04f, 0.3f, r) * contrast;
             if (parity)
@@ -122,7 +124,8 @@ void spiral_draw(void *state, const Frame *f) {
     Rgbf inks[3];
     chord_inks(f, inks);
     float sign = s->speed > 0 ? 1.0f : -1.0f;
-    float flow = (frame_travel(f, s->speed * 0.6f, s->speed) + sign * frame_surge(f, ROLE_KICK, 0.2f, 0.6f)) * frame_pace(f);
+    float flow =
+        (frame_travel(f, s->speed * 0.6f, s->speed) + sign * frame_surge(f, ROLE_KICK, 0.2f, 0.6f)) * frame_pace(f);
     float contrast = frame_contrast(f);
     for (int row = 0; row < g->rows; row++) {
         float y = cell_y(g, row);
@@ -139,7 +142,8 @@ void spiral_draw(void *state, const Frame *f) {
             float level = msin(mfract(band) * PI_F) * smoothstep(0.0f, 0.12f, r);
             int i = (int)(level * 7.99f);
             if (i <= 0) continue;
-            put_cell(g, col, row, ramp[i], frame_dim(f, inks[((k % s->colors) + s->colors) % s->colors], (0.3f + 0.8f * level) * contrast));
+            put_cell(g, col, row, ramp[i],
+                     frame_dim(f, inks[((k % s->colors) + s->colors) % s->colors], (0.3f + 0.8f * level) * contrast));
         }
     }
     f->fx->glow = 0.6f;
@@ -181,7 +185,8 @@ void opart_draw(void *state, const Frame *f) {
             float push = 1 - swell * bulge, u = lx + dx * push, v = ly + dy * push;
             if (o->whirl != 0 && bulge > 0.01f) {
                 // The twist tightens and loosens slowly, strongest at the lens's heart.
-                float a = o->whirl * bulge * (0.6f + 0.4f * msin(t * 0.5f)), c = mcos(a), s = msin(a), wx = u - lx, wy = v - ly;
+                float a = o->whirl * bulge * (0.6f + 0.4f * msin(t * 0.5f)), c = mcos(a), s = msin(a), wx = u - lx,
+                      wy = v - ly;
                 u = lx + wx * c - wy * s, v = ly + wx * s + wy * c;
             }
             u += o->wave * msin(v * o->freq + t * 1.3f);
@@ -308,7 +313,8 @@ void moire_draw(void *state, const Frame *f) {
         float y = cell_y(g, row);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col);
-            int a = mfloor_i(moire_field(m, 0, x, y, ax, ay, t) - flow), b = mfloor_i(moire_field(m, 1, x, y, bx, by, t) - flow);
+            int a = mfloor_i(moire_field(m, 0, x, y, ax, ay, t) - flow),
+                b = mfloor_i(moire_field(m, 1, x, y, bx, by, t) - flow);
             if ((a + b) & 1)
                 put_cell(g, col, row, '#', frame_dim(f, inks[0], 0.9f * contrast));
             else if (a & 1)
@@ -375,7 +381,8 @@ void truchet_draw(void *state, const Frame *f) {
                         float off = mabs(turned ? u + v - 1 : u - v) * 0.7071f;
                         if (off > 0.12f) continue;
                         float band = mfract(mhypot(cell_x(g, col), cell_y(g, row)) * 1.5f - flow);
-                        put_cell(g, col, row, turned ? '\\' : '/', frame_dim(f, inks[(int)(band * 3) % 3], (off < 0.06f ? 1.0f : 0.6f) * contrast));
+                        put_cell(g, col, row, turned ? '\\' : '/',
+                                 frame_dim(f, inks[(int)(band * 3) % 3], (off < 0.06f ? 1.0f : 0.6f) * contrast));
                         continue;
                     }
                     float ax = turned ? 1.0f : 0.0f, du1 = u - ax, dv1 = v, du2 = u - (1 - ax), dv2 = v - 1;
@@ -454,9 +461,10 @@ void squares_draw(void *state, const Frame *f) {
             Rgbf ink = inks[((band % 3) + 3) % 3];
             if (mfract(ring) < 0.24f) {
                 // The edge, drawn along its true direction on screen.
-                int upright = mabs(px) > mabs(py), glyph = s->sides != 4 ? slope_glyph(ex * c - ey * sn, ex * sn + ey * c)
-                                                         : upright      ? slope_glyph(-sn, c)
-                                                                        : slope_glyph(c, sn);
+                int upright = mabs(px) > mabs(py), glyph = s->sides != 4
+                                                               ? slope_glyph(ex * c - ey * sn, ex * sn + ey * c)
+                                                           : upright ? slope_glyph(-sn, c)
+                                                                     : slope_glyph(c, sn);
                 put_cell(g, col, row, glyph, frame_dim(f, ink, (1.0f + 0.3f * kick) * contrast));
             } else if (band & 1) {
                 put_cell(g, col, row, '#', frame_dim(f, ink, 0.5f * contrast));
@@ -576,9 +584,11 @@ void honeycomb_draw(void *state, const Frame *f) {
     // A kick's ring crosses the whole screen within 1.6 seconds, so the shot's kicks older than that are counted once for
     // every cell, and only the newer ones cell by cell.
     float settle = mmax(f->t - f->local, f->t - 1.6f);
-    int beating = f->react > 0 && !f->calm && !f->still, settled = beating ? score_count(f->score, ROLE_KICK, f->t - f->local, settle) : 0;
+    int beating = f->react > 0 && !f->calm && !f->still,
+        settled = beating ? score_count(f->score, ROLE_KICK, f->t - f->local, settle) : 0;
     Rgbf fill[3], rim[3];
-    for (int k = 0; k < 3; k++) fill[k] = frame_dim(f, inks[k], 0.75f * contrast), rim[k] = frame_dim(f, inks[k], 0.5f * contrast);
+    for (int k = 0; k < 3; k++)
+        fill[k] = frame_dim(f, inks[k], 0.75f * contrast), rim[k] = frame_dim(f, inks[k], 0.5f * contrast);
     // The three directions an edge of a pointy-topped hexagon faces, and the glyph that draws each edge.
     static const float NX[3] = {1.0f, 0.5f, -0.5f}, NY[3] = {0.0f, 0.8660254f, 0.8660254f};
     static const char EDGE[3] = {'|', '\\', '/'};
@@ -609,7 +619,8 @@ void honeycomb_draw(void *state, const Frame *f) {
                 if (depth > 0.86f)
                     put_cell(g, col, row, EDGE[facing], rim[color]);
                 else
-                    put_cell(g, col, row, '#', wave > 0.01f ? frame_dim(f, inks[color], (0.75f + 0.4f * wave) * contrast) : fill[color]);
+                    put_cell(g, col, row, '#',
+                             wave > 0.01f ? frame_dim(f, inks[color], (0.75f + 0.4f * wave) * contrast) : fill[color]);
                 continue;
             }
             float tide = 0.5f + 0.5f * msin(dist * 3 - t * 1.2f + hash01((uint32_t)(rx * 31 + rz * 977) ^ h->salt) * 2);
@@ -617,7 +628,8 @@ void honeycomb_draw(void *state, const Frame *f) {
             if (depth > 0.86f)
                 put_cell(g, col, row, EDGE[facing], frame_dim(f, ink, (0.7f + 0.6f * wave) * contrast));
             else if (tide + wave > 0.75f)
-                put_cell(g, col, row, wave > 0.3f ? '#' : ':', frame_dim(f, ink, (0.25f + 0.5f * tide + wave) * contrast));
+                put_cell(g, col, row, wave > 0.3f ? '#' : ':',
+                         frame_dim(f, ink, (0.25f + 0.5f * tide + wave) * contrast));
         }
     }
     f->fx->glow = 0.55f;
@@ -649,7 +661,8 @@ void cafewall_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Rgbf inks[3];
     chord_inks(f, inks);
-    float contrast = frame_contrast(f), t = f->local * frame_pace(f), nudge = frame_surge(f, ROLE_KICK, 0.2f, 0.5f) * frame_pace(f);
+    float contrast = frame_contrast(f), t = f->local * frame_pace(f),
+          nudge = frame_surge(f, ROLE_KICK, 0.2f, 0.5f) * frame_pace(f);
     Rgbf mortar = palette_ramp(f->palette, 0.45f);
     if (w->upright) {
         // Two columns to a row's height keep the tiles square, and a single column of mortar is as thick as a row's.
@@ -661,9 +674,11 @@ void cafewall_draw(void *state, const Frame *f) {
                 for (int row = 0; row < g->rows; row++) put_cell(g, col, row, '|', frame_dim(f, mortar, contrast));
                 continue;
             }
-            float shift = ((float)(k & 1) * 0.5f + w->sway * 0.5f * msin(t * 0.9f + (float)k * w->phase) + nudge * 0.25f) * tall;
+            float shift =
+                ((float)(k & 1) * 0.5f + w->sway * 0.5f * msin(t * 0.9f + (float)k * w->phase) + nudge * 0.25f) * tall;
             for (int row = 0; row < g->rows; row++)
-                if (mfloor_i(((float)row + shift) / tall) & 1) put_cell(g, col, row, '#', frame_dim(f, inks[k % 3 == 2 ? 1 : 0], 0.95f * contrast));
+                if (mfloor_i(((float)row + shift) / tall) & 1)
+                    put_cell(g, col, row, '#', frame_dim(f, inks[k % 3 == 2 ? 1 : 0], 0.95f * contrast));
         }
         f->fx->glow = 0.45f;
         return;
@@ -675,7 +690,8 @@ void cafewall_draw(void *state, const Frame *f) {
             for (int col = 0; col < g->cols; col++) put_cell(g, col, row, '-', frame_dim(f, mortar, contrast));
             continue;
         }
-        float shift = ((float)(k & 1) * 0.5f + w->sway * 0.5f * msin(t * 0.9f + (float)k * w->phase) + nudge * 0.25f) * (float)w->tile;
+        float shift = ((float)(k & 1) * 0.5f + w->sway * 0.5f * msin(t * 0.9f + (float)k * w->phase) + nudge * 0.25f) *
+                      (float)w->tile;
         for (int col = 0; col < g->cols; col++) {
             int light = mfloor_i(((float)col + shift) / (float)w->tile) & 1;
             if (light) put_cell(g, col, row, '#', frame_dim(f, inks[k % 3 == 2 ? 1 : 0], 0.95f * contrast));
@@ -744,19 +760,22 @@ void boing_draw(void *state, const Frame *f) {
     for (int row = cell_row(g, cy + rad + 0.1f); row <= cell_row(g, cy - rad); row++)
         for (int col = cell_col(g, cx - rad); col <= cell_col(g, cx + rad + 0.2f); col++) {
             float dx = (cell_x(g, col) - cx - 0.16f) / rad, dy = (cell_y(g, row) - cy + 0.06f) / rad;
-            if (dx * dx + dy * dy < 1 && cell_y(g, row) > floor_y && col >= 0 && col < g->cols && row >= 0 && row < g->rows)
+            if (dx * dx + dy * dy < 1 && cell_y(g, row) > floor_y && col >= 0 && col < g->cols && row >= 0 &&
+                row < g->rows)
                 grid_at(g, col, row)->glyph = ' ';
         }
     for (int row = cell_row(g, cy + rad / squash); row <= cell_row(g, cy - rad / squash); row++)
         for (int col = cell_col(g, cx - rad / squash); col <= cell_col(g, cx + rad / squash); col++) {
-            float u = (cell_x(g, col) - cx) / (rad / squash), v = (cell_y(g, row) - cy) / (rad * squash), d2 = u * u + v * v;
+            float u = (cell_x(g, col) - cx) / (rad / squash), v = (cell_y(g, row) - cy) / (rad * squash),
+                  d2 = u * u + v * v;
             if (d2 >= 1) continue;
             float nz = msqrt(1 - d2), tu = u * tc - v * ts, tv = u * ts + v * tc;
             float lon = matan2(tu, nz) + roll, lat = matan2(tv, msqrt(mmax(0.0f, 1 - tv * tv)));
             int parity = (mfloor_i(lon / PI_F * (float)b->bands) + mfloor_i(lat / PI_F * (float)b->bands)) & 1;
             float lit = 0.3f + 0.7f * saturate(u * lx + v * ly + nz * lz);
             static const char ramp[] = ".:=+*#@";
-            put_cell(g, col, row, ramp[(int)(lit * 6.99f)], frame_dim(f, parity ? inks[0] : white, lit * contrast * 1.1f));
+            put_cell(g, col, row, ramp[(int)(lit * 6.99f)],
+                     frame_dim(f, parity ? inks[0] : white, lit * contrast * 1.1f));
         }
     f->fx->glow = 0.5f;
 }
@@ -869,11 +888,13 @@ void tiletwist_draw(void *state, const Frame *f) {
                 int tx = bx + NEAR[k][0], ty = by + NEAR[k][1];
                 if (tx < 0 || ty < 0 || tx >= TILES_ACROSS || ty >= TILES_DOWN) continue;
                 float lx = x / s - ((float)(tx - half_x) + 0.5f), ly = y / s - ((float)(ty - half_y) + 0.5f);
-                float rx = lx * tc[ty][tx] + ly * ts[ty][tx], ry = -lx * ts[ty][tx] + ly * tc[ty][tx], m = mmax(mabs(rx), mabs(ry));
+                float rx = lx * tc[ty][tx] + ly * ts[ty][tx], ry = -lx * ts[ty][tx] + ly * tc[ty][tx],
+                      m = mmax(mabs(rx), mabs(ry));
                 if (m < 0.47f) hit = (tx + ty) & 1, edge = m;
             }
             if (hit < 0) continue;
-            put_cell(g, col, row, edge > 0.38f ? '+' : '#', frame_dim(f, inks[hit], (edge > 0.38f ? 1.05f : 0.8f) * contrast));
+            put_cell(g, col, row, edge > 0.38f ? '+' : '#',
+                     frame_dim(f, inks[hit], (edge > 0.38f ? 1.05f : 0.8f) * contrast));
         }
     }
     f->fx->glow = 0.5f;
@@ -919,9 +940,11 @@ void limit_draw(void *state, const Frame *f) {
     float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
     float travel = (frame_travel(f, c->speed * 0.5f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.8f)) * pace;
     int hops = mfloor_i(travel / c->step);
+
     // An odd polygon's neighbor sits half a turn round from it, so the view turns with each hop and never jumps.
     float turn = f->local * c->spin * pace + (c->odd && (hops & 1) ? PI_F : 0), ct = mcos(turn), st = msin(turn);
     float a = mtanh((travel - (float)hops * c->step) * 0.5f), radius = 0.97f, cw = 2 * g->aspect / (float)g->cols;
+
     if (!c->half) dust_stars(f, c->salt, 0.003f, 0.35f);
     for (int row = 0; row < g->rows; row++) {
         float y0 = cell_y(g, row);
@@ -934,15 +957,19 @@ void limit_draw(void *state, const Frame *f) {
             } else {
                 zx = x0 / radius, zy = y0 / radius, gain = 1 / radius;
             }
+
             float r2 = zx * zx + zy * zy;
             if (r2 >= 1) {
-                if (!c->half && (msqrt(r2) - 1) * radius < cw) put_cell(g, col, row, slope_glyph(-zy, zx), frame_dim(f, inks[2], 0.7f * contrast));
+                if (!c->half && (msqrt(r2) - 1) * radius < cw)
+                    put_cell(g, col, row, slope_glyph(-zy, zx), frame_dim(f, inks[2], 0.7f * contrast));
                 continue;
             }
+
             // Turned, then carried along the x axis by the flight: z -> (z + a) / (1 + a z).
             float x = zx * ct - zy * st, y = zx * st + zy * ct;
             float nx = x + a, mx = 1 + a * x, my = a * y, m2 = mx * mx + my * my;
             x = (nx * mx + y * my) / m2, y = (y * mx - nx * my) / m2, gain *= (1 - a * a) / m2;
+
             // Reflected home into the one triangle, counting the mirrors crossed on the way and the polygon walls among them.
             int flips = 0, walls = 0, k;
             for (k = 0; k < 40; k++) {
@@ -958,21 +985,28 @@ void limit_draw(void *state, const Frame *f) {
                 if (!moved) break;
                 flips += moved;
             }
+
             float fade = (0.4f + 0.6f * (1 - r2)) * contrast, size = (c->center - c->radius) / gain;
             // Polygons too small to draw cell by cell blur into a mist of both colors.
             if (k == 40 || size < 1.5f * cw) {
                 put_cell(g, col, row, ':', frame_dim(f, rgbf_mix(inks[0], inks[1], 0.5f), fade * 0.6f));
                 continue;
             }
+
             // Each hop crosses one wall, so the colors swap with it and the flight stays seamless.
             float ex = x - c->center, wall = (msqrt(ex * ex + y * y) - c->radius) / gain;
             int edge = wall < 0.7f * cw, pin = size > 4 * cw ? flips & 1 : 1;
             if ((walls + hops) & 1)
-                put_cell(g, col, row, edge ? '+' : pin ? '#' : '%', frame_dim(f, inks[0], fade * (pin ? 1.0f : 0.7f) * (0.85f + 0.3f * kick)));
+                put_cell(g, col, row,
+                         edge  ? '+'
+                         : pin ? '#'
+                               : '%',
+                         frame_dim(f, inks[0], fade * (pin ? 1.0f : 0.7f) * (0.85f + 0.3f * kick)));
             else
                 put_cell(g, col, row, edge ? '.' : ':', frame_dim(f, inks[1], fade * (pin ? 0.8f : 0.5f)));
         }
     }
+
     f->fx->glow = 0.55f + 0.25f * kick;
 }
 
@@ -1004,7 +1038,8 @@ void carpet_draw(void *state, const Frame *f) {
     float zoom = (frame_travel(f, c->speed * 0.5f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.5f)) * pace;
     int whole = mfloor_i(zoom);
     // A zoom by three brings back the same carpet, so holes keep their colors by counting levels from the start.
-    float scale = 0.34f * mexp2(-(zoom - (float)whole) * 1.5849625f), turn = f->local * c->spin * pace, ct = mcos(turn), st = msin(turn);
+    float scale = 0.34f * mexp2(-(zoom - (float)whole) * 1.5849625f), turn = f->local * c->spin * pace, ct = mcos(turn),
+          st = msin(turn);
     float cw = 2 * g->aspect / (float)g->cols, ch = 2.0f / (float)g->rows;
     float side_cut = cw * mabs(ct) + ch * mabs(st), flat_cut = ch * mabs(ct) + cw * mabs(st);
     int side_glyph = slope_glyph(st, ct), flat_glyph = slope_glyph(ct, -st);
@@ -1031,9 +1066,14 @@ void carpet_draw(void *state, const Frame *f) {
             Rgbf ink = rgbf_mix(inks[0], inks[1 + (level + whole) % 2], grown);
             int side = mmin(fu, 1 - fu) * size < side_cut, flat = mmin(fv, 1 - fv) * size < flat_cut;
             if (side || flat)
-                put_cell(g, col, row, side && flat ? '+' : side ? side_glyph : flat_glyph, frame_dim(f, ink, (0.3f + grown * (0.7f + 0.3f * kick)) * contrast));
+                put_cell(g, col, row,
+                         side && flat ? '+'
+                         : side       ? side_glyph
+                                      : flat_glyph,
+                         frame_dim(f, ink, (0.3f + grown * (0.7f + 0.3f * kick)) * contrast));
             else
-                put_cell(g, col, row, grown > 0.5f ? '#' : ':', frame_dim(f, ink, (0.3f + grown * (0.3f + 0.2f * kick)) * contrast));
+                put_cell(g, col, row, grown > 0.5f ? '#' : ':',
+                         frame_dim(f, ink, (0.3f + grown * (0.3f + 0.2f * kick)) * contrast));
         }
     }
     f->fx->glow = 0.5f + 0.25f * kick;
@@ -1079,7 +1119,8 @@ void quasi_draw(void *state, const Frame *f) {
             for (int j = 0; j < q->waves; j++) sum += mcos(x * dx[j] + y * dy[j] + phase);
             float v = sum / (float)q->waves;
             if (v > 0) {
-                put_cell(g, col, row, v < 0.08f ? '+' : '#', frame_dim(f, v > 0.5f ? inks[2] : inks[0], (0.75f + 0.3f * kick) * contrast));
+                put_cell(g, col, row, v < 0.08f ? '+' : '#',
+                         frame_dim(f, v > 0.5f ? inks[2] : inks[0], (0.75f + 0.3f * kick) * contrast));
             } else {
                 put_cell(g, col, row, v > -0.08f ? '.' : ':', frame_dim(f, inks[1], 0.55f * contrast));
             }
@@ -1181,7 +1222,8 @@ void xor_draw(void *state, const Frame *f) {
     for (int k = 0; k < 2; k++) {
         float a = t * x->spin[k] * TAU_F * 0.25f + x->phase[k];
         cs[k] = mcos(a), sn[k] = msin(a), inv[k] = 1 / (x->size[k] * zoom);
-        ox[k] = x->orbit[k] * g->aspect * msin(t * 0.21f + x->phase[k]), oy[k] = x->orbit[k] * msin(t * 0.17f + x->phase[k] * 1.7f);
+        ox[k] = x->orbit[k] * g->aspect * msin(t * 0.21f + x->phase[k]),
+        oy[k] = x->orbit[k] * msin(t * 0.17f + x->phase[k] * 1.7f);
     }
     for (int row = 0; row < g->rows; row++) {
         float y0 = cell_y(g, row);
@@ -1204,7 +1246,8 @@ void xor_draw(void *state, const Frame *f) {
             }
             if (!(lit[0] ^ lit[1])) continue;
             int rim = edge < 0.35f * 2 * g->aspect / (float)g->cols;
-            put_cell(g, col, row, rim ? '+' : '#', frame_dim(f, inks[lit[1]], (rim ? 1.0f : 0.8f + 0.25f * kick) * contrast));
+            put_cell(g, col, row, rim ? '+' : '#',
+                     frame_dim(f, inks[lit[1]], (rim ? 1.0f : 0.8f + 0.25f * kick) * contrast));
         }
     }
     f->fx->glow = 0.5f + 0.25f * kick;
@@ -1235,7 +1278,8 @@ void blocks_draw(void *state, const Frame *f) {
     chord_inks(f, inks);
     float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.25f, 1.0f);
     // A kick's surge is its velocity times the time constant, so 4 / 3 makes a full-velocity kick a third of a turn.
-    float swing = (f->local * b->speed + frame_surge(f, ROLE_KICK, 0.25f, 4.0f / 3.0f) * (b->speed > 0 ? 1 : -1)) * pace;
+    float swing =
+        (f->local * b->speed + frame_surge(f, ROLE_KICK, 0.25f, 4.0f / 3.0f) * (b->speed > 0 ? 1 : -1)) * pace;
     float s = b->size;
     for (int row = 0; row < g->rows; row++) {
         float y = cell_y(g, row);
@@ -1252,11 +1296,15 @@ void blocks_draw(void *state, const Frame *f) {
             int face = dy >= 0.57735f * mabs(dx) ? 0 : dx < 0 ? 1 : 2;
             // Thin dark seams along the cube's edges keep the blocks apart: round its six sides, and from its middle out to
             // the corners at 30, 150 and 270 degrees where its faces meet.
-            float side = mmax(mabs(dx), mmax(mabs(0.5f * dx + 0.866f * dy), mabs(-0.5f * dx + 0.866f * dy))) / (0.866f * s);
-            float seam = mmin(0.866f * dx + 0.5f * dy > 0 ? mabs(0.866f * dy - 0.5f * dx) : 1,
-                              mmin(-0.866f * dx + 0.5f * dy > 0 ? mabs(0.866f * dy + 0.5f * dx) : 1, dy < 0 ? mabs(dx) : 1)) / s;
+            float side =
+                mmax(mabs(dx), mmax(mabs(0.5f * dx + 0.866f * dy), mabs(-0.5f * dx + 0.866f * dy))) / (0.866f * s);
+            float seam =
+                mmin(0.866f * dx + 0.5f * dy > 0 ? mabs(0.866f * dy - 0.5f * dx) : 1,
+                     mmin(-0.866f * dx + 0.5f * dy > 0 ? mabs(0.866f * dy + 0.5f * dx) : 1, dy < 0 ? mabs(dx) : 1)) /
+                s;
             if (side > 0.93f || seam < 0.05f) continue;
-            float light = swing - mhypot(hx, hy) * b->wave * 0.15f, lit = 0.5f + 0.5f * mcos(TAU_F * light - (float)face * 2.0944f);
+            float light = swing - mhypot(hx, hy) * b->wave * 0.15f,
+                  lit = 0.5f + 0.5f * mcos(TAU_F * light - (float)face * 2.0944f);
             float level = (0.2f + 0.8f * lit) * (0.9f + 0.2f * kick);
             int i = (int)(saturate(level) * 8.99f);
             if (i > 0) put_cell(g, col, row, ramp[i], frame_dim(f, inks[face], (0.35f + 0.7f * level) * contrast));

@@ -303,13 +303,17 @@ static void mix_voice(Player *p, Voice *v, int n) {
     float dl = (v->target_l - v->gain_l) / (float)n, dr = (v->target_r - v->gain_r) / (float)n;
     int end = s->loop_length ? s->loop_start + s->loop_length : s->length;
     float knob = v->cutoff + v->cutoff_env, lfo = 0;
+
     if (ins->wobble_depth > 0 && v->wobble > 0) {
         // The LFO runs on the song's own beat, read at the middle of this block.
         double beat = ((double)p->frame + n * 0.5) * (double)p->song->bpm / (60.0 * AUDIO_RATE);
         float phase = (float)(beat * v->wobble - (double)(long long)(beat * v->wobble));
-        lfo = ins->wobble_shape == 1 ? 1 - phase : ins->wobble_shape == 2 ? 1 - mabs(2 * phase - 1) : 0.5f - 0.5f * mcos(phase * TAU_F);
+        lfo = ins->wobble_shape == 1   ? 1 - phase
+              : ins->wobble_shape == 2 ? 1 - mabs(2 * phase - 1)
+                                       : 0.5f - 0.5f * mcos(phase * TAU_F);
         knob += ins->wobble_depth * lfo;
     }
+
     if (v->filtered) svf_set(&v->svf, knob_hz(knob), 0.707f + ins->resonance);
     float growl = ins->growl, drive = 1 + 3 * growl;
     if (growl > 0) {
@@ -317,6 +321,7 @@ static void mix_voice(Player *p, Voice *v, int n) {
         svf_set(&v->vowel[0], 450 - 150 * lfo, 4.5f);
         svf_set(&v->vowel[1], 800 * mpow(2.875f, lfo), 7);
     }
+
     for (int i = 0; i < n; i++) {
         int idx = (int)v->pos;
         float f = (float)(v->pos - (double)idx), s0, s1, s2, s3;
@@ -332,6 +337,7 @@ static void mix_voice(Player *p, Voice *v, int n) {
             s2 = frame_at(s, idx + 1);
             s3 = frame_at(s, idx + 2);
         }
+
         float c1 = 0.5f * (s2 - s0), c2 = s0 - 2.5f * s1 + 2 * s2 - 0.5f * s3, c3 = 0.5f * (s3 - s0) + 1.5f * (s1 - s2);
         float x = ((c3 * f + c2) * f + c1) * f + s1;
         if (v->filtered) x = svf_low(&v->svf, x);
@@ -342,6 +348,7 @@ static void mix_voice(Player *p, Voice *v, int n) {
             // through the formants, or they'd fizz over the top.
             x += growl * 7 * talk;
         }
+
         v->gain_l += dl;
         v->gain_r += dr;
         float l = x * v->gain_l, r = x * v->gain_r, m = (l + r) * 0.5f;
@@ -349,6 +356,7 @@ static void mix_voice(Player *p, Voice *v, int n) {
         out_r[i] += r;
         rev[i] += m * ins->send_reverb;
         del[i] += m * ins->send_delay;
+
         v->pos += v->step;
         if (v->pos >= end) {
             if (s->loop_length) {
@@ -359,6 +367,7 @@ static void mix_voice(Player *p, Voice *v, int n) {
             }
         }
     }
+
     v->gain_l = v->target_l;
     v->gain_r = v->target_r;
 }

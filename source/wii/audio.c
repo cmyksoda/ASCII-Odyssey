@@ -178,8 +178,8 @@ void audio_chime(int which) {
     static int next;
     int voice = 1 + next++ % 3;
     ASND_StopVoice(voice);
-    ASND_SetVoice(voice, VOICE_MONO_16BIT, AUDIO_RATE, 0, chimes + which * CHIME_FRAMES, CHIME_FRAMES * 2, volume * 3 / 4,
-                  volume * 3 / 4, NULL);
+    ASND_SetVoice(voice, VOICE_MONO_16BIT, AUDIO_RATE, 0, chimes + which * CHIME_FRAMES, CHIME_FRAMES * 2,
+                  volume * 3 / 4, volume * 3 / 4, NULL);
 }
 
 void audio_volume(float level) {

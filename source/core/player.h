@@ -37,7 +37,8 @@ typedef struct {
 } Channel;
 
 // Called for every note that starts, at its exact time, so the visuals can follow the score.
-typedef void (*NoteListener)(void *context, double seconds, int channel, int note, float velocity, const Instrument *ins);
+typedef void (*NoteListener)(void *context, double seconds, int channel, int note, float velocity,
+                             const Instrument *ins);
 
 typedef struct {
     const Song *song;

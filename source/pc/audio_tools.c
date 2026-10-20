@@ -63,7 +63,8 @@ void audio_measure(const float *stereo, long frames, AudioStats *out) {
     // K-weighting at 48 kHz, straight from ITU-R BS.1770.
     Biquad shelf[2], high[2];
     for (int c = 0; c < 2; c++) {
-        shelf[c] = (Biquad){1.53512485958697, -2.69169618940638, 1.19839281085285, -1.69065929318241, 0.73248077421585, 0, 0};
+        shelf[c] =
+            (Biquad){1.53512485958697, -2.69169618940638, 1.19839281085285, -1.69065929318241, 0.73248077421585, 0, 0};
         high[c] = (Biquad){1.0, -2.0, 1.0, -1.99004745483398, 0.99007225036621, 0, 0};
     }
     long step = AUDIO_RATE / 10, blocks = frames / step;
@@ -145,7 +146,8 @@ static void fft(double *re, double *im, int n) {
 }
 
 static void heat(double t, uint8_t *rgb) {
-    static const double stops[6][3] = {{0, 0, 4}, {40, 11, 84}, {120, 28, 109}, {196, 60, 78}, {245, 140, 34}, {252, 255, 164}};
+    static const double stops[6][3] = {{0, 0, 4},     {40, 11, 84},   {120, 28, 109},
+                                       {196, 60, 78}, {245, 140, 34}, {252, 255, 164}};
     t = t < 0 ? 0 : t > 1 ? 1 : t;
     double x = t * 5;
     int i = (int)x;

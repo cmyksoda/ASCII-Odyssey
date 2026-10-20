@@ -152,7 +152,8 @@ int figlet_render(const FigletFont *f, const char *text, char *out, int max_w) {
             char *line = out + r * max_w;
             const char *glyph = f->rows[g][r];
             for (int k = 0; k < amount; k++)
-                if (len - amount + k >= 0) line[len - amount + k] = smush(f, line[len - amount + k], glyph[k], prev_w, cur_w);
+                if (len - amount + k >= 0)
+                    line[len - amount + k] = smush(f, line[len - amount + k], glyph[k], prev_w, cur_w);
             memcpy(line + len, glyph + amount, (size_t)(cur_w - amount));
         }
         len += cur_w - amount;
@@ -200,7 +201,8 @@ static int wrap_line(const FigletFont *f, const char *text, int max_w) {
     return w > max_w ? -1 : w;
 }
 
-static int wrap_place(const FigletFont *f, const char *text, int max_w, int max_h, char *out, int stride, FigletLayout *lay) {
+static int wrap_place(const FigletFont *f, const char *text, int max_w, int max_h, char *out, int stride,
+                      FigletLayout *lay) {
     int w = wrap_line(f, text, max_w), tall = f->height, top = lay->lines ? lay->height + 1 : 0;
     if (w <= 0 || lay->lines == FIGLET_LINES) return -1;
     for (int blank = 1; blank && tall > 1; tall -= blank)

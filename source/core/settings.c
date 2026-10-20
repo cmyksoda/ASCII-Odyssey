@@ -34,7 +34,8 @@ static int number(const char *value, int lo, int hi, int fallback) {
 static void apply(Settings *s, const char *key, const char *value) {
     if (!strcmp(key, "seed")) s->seed_mode = (SeedMode)named(value, SEED_NAMES, SEED_MODES, s->seed_mode);
     if (!strcmp(key, "typed_seed")) seed_normalize(value, s->typed_seed, sizeof s->typed_seed);
-    if (!strcmp(key, "mood")) s->mood = !strcmp(value, "any") ? MOOD_ANY : named(value, mood_names, MOOD_COUNT, s->mood);
+    if (!strcmp(key, "mood"))
+        s->mood = !strcmp(value, "any") ? MOOD_ANY : named(value, mood_names, MOOD_COUNT, s->mood);
     if (!strcmp(key, "length")) s->length = (LengthPref)named(value, LENGTH_NAMES, 3, s->length);
     if (!strcmp(key, "after")) s->after = (AfterPiece)named(value, AFTER_NAMES, AFTER_MODES, s->after);
     if (!strcmp(key, "volume")) s->volume = number(value, 0, VOLUME_STEPS, s->volume);
