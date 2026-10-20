@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Op art at full tilt: a checkerboard vortex zooming forever inward, a hypnotic spiral, a rubber checkerboard, a
 // kaleidoscope tiled across the whole screen, moire rings, flipping Truchet tiles, a twisting tower of squares, a
-// checkered box tunnel, a honeycomb, the cafe wall illusion, the Amiga's bouncing ball, a kaleidoscope of gems and a
-// grid of twisting tiles. Kicks drive their motion and chords turn their colors.
+// checkered box tunnel, a honeycomb, the cafe wall illusion, the Amiga's bouncing ball, a kaleidoscope of gems, a grid
+// of twisting tiles, Escher's circle limit, a Sierpinski carpet and a quasicrystal. Kicks drive their motion and chords
+// turn their colors.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -772,4 +773,213 @@ void tiletwist_draw(void *state, const Frame *f) {
         }
     }
     f->fx->glow = 0.5f;
+}
+
+/* ---------- Circle limit ---------- */
+
+typedef struct {
+    float cos_a, sin_a, center, radius, radius2, step, spin, speed;
+    int odd, half;
+    uint32_t salt;
+} CircleLimit;
+
+void limit_setup(void *state, Rng *r, const Frame *f) {
+    CircleLimit *c = state;
+    // A polygon's sides and how many meet at each corner: too many to lie flat in a plane, and an even number so the
+    // polygons take turns in two colors like a checkerboard.
+    static const int PQ[7][2] = {{5, 4}, {6, 4}, {8, 4}, {4, 6}, {4, 8}, {5, 6}, {6, 6}};
+    const int *pq = PQ[rng_range(r, 0, 7)];
+    float a = PI_F / (float)pq[0], cq = mcos(PI_F / (float)pq[1]), sa = msin(a);
+    // The tiles' mirrors: the x axis, the line at angle a, and a circle square to the rim meeting that line at pi / q.
+    float d2 = cq * cq / (cq * cq - sa * sa), x = 1 / msqrt(d2);
+    c->cos_a = mcos(a), c->sin_a = sa, c->center = msqrt(d2), c->radius2 = d2 - 1, c->radius = msqrt(d2 - 1);
+    // One hop carries the middle of a polygon onto its neighbour's, 2 atanh(1 / center) away.
+    c->step = mlog2((1 + x) / (1 - x)) * 0.6931472f;
+    c->odd = pq[0] & 1;
+    c->spin = rng_between(r, 0.04f, 0.1f) * (rng_chance(r, 50) ? 1 : -1);
+    c->speed = rng_between(r, 0.25f, 0.4f);
+    // Sometimes the plane is seen from its edge, the tiles dwindling toward a horizon along the bottom of the screen.
+    c->half = rng_chance(r, 30);
+    c->salt = rng_u32(r);
+    (void)f;
+}
+
+// Escher's circle limit: the hyperbolic plane drawn in a disk, its polygons in checkerboard colors shrinking without
+// end toward the rim, each one split by its mirrors into a pinwheel of light and shade. The view flies across the plane
+// from polygon to polygon, turning slowly, and each kick lunges it on.
+void limit_draw(void *state, const Frame *f) {
+    CircleLimit *c = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float travel = (frame_travel(f, c->speed * 0.5f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.8f)) * pace;
+    int hops = mfloor_i(travel / c->step);
+    // An odd polygon's neighbour sits half a turn round from it, so the view turns with each hop and never jumps.
+    float turn = f->local * c->spin * pace + (c->odd && (hops & 1) ? PI_F : 0), ct = mcos(turn), st = msin(turn);
+    float a = mtanh((travel - (float)hops * c->step) * 0.5f), radius = 0.97f, cw = 2 * g->aspect / (float)g->cols;
+    if (!c->half) dust_stars(f, c->salt, 0.003f, 0.35f);
+    for (int row = 0; row < g->rows; row++) {
+        float y0 = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x0 = cell_x(g, col), zx, zy, gain;
+            if (c->half) {
+                // The upper half-plane, its edge just under the screen, carried into the disk.
+                float hy = y0 + 1.03f, den = x0 * x0 + (hy + 1) * (hy + 1);
+                zx = (x0 * x0 + hy * hy - 1) / den, zy = -2 * x0 / den, gain = 2 / den;
+            } else {
+                zx = x0 / radius, zy = y0 / radius, gain = 1 / radius;
+            }
+            float r2 = zx * zx + zy * zy;
+            if (r2 >= 1) {
+                if (!c->half && (msqrt(r2) - 1) * radius < cw) put_cell(g, col, row, slope_glyph(-zy, zx), frame_dim(f, inks[2], 0.7f * contrast));
+                continue;
+            }
+            // Turned, then carried along the x axis by the flight: z -> (z + a) / (1 + a z).
+            float x = zx * ct - zy * st, y = zx * st + zy * ct;
+            float nx = x + a, mx = 1 + a * x, my = a * y, m2 = mx * mx + my * my;
+            x = (nx * mx + y * my) / m2, y = (y * mx - nx * my) / m2, gain *= (1 - a * a) / m2;
+            // Reflected home into the one triangle, counting the mirrors crossed on the way and the polygon walls among them.
+            int flips = 0, walls = 0, k;
+            for (k = 0; k < 40; k++) {
+                int moved = 0;
+                if (y < 0) y = -y, moved++;
+                float side = y * c->cos_a - x * c->sin_a;
+                if (side > 0) x += 2 * side * c->sin_a, y -= 2 * side * c->cos_a, moved++;
+                float ex = x - c->center, e2 = ex * ex + y * y;
+                if (e2 < c->radius2) {
+                    float s = c->radius2 / e2;
+                    x = c->center + ex * s, y *= s, gain *= s, moved++, walls++;
+                }
+                if (!moved) break;
+                flips += moved;
+            }
+            float fade = (0.4f + 0.6f * (1 - r2)) * contrast, size = (c->center - c->radius) / gain;
+            // Polygons too small to draw cell by cell blur into a mist of both colors.
+            if (k == 40 || size < 1.5f * cw) {
+                put_cell(g, col, row, ':', frame_dim(f, rgbf_mix(inks[0], inks[1], 0.5f), fade * 0.6f));
+                continue;
+            }
+            // Each hop crosses one wall, so the colors swap with it and the flight stays seamless.
+            float ex = x - c->center, wall = (msqrt(ex * ex + y * y) - c->radius) / gain;
+            int edge = wall < 0.7f * cw, pin = size > 4 * cw ? flips & 1 : 1;
+            if ((walls + hops) & 1)
+                put_cell(g, col, row, edge ? '+' : pin ? '#' : '%', frame_dim(f, inks[0], fade * (pin ? 1.0f : 0.7f) * (0.85f + 0.3f * kick)));
+            else
+                put_cell(g, col, row, edge ? '.' : ':', frame_dim(f, inks[1], fade * (pin ? 0.8f : 0.5f)));
+        }
+    }
+    f->fx->glow = 0.55f + 0.25f * kick;
+}
+
+/* ---------- Carpet ---------- */
+
+typedef struct {
+    float speed, spin;
+    int cross;
+} Carpet;
+
+void carpet_setup(void *state, Rng *r, const Frame *f) {
+    Carpet *c = state;
+    c->speed = rng_between(r, 0.3f, 0.5f);
+    c->spin = rng_chance(r, 50) ? rng_between(r, 0.03f, 0.07f) * (rng_chance(r, 50) ? 1 : -1) : 0;
+    // Sometimes the squares open where just one of the two thirds is a middle one, so crosses fill the screen.
+    c->cross = rng_chance(r, 35);
+    (void)f;
+}
+
+// A Sierpinski carpet zooming forever into the corner where four of them meet: every square is cut into nine and its
+// middle punched out, again and again, so holes of every size stream out from the middle and off the screen. The holes
+// glow in colors that take turns by size, each framed in light, and kicks lunge the zoom.
+void carpet_draw(void *state, const Frame *f) {
+    Carpet *c = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float zoom = (frame_travel(f, c->speed * 0.5f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.5f)) * pace;
+    int whole = mfloor_i(zoom);
+    // A zoom by three brings back the same carpet, so holes keep their colors by counting levels from the start.
+    float scale = 0.34f * mexp2(-(zoom - (float)whole) * 1.5849625f), turn = f->local * c->spin * pace, ct = mcos(turn), st = msin(turn);
+    float cw = 2 * g->aspect / (float)g->cols, ch = 2.0f / (float)g->rows;
+    float side_cut = cw * mabs(ct) + ch * mabs(st), flat_cut = ch * mabs(ct) + cw * mabs(st);
+    int side_glyph = slope_glyph(st, ct), flat_glyph = slope_glyph(ct, -st);
+    for (int row = 0; row < g->rows; row++) {
+        float y0 = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x0 = cell_x(g, col), u = mabs(x0 * ct - y0 * st) * scale, v = mabs(x0 * st + y0 * ct) * scale;
+            float size = 1 / scale, fu = 0, fv = 0;
+            int level = -1;
+            for (int n = 0; n < 6; n++) {
+                int du = mfloor_i(u) % 3, dv = mfloor_i(v) % 3;
+                if (c->cross ? (du == 1) != (dv == 1) : du == 1 && dv == 1) {
+                    level = n, fu = mfract(u), fv = mfract(v);
+                    break;
+                }
+                u *= 3, v *= 3, size /= 3;
+            }
+            // Holes fade in as they grow from a speck, so the zoom never pops.
+            float grown = level < 0 ? 0 : smoothstep(1.5f * ch, 4 * ch, size);
+            if (grown <= 0) {
+                put_cell(g, col, row, ':', frame_dim(f, inks[0], 0.3f * contrast));
+                continue;
+            }
+            Rgbf ink = rgbf_mix(inks[0], inks[1 + (level + whole) % 2], grown);
+            int side = mmin(fu, 1 - fu) * size < side_cut, flat = mmin(fv, 1 - fv) * size < flat_cut;
+            if (side || flat)
+                put_cell(g, col, row, side && flat ? '+' : side ? side_glyph : flat_glyph, frame_dim(f, ink, (0.3f + grown * (0.7f + 0.3f * kick)) * contrast));
+            else
+                put_cell(g, col, row, grown > 0.5f ? '#' : ':', frame_dim(f, ink, (0.3f + grown * (0.3f + 0.2f * kick)) * contrast));
+        }
+    }
+    f->fx->glow = 0.5f + 0.25f * kick;
+}
+
+/* ---------- Quasicrystal ---------- */
+
+typedef struct {
+    int waves;
+    float freq, speed, way, spin;
+} Quasi;
+
+void quasi_setup(void *state, Rng *r, const Frame *f) {
+    Quasi *q = state;
+    static const int waves[3] = {5, 7, 9};
+    q->waves = waves[rng_range(r, 0, 3)];
+    q->freq = rng_between(r, 16.0f, 20.0f);
+    q->speed = rng_between(r, 1.2f, 2.0f);
+    q->way = rng_chance(r, 50) ? 1 : -1;
+    q->spin = rng_between(r, 0.02f, 0.05f) * (rng_chance(r, 50) ? 1 : -1);
+    (void)f;
+}
+
+// A quasicrystal: five, seven or nine waves crossing at even angles add up to a rosette that never repeats, its crests
+// and troughs in two colors like a checkerboard, and as all the waves march together the petals bloom and melt into
+// one another without end. Kicks push the march along.
+void quasi_draw(void *state, const Frame *f) {
+    Quasi *q = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float phase = (frame_travel(f, q->speed * 0.6f, q->speed) + frame_surge(f, ROLE_KICK, 0.2f, 3.0f)) * q->way * pace;
+    float turn = f->local * q->spin * pace, k = q->freq * (1 + 0.06f * kick), dx[9], dy[9];
+    for (int j = 0; j < q->waves; j++) {
+        float a = PI_F * (float)j / (float)q->waves + turn;
+        dx[j] = mcos(a) * k, dy[j] = msin(a) * k;
+    }
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), sum = 0;
+            for (int j = 0; j < q->waves; j++) sum += mcos(x * dx[j] + y * dy[j] + phase);
+            float v = sum / (float)q->waves;
+            if (v > 0) {
+                put_cell(g, col, row, v < 0.08f ? '+' : '#', frame_dim(f, v > 0.5f ? inks[2] : inks[0], (0.75f + 0.3f * kick) * contrast));
+            } else {
+                put_cell(g, col, row, v > -0.08f ? '.' : ':', frame_dim(f, inks[1], 0.55f * contrast));
+            }
+        }
+    }
+    f->fx->glow = 0.5f + 0.25f * kick;
 }

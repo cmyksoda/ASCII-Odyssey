@@ -174,6 +174,9 @@ SCENE(globe)
 SCENE(dandelion)
 SCENE(ballerina)
 SCENE(lights)
+SCENE(limit)
+SCENE(carpet)
+SCENE(quasi)
 #undef SCENE
 
 #endif
