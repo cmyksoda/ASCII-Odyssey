@@ -5,15 +5,22 @@
 
 #include <string.h>
 
-const char *const entrance_names[ENTRANCES] = {
-    "cut",  "dissolve", "wipe",    "diagonal",   "radial", "iris", "blinds",   "checker", "spiral",
-    "melt", "decode",   "fade",    "push",       "doors",  "shatter", "typewriter", "swirl", "zoom", "interlace"};
+// Counted from the list itself, so a missing name stops the build.
+static const char *const NAMES[] = {
+    "cut",    "dissolve", "wipe",    "diagonal", "radial", "iris",  "blinds", "checker", "spiral", "melt",
+    "decode", "fade",     "push",    "doors",    "shatter", "typewriter", "swirl", "zoom", "interlace", "mosaic",
+    "slide",  "cascade",  "glitch",  "flip",     "star",   "heart", "kaleido"};
+_Static_assert(sizeof NAMES / sizeof NAMES[0] == ENTRANCES, "every entrance needs a name");
+const char *const *const entrance_names = NAMES;
 
-static const Entrance SOFT[] = {ENTER_DISSOLVE, ENTER_WIPE,  ENTER_DIAGONAL, ENTER_RADIAL,  ENTER_IRIS,       ENTER_BLINDS,
-                                ENTER_CHECKER,  ENTER_SPIRAL, ENTER_MELT,    ENTER_DECODE,  ENTER_FADE,       ENTER_PUSH,
-                                ENTER_DOORS,    ENTER_SHATTER, ENTER_TYPEWRITER, ENTER_SWIRL, ENTER_ZOOM,     ENTER_INTERLACE};
+static const Entrance SOFT[] = {ENTER_DISSOLVE, ENTER_WIPE,    ENTER_DIAGONAL,   ENTER_RADIAL,  ENTER_IRIS,      ENTER_BLINDS,
+                                ENTER_CHECKER,  ENTER_SPIRAL,  ENTER_MELT,       ENTER_DECODE,  ENTER_FADE,      ENTER_PUSH,
+                                ENTER_DOORS,    ENTER_SHATTER, ENTER_TYPEWRITER, ENTER_SWIRL,   ENTER_ZOOM,      ENTER_INTERLACE,
+                                ENTER_MOSAIC,   ENTER_SLIDE,   ENTER_CASCADE,    ENTER_GLITCH,  ENTER_FLIP,      ENTER_STAR,
+                                ENTER_HEART,    ENTER_KALEIDO};
 // A drop lands with a burst that opens from the middle or sweeps across in half a beat.
-static const Entrance BURST[] = {ENTER_RADIAL, ENTER_IRIS, ENTER_CHECKER, ENTER_BLINDS, ENTER_DIAGONAL, ENTER_PUSH, ENTER_DOORS};
+static const Entrance BURST[] = {ENTER_RADIAL, ENTER_IRIS,   ENTER_CHECKER, ENTER_BLINDS,  ENTER_DIAGONAL,
+                                 ENTER_PUSH,   ENTER_DOORS,  ENTER_GLITCH,  ENTER_FLIP,    ENTER_KALEIDO};
 
 static int edm(Mood m) {
     return m == MOOD_SYNTHWAVE || m == MOOD_TRANCE || m == MOOD_KEYGEN || m == MOOD_JUNGLE || m == MOOD_DUBSTEP;
@@ -75,8 +82,9 @@ static Entrance pick_entrance(Rng *r, const Entrance *list, int count, Entrance 
 }
 
 // Each mood has its own taste in transitions: keygen's are digital, ambient and the music box melt softly, dubstep
-// shoves and shatters. Weights by family: soft, digital, geometric, moving.
-enum { FAMILY_SOFT, FAMILY_DIGITAL, FAMILY_GEOMETRIC, FAMILY_MOVING, FAMILIES };
+// shoves and shatters, and the music box likes a star or a heart. Weights by family: soft, digital, geometric,
+// moving, playful.
+enum { FAMILY_SOFT, FAMILY_DIGITAL, FAMILY_GEOMETRIC, FAMILY_MOVING, FAMILY_PLAYFUL, FAMILIES };
 
 static int family_of(Entrance e) {
     switch (e) {
@@ -88,18 +96,25 @@ static int family_of(Entrance e) {
     case ENTER_TYPEWRITER:
     case ENTER_CHECKER:
     case ENTER_BLINDS:
-    case ENTER_INTERLACE: return FAMILY_DIGITAL;
+    case ENTER_INTERLACE:
+    case ENTER_MOSAIC:
+    case ENTER_GLITCH: return FAMILY_DIGITAL;
     case ENTER_PUSH:
     case ENTER_SHATTER:
-    case ENTER_ZOOM: return FAMILY_MOVING;
+    case ENTER_ZOOM:
+    case ENTER_SLIDE:
+    case ENTER_CASCADE:
+    case ENTER_FLIP: return FAMILY_MOVING;
+    case ENTER_STAR:
+    case ENTER_HEART: return FAMILY_PLAYFUL;
     default: return FAMILY_GEOMETRIC;
     }
 }
 
 static const int FAMILY_TASTE[MOOD_COUNT][FAMILIES] = {
-    [MOOD_KEYGEN] = {1, 5, 2, 2},   [MOOD_AMBIENT] = {5, 1, 2, 1}, [MOOD_SYNTHWAVE] = {1, 2, 3, 3},
-    [MOOD_LOFI] = {4, 2, 2, 1},     [MOOD_TRANCE] = {2, 1, 4, 3},  [MOOD_JUNGLE] = {1, 3, 2, 4},
-    [MOOD_MUSICBOX] = {5, 1, 2, 1}, [MOOD_DUB] = {4, 1, 2, 2},     [MOOD_DUBSTEP] = {1, 3, 2, 4}};
+    [MOOD_KEYGEN] = {1, 5, 2, 2, 1},   [MOOD_AMBIENT] = {5, 1, 2, 1, 1}, [MOOD_SYNTHWAVE] = {1, 2, 3, 3, 1},
+    [MOOD_LOFI] = {4, 2, 2, 1, 2},     [MOOD_TRANCE] = {2, 1, 4, 3, 1},  [MOOD_JUNGLE] = {1, 3, 2, 4, 0},
+    [MOOD_MUSICBOX] = {5, 1, 2, 1, 3}, [MOOD_DUB] = {4, 1, 2, 2, 1},     [MOOD_DUBSTEP] = {1, 3, 2, 4, 0}};
 
 static Entrance pick_soft_entrance(Rng *r, Mood mood, Entrance previous) {
     int count = (int)(sizeof SOFT / sizeof SOFT[0]), weights[sizeof SOFT / sizeof SOFT[0]];
@@ -184,6 +199,45 @@ static void render_shot(const Direction *d, Shot *shot, Frame *f, Grid *into) {
 static const char SCRAMBLE[] = "!#$%&*+-/:;<=>?@[]^_{|}~";
 
 
+#define HEART_ANGLES 128
+
+// How far the heart (x^2 + y^2 - 1)^3 = x^2 y^3 reaches from its middle in each direction, found once by bisection.
+static float heart_reach(float angle) {
+    static float reach[HEART_ANGLES];
+    static int ready;
+    if (!ready) {
+        for (int k = 0; k < HEART_ANGLES; k++) {
+            float a = (float)k / HEART_ANGLES * TAU_F, c = mcos(a), s = msin(a), lo = 0, hi = 1.5f;
+            for (int it = 0; it < 24; it++) {
+                float r = (lo + hi) * 0.5f, x = r * c, y = r * s, q = x * x + y * y - 1;
+                if (q * q * q - x * x * y * y * y < 0) lo = r;
+                else hi = r;
+            }
+            reach[k] = lo;
+        }
+        ready = 1;
+    }
+    int k = (int)mfloor(angle / TAU_F * HEART_ANGLES + 0.5f);
+    return reach[((k % HEART_ANGLES) + HEART_ANGLES) % HEART_ANGLES];
+}
+
+// The largest of a point's distance over the heart's reach, taken along the screen's edge where it peaks, so the heart
+// covers the farthest corner just as its transition ends. Worked out again only when the screen's shape changes.
+static float heart_cover(float aspect) {
+    static float for_aspect = -1, cover;
+    if (aspect != for_aspect) {
+        float reach = 0.5f * msqrt(aspect * aspect + 1);
+        cover = 0;
+        for (int i = 0; i <= 256; i++) {
+            float u = (float)i / 256 - 0.5f, edge[4][2] = {{u * aspect, 0.5f}, {u * aspect, -0.5f}, {0.5f * aspect, u}, {-0.5f * aspect, u}};
+            for (int k = 0; k < 4; k++)
+                cover = mmax(cover, mhypot(edge[k][0], edge[k][1]) / reach / heart_reach(matan2(edge[k][1], edge[k][0])));
+        }
+        for_aspect = aspect;
+    }
+    return cover;
+}
+
 // When a cell of the new shot takes over, as a fraction of the transition: each kind of entrance orders the cells its
 // own way, with a little per-cell noise so no edge is ruler-straight.
 static float reveal_key(Entrance how, int direction, int col, int row, const Grid *g) {
@@ -212,6 +266,16 @@ static float reveal_key(Entrance how, int direction, int col, int row, const Gri
     case ENTER_TYPEWRITER: return (y + x / (float)g->rows) * 0.97f;
     case ENTER_SWIRL:
     case ENTER_ZOOM: return mhypot(dx, dy) / reach * 0.6f + h * 0.4f;
+    case ENTER_STAR: {
+        // A five-pointed star, one point up, growing until its shoulders reach the corners.
+        float a = matan2(-dy, dx), arm = mabs(mcos(2.5f * (a - PI_F * 0.5f))), shape = 0.55f + 0.45f * arm * arm * arm;
+        return mhypot(dx, dy) / reach / shape * 0.55f * 0.94f + h * 0.06f;
+    }
+    case ENTER_HEART: {
+        // A heart growing from the middle until it has covered the farthest corner.
+        float fill = mhypot(dx, dy) / reach / heart_reach(matan2(-dy, dx)) / heart_cover(g->aspect);
+        return fill * 0.94f + h * 0.06f;
+    }
     default: return h;
     }
 }
@@ -235,10 +299,18 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
     case ENTER_INTERLACE:
     case ENTER_SWIRL:
     case ENTER_ZOOM:
-    case ENTER_SHATTER: break;
+    case ENTER_SHATTER:
+    case ENTER_MOSAIC:
+    case ENTER_SLIDE:
+    case ENTER_CASCADE:
+    case ENTER_GLITCH:
+    case ENTER_FLIP:
+    case ENTER_KALEIDO: break;
     default: return 0;
     }
     memcpy(incoming, to->cells, sizeof(Cell) * (size_t)n);
+    static const Cell blank = {' ', {0, 0, 0}, 0};
+    const Cell *before = from->cells;
     const Cell *in = incoming;
     float cx = (float)cols * 0.5f, cy = (float)rows * 0.5f;
     for (int row = 0; row < rows; row++)
@@ -292,6 +364,62 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = *cell_or_blank(from->cells, from, src_col, src_row);
                 break;
             }
+            case ENTER_MOSAIC: {
+                // The old picture coarsens into blocks, and the new one sharpens back out of them.
+                float coarse = 1 - mabs(2 * p - 1);
+                int bw = 1 + (int)(coarse * 10), bh = 1 + (int)(coarse * 7);
+                *dst = *cell_or_blank(p < 0.5f ? before : in, to, col / bw * bw + bw / 2, row / bh * bh + bh / 2);
+                break;
+            }
+            case ENTER_SLIDE: {
+                // The new picture slides in over the old one, which stays where it is.
+                int horizontal = direction < 2, span = horizontal ? cols : rows, sign = direction & 1 ? -1 : 1;
+                int at = horizontal ? col : row, new_at = at + sign * ((int)(p * (float)span + 0.5f) - span);
+                if (new_at >= 0 && new_at < span)
+                    *dst = horizontal ? in[row * cols + new_at] : in[new_at * cols + col];
+                else
+                    *dst = before[row * cols + col];
+                break;
+            }
+            case ENTER_CASCADE: {
+                // Column by column the new picture drops in from above, each after its own short wait, under gravity.
+                float age = (p - hash01((uint32_t)col * 2654435761u) * 0.5f) / 0.5f;
+                int fall = age >= 1 ? 0 : (int)((1 - age * age) * (float)rows);
+                *dst = age > 0 && row + fall < rows ? in[(row + fall) * cols + col] : before[row * cols + col];
+                break;
+            }
+            case ENTER_GLITCH: {
+                // Bands of rows tear sideways by ragged amounts that swell and settle, each band jumping to the new
+                // picture at its own moment.
+                uint32_t band = (uint32_t)(row / 2) * 2654435761u, tear = band ^ (uint32_t)(p * 6.0f) * 40503u;
+                int shift = (int)((hash01(tear) - 0.5f) * msin(p * PI_F) * (float)cols * 0.5f);
+                *dst = *cell_or_blank(hash01(band + 7) < p ? in : before, to, col - shift, row);
+                break;
+            }
+            case ENTER_FLIP: {
+                // Like an old television changing channel: the old picture squashes to a line, the new one springs open.
+                float height = mabs(2 * p - 1), rel = ((float)row + 0.5f - cy) / (height * cy + 0.001f);
+                if (mabs(rel) > 1)
+                    *dst = height < 0.06f && row == rows / 2 ? (Cell){'-', {235, 235, 235}, 0} : blank;
+                else
+                    *dst = *cell_or_blank(p < 0.5f ? before : in, to, col, (int)(cy + rel * cy));
+                break;
+            }
+            case ENTER_KALEIDO: {
+                // The old picture folds into a kaleidoscope of more and more mirrors, then the new one unfolds from it.
+                int mirrors = (int)((1 - mabs(2 * p - 1)) * 8.99f);
+                const Cell *src = p < 0.5f ? before : in;
+                if (mirrors < 2) {
+                    *dst = src[row * cols + col];
+                    break;
+                }
+                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio, dy = (float)row - cy;
+                float r = mhypot(dx, dy), wedge = PI_F / (float)mirrors, a = matan2(dy, dx) + PI_F;
+                a -= mfloor(a / (2 * wedge)) * 2 * wedge;
+                if (a > wedge) a = 2 * wedge - a;
+                *dst = *cell_or_blank(src, to, (int)(cx + r * mcos(a) / ratio + 0.5f), (int)(cy + r * msin(a) + 0.5f));
+                break;
+            }
             default: *dst = in[row * cols + col]; break;
             }
         }
@@ -322,7 +450,12 @@ static Entrance still_entrance(Entrance how) {
     case ENTER_ZOOM: return ENTER_RADIAL;
     case ENTER_INTERLACE: return ENTER_BLINDS;
     case ENTER_SWIRL: return ENTER_SPIRAL;
-    case ENTER_SHATTER: return ENTER_DISSOLVE;
+    case ENTER_SHATTER:
+    case ENTER_GLITCH:
+    case ENTER_KALEIDO: return ENTER_DISSOLVE;
+    case ENTER_SLIDE: return ENTER_WIPE;
+    case ENTER_CASCADE: return ENTER_MELT;
+    case ENTER_FLIP: return ENTER_BLINDS;
     default: return how;
     }
 }
@@ -383,7 +516,8 @@ void direction_draw(Direction *d, Frame *f, Grid *scratch) {
         float progress = smoothstep(0.0f, shot->fade, since);
         f->fx->glow = mixf(glow, f->fx->glow, progress);
         f->fx->bg = rgb_mix(d->palettes[d->shots[i - 1].palette]->bg, d->palettes[shot->palette]->bg, progress);
-        Entrance how = f->still ? still_entrance(shot->entrance) : shot->entrance;
+        // A glitch's tearing is a flicker as much as a motion, so reduce flashing calms it too.
+        Entrance how = f->still || (f->calm && shot->entrance == ENTER_GLITCH) ? still_entrance(shot->entrance) : shot->entrance;
         blend(scratch, f->grid, how, shot->direction, progress * 1.05f, f->t, f->fx->bg);
     } else {
         render_shot(d, shot, f, f->grid);

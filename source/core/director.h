@@ -26,10 +26,19 @@ typedef enum {
     ENTER_SWIRL,
     ENTER_ZOOM,
     ENTER_INTERLACE,
+    ENTER_MOSAIC,
+    ENTER_SLIDE,
+    ENTER_CASCADE,
+    ENTER_GLITCH,
+    ENTER_FLIP,
+    ENTER_STAR,
+    ENTER_HEART,
+    ENTER_KALEIDO,
     ENTRANCES
 } Entrance;
 
-extern const char *const entrance_names[ENTRANCES];
+// One name for each Entrance, in order.
+extern const char *const *const entrance_names;
 
 typedef struct {
     int kind;
