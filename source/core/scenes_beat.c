@@ -65,7 +65,7 @@ void kaleidoscope_draw(void *state, const Frame *f) {
             float rings = 0;
             for (int i = 0; i < n_kicks; i++) {
                 float d = radius - (f->t - kicks[i]->time) * 1.1f;
-                rings = mmax(rings, mexp(-d * d * 300) * kicks[i]->velocity * f->react);
+                rings = mmax(rings, mexp(-d * d * 300) * kicks[i]->velocity * frame_bright(f));
             }
             float level = saturate((shape * 0.9f + rings) * frame);
             int i = (int)(level * 6.99f);
@@ -106,7 +106,8 @@ void spectrum_draw(void *state, const Frame *f) {
         int n = recent_notes(f->score, (Role)role, f->t, 1.5f, notes, 48);
         for (int i = 0; i < n; i++) {
             float age = f->t - notes[i]->time, v = notes[i]->velocity;
-            float tau = role == ROLE_PAD || role == ROLE_CHORD ? s->decay * 3 : s->decay;
+            // Calmer pictures let the bars fall slowly instead of jumping.
+            float tau = (role == ROLE_PAD || role == ROLE_CHORD ? s->decay * 3 : s->decay) * (f->calm ? 2.5f : 1.0f);
             float now = v * mexp(-age / tau), held = v - age * 0.9f;
             // A note lights its own bar and, more faintly, its overtones, the way a real analyzer would show it.
             static const int overtones[4] = {0, 12, 19, 24};
@@ -192,7 +193,7 @@ void ripples_draw(void *state, const Frame *f) {
             float x = roles[k] == ROLE_KICK ? p->cx : (hash01(id) * 1.6f - 0.8f) * g->aspect;
             float y = roles[k] == ROLE_KICK ? p->cy : hash01(id + 1) * 1.4f - 0.7f;
             float radius = age * p->speed * (roles[k] == ROLE_HAT ? 0.4f : 0.8f) + 0.03f;
-            float fade = mexp(-age / (roles[k] == ROLE_HAT ? 0.25f : 0.8f)) * notes[i]->velocity;
+            float fade = mexp(-age / (roles[k] == ROLE_HAT ? 0.25f : 0.8f)) * notes[i]->velocity * frame_bright(f);
             Rgbf color = frame_dim(f, roles[k] == ROLE_KICK ? palette_ramp(f->palette, 0.95f) : palette_accent(f->palette, k), 0.3f + fade);
             if (fade > 0.05f) ring(f, x, y, radius, color);
             if (fade > 0.25f && roles[k] != ROLE_HAT) ring(f, x, y, radius * 0.6f, frame_dim(f, color, 0.5f));
@@ -229,17 +230,18 @@ static void burst(const Frame *f, const Fireworks *w, float bx, float by, float 
     for (int s = 0; s < sparks; s++) {
         float a = (float)s / (float)sparks * TAU_F + hash01(id + (uint32_t)s) * 0.2f;
         float speed = w->spread * (0.75f + 0.25f * hash01(id * 7u + (uint32_t)s));
-        Rgbf c = rgbf_mix(white, s % 2 ? color : second, saturate(age * 2.5f));
+        // Calmer pictures skip the white burst: sparks start in their own color and burn lower.
+        Rgbf c = rgbf_mix(white, s % 2 ? color : second, f->calm ? 1.0f : saturate(age * 2.5f));
         for (int k = 0; k < 4; k++) {
             float at = mmax(0, age - (float)k * 0.07f), reach = speed * (1 - mexp(-at * 2.4f));
             float x = bx + mcos(a) * reach * g->aspect * 0.75f, y = by + msin(a) * reach - w->gravity * at * at;
-            float bright = (k ? 0.55f / (float)(k + 1) : 1.0f) * (0.2f + life) * (1 + flare);
+            float bright = (k ? 0.55f / (float)(k + 1) : 1.0f) * (0.2f + life) * (1 + flare) * (0.4f + 0.6f * frame_bright(f));
             int glyph = k ? (k == 1 ? '+' : '.') : age < 0.3f ? '*' : life > 0.45f ? '*' : '+';
             if (bright > 0.06f) (k ? put_cell_under : put_cell)(g, cell_col(g, x), cell_row(g, y), glyph, frame_dim(f, c, bright));
         }
     }
     // The flash at the heart of the burst.
-    if (age < 0.18f) put_cell(g, cell_col(g, bx), cell_row(g, by), '#', frame_dim(f, white, 1.2f));
+    if (age < 0.18f && !f->calm) put_cell(g, cell_col(g, bx), cell_row(g, by), '#', frame_dim(f, white, 1.2f));
 }
 
 // Rockets climb so that they burst exactly on the snares and claps, the score telling them when; every kick makes the
@@ -404,7 +406,7 @@ void skyline_draw(void *state, const Frame *f) {
         int n = recent_notes(f->score, (Role)role, f->t, 2.0f, notes, 24);
         for (int i = 0; i < n; i++) {
             int b = (int)(hash_u32((uint32_t)notes[i]->note * 31u + (uint32_t)role) % (uint32_t)s->count);
-            lit[b] = mmax(lit[b], notes[i]->velocity * mexp(-(f->t - notes[i]->time) / 0.7f));
+            lit[b] = mmax(lit[b], notes[i]->velocity * mexp(-(f->t - notes[i]->time) / 0.7f) * frame_bright(f));
         }
     }
     float kick = frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);

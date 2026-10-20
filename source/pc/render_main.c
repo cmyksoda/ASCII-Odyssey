@@ -368,7 +368,7 @@ static int piece_main(int argc, char **argv) {
     const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL, *scene = NULL, *palette = NULL;
     Mood mood = MOOD_ANY;
     LengthPref length = LENGTH_MEDIUM;
-    int wide = 0, fps = 30, scale = 2, count = 0, benchmark = 0;
+    int wide = 0, fps = 30, scale = 2, count = 0, benchmark = 0, calm = 0, still = 0;
     double times[64];
     for (int i = 2; i < argc; i++) {
         if (!strcmp(argv[i], "--seed") && i + 1 < argc)
@@ -395,6 +395,10 @@ static int piece_main(int argc, char **argv) {
             wide = 1;
         else if (!strcmp(argv[i], "--bench"))
             benchmark = 1;
+        else if (!strcmp(argv[i], "--calm"))
+            calm = 1;
+        else if (!strcmp(argv[i], "--still"))
+            still = 1;
         else if (!strcmp(argv[i], "--short"))
             length = LENGTH_SHORT;
         else if (!strcmp(argv[i], "--long"))
@@ -433,7 +437,7 @@ static int piece_main(int argc, char **argv) {
         int cols = count < 3 ? count : 3;
         for (int i = 0; i < count; i++) {
             Screen screen = {0};
-            piece_draw(&p, times[i], &screen, 0, 0, NULL, 0);
+            piece_draw(&p, times[i], &screen, calm, still, NULL, 0);
             soft_render(&screen, &fb);
             soft_present(&fb, wide, 1, &shown);
             if (!out.rgb) image_init(&out, shown.w * cols, shown.h * ((count + cols - 1) / cols));

@@ -56,6 +56,9 @@ void frame_resolve(const Frame *f);
 // A color moved toward the ground by k (k > 1 moves it further out): dimmer on a dark ground, paler on a light one, so
 // distance and fading read the same way on paper as on night sky.
 Rgbf frame_dim(const Frame *f, Rgbf color, float k);
+// How strongly light set off by single notes may flare: fully in a reactive scene, a third as much for viewers who
+// asked for calmer pictures, not at all in a still one.
+float frame_bright(const Frame *f);
 // Beat pulses in reactive scenes (none in still ones), softer for viewers who asked for calmer pictures.
 float frame_pulse(const Frame *f, Role role, float tau, float strength);
 // Distance covered since the shot began at a base speed plus a share that follows the music's energy.

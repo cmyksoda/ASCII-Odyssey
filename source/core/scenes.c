@@ -18,6 +18,10 @@ Rgbf frame_dim(const Frame *f, Rgbf color, float k) {
     return rgbf_add(ground, rgbf_scale(rgbf_add(color, rgbf_scale(ground, -1)), k));
 }
 
+float frame_bright(const Frame *f) {
+    return f->react * (f->calm ? 0.3f : 1.0f);
+}
+
 float frame_pulse(const Frame *f, Role role, float tau, float strength) {
     if (f->react <= 0) return 0;
     float p = score_pulse(f->score, role, f->t, f->calm ? tau * 2.5f : tau);
@@ -801,7 +805,7 @@ static void constellation_draw(void *state, const Frame *f) {
         int n = recent_notes(f->score, sung[v], f->t, 0.9f, ev, 16);
         for (int i = 0; i < n; i++) {
             int star = (int)((unsigned)(ev[i]->note * 7 + v * 5) % STARS);
-            flare[star] = mmax(flare[star], ev[i]->velocity * mexp(-(f->t - ev[i]->time) / 0.35f));
+            flare[star] = mmax(flare[star], ev[i]->velocity * mexp(-(f->t - ev[i]->time) / 0.35f) * frame_bright(f));
         }
     }
     float kick = frame_pulse(f, ROLE_KICK, 0.2f, 0.4f);
@@ -832,7 +836,8 @@ static void constellation_draw(void *state, const Frame *f) {
                 float at = age - (float)k * 0.03f;
                 if (at < 0) continue;
                 float x = x0 - at * 1.6f, y = y0 - at * 0.7f;
-                put_cell(g, cell_col(g, x), cell_row(g, y), k ? (k < 3 ? '-' : '.') : '*', frame_dim(f, white, (1 - age / 0.7f) * (1 - (float)k * 0.15f)));
+                put_cell(g, cell_col(g, x), cell_row(g, y), k ? (k < 3 ? '-' : '.') : '*',
+                         frame_dim(f, white, (1 - age / 0.7f) * (1 - (float)k * 0.15f) * frame_bright(f)));
             }
         }
     }
