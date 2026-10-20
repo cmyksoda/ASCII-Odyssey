@@ -40,6 +40,14 @@ typedef enum {
     ENTER_PINWHEEL,
     ENTER_HONEYCOMB,
     ENTER_CRT,
+    ENTER_CLOCK,
+    ENTER_DIAMOND,
+    ENTER_SNAKE,
+    ENTER_BUBBLES,
+    ENTER_WAVE,
+    ENTER_INK,
+    ENTER_COMB,
+    ENTER_BOUNCE,
     ENTRANCES
 } Entrance;
 

@@ -2,6 +2,7 @@
 #include "director.h"
 
 #include "mathx.h"
+#include "noise.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +12,7 @@ static const char *const NAMES[] = {
     "cut",    "dissolve", "wipe",    "diagonal", "radial", "iris",  "blinds", "checker", "spiral", "melt",
     "decode", "fade",     "push",    "doors",    "shatter", "typewriter", "swirl", "zoom", "interlace", "mosaic",
     "slide",  "cascade",  "glitch",  "flip",     "star",   "heart", "kaleido", "tetris", "ripple", "halftone",
-    "pinwheel", "honeycomb", "crt"};
+    "pinwheel", "honeycomb", "crt",  "clock",    "diamond", "snake",    "bubbles", "wave", "ink",     "comb",   "bounce"};
 _Static_assert(sizeof NAMES / sizeof NAMES[0] == ENTRANCES, "every entrance needs a name");
 const char *const *const entrance_names = NAMES;
 
@@ -20,10 +21,12 @@ static const Entrance SOFT[] = {ENTER_DISSOLVE, ENTER_WIPE,    ENTER_DIAGONAL,  
                                 ENTER_DOORS,    ENTER_SHATTER, ENTER_TYPEWRITER, ENTER_SWIRL,   ENTER_ZOOM,      ENTER_INTERLACE,
                                 ENTER_MOSAIC,   ENTER_SLIDE,   ENTER_CASCADE,    ENTER_GLITCH,  ENTER_FLIP,      ENTER_STAR,
                                 ENTER_HEART,    ENTER_KALEIDO, ENTER_TETRIS,     ENTER_RIPPLE,  ENTER_HALFTONE,  ENTER_PINWHEEL,
-                                ENTER_HONEYCOMB, ENTER_CRT};
+                                ENTER_HONEYCOMB, ENTER_CRT,    ENTER_CLOCK,      ENTER_DIAMOND, ENTER_SNAKE,     ENTER_BUBBLES,
+                                ENTER_WAVE,     ENTER_INK,     ENTER_COMB,       ENTER_BOUNCE};
 // A drop lands with a burst that opens from the middle or sweeps across in half a beat.
 static const Entrance BURST[] = {ENTER_RADIAL, ENTER_IRIS,   ENTER_CHECKER, ENTER_BLINDS,  ENTER_DIAGONAL,
-                                 ENTER_PUSH,   ENTER_DOORS,  ENTER_GLITCH,  ENTER_FLIP,    ENTER_KALEIDO};
+                                 ENTER_PUSH,   ENTER_DOORS,  ENTER_GLITCH,  ENTER_FLIP,    ENTER_KALEIDO,
+                                 ENTER_DIAMOND, ENTER_BUBBLES};
 
 static int edm(Mood m) {
     return m == MOOD_SYNTHWAVE || m == MOOD_TRANCE || m == MOOD_KEYGEN || m == MOOD_8BIT || m == MOOD_DUBSTEP;
@@ -116,7 +119,9 @@ static int family_of(Entrance e) {
     case ENTER_MELT:
     case ENTER_SWIRL:
     case ENTER_RIPPLE:
-    case ENTER_HALFTONE: return FAMILY_SOFT;
+    case ENTER_HALFTONE:
+    case ENTER_WAVE:
+    case ENTER_INK: return FAMILY_SOFT;
     case ENTER_DECODE:
     case ENTER_TYPEWRITER:
     case ENTER_CHECKER:
@@ -125,15 +130,19 @@ static int family_of(Entrance e) {
     case ENTER_MOSAIC:
     case ENTER_GLITCH:
     case ENTER_TETRIS:
-    case ENTER_CRT: return FAMILY_DIGITAL;
+    case ENTER_CRT:
+    case ENTER_SNAKE: return FAMILY_DIGITAL;
     case ENTER_PUSH:
     case ENTER_SHATTER:
     case ENTER_ZOOM:
     case ENTER_SLIDE:
     case ENTER_CASCADE:
-    case ENTER_FLIP: return FAMILY_MOVING;
+    case ENTER_FLIP:
+    case ENTER_COMB: return FAMILY_MOVING;
     case ENTER_STAR:
-    case ENTER_HEART: return FAMILY_PLAYFUL;
+    case ENTER_HEART:
+    case ENTER_BUBBLES:
+    case ENTER_BOUNCE: return FAMILY_PLAYFUL;
     default: return FAMILY_GEOMETRIC;
     }
 }
@@ -330,6 +339,42 @@ static float reveal_key(Entrance how, int direction, int col, int row, const Gri
         float hx = s * 1.7320508f * (q + r * 0.5f), hy = s * 1.5f * r;
         return mhypot(hx, hy) / reach * 0.8f + hash01((uint32_t)((int)q * 92821 + (int)r * 68917)) * 0.2f;
     }
+    case ENTER_CLOCK: {
+        // One hand sweeping round from twelve o'clock, either way.
+        float a = mfract(matan2(dx, -dy) / TAU_F + 1.0f);
+        return (direction & 1 ? 1 - a : a) * 0.94f + h * 0.06f;
+    }
+    case ENTER_DIAMOND: return (mabs(dx) + mabs(dy)) / (0.5f * g->aspect + 0.5f) * 0.92f + h * 0.08f;
+    case ENTER_SNAKE: {
+        // The old game's snake, eating the picture away block by block, back and forth along the rows.
+        int across = (g->cols + 5) / 6, down = (g->rows + 2) / 3, bx = col / 6, by = row / 3;
+        int step = by * across + (by & 1 ? across - 1 - bx : bx);
+        return ((float)step + 0.5f) / (float)(across * down) * 0.98f;
+    }
+    case ENTER_BUBBLES: {
+        // Bubbles of the new shot swell at scattered spots, one in each ninth of the screen, until they merge. No point
+        // lies farther than 0.54 of the reach from its ninth's bubble, which sets the scale.
+        float near = 9;
+        for (int k = 0; k < 9; k++) {
+            uint32_t id = (uint32_t)k * 2654435761u ^ (uint32_t)direction * 40503u;
+            float bx = (((float)(k % 3) + 0.2f + 0.6f * hash01(id)) / 3 - 0.5f) * g->aspect;
+            float by = ((float)(k / 3) + 0.2f + 0.6f * hash01(id + 7)) / 3 - 0.5f;
+            near = mmin(near, mhypot(dx - bx, dy - by));
+        }
+        return near / (0.54f * reach) * 0.94f + h * 0.06f;
+    }
+    case ENTER_WAVE: {
+        // A wipe whose edge rolls like a wave.
+        int horizontal = direction < 2;
+        float along = horizontal ? (direction & 1 ? 1 - x : x) : (direction & 1 ? 1 - y : y);
+        float across = horizontal ? y : x;
+        return along * 0.8f + (0.5f + 0.5f * msin(across * TAU_F * 2 + (float)direction)) * 0.14f + h * 0.06f;
+    }
+    case ENTER_INK: {
+        // Blots of ink spreading, where a noise field runs lowest first; the field spans about 0.12 to 0.92.
+        float blot = noise_fbm(dx * 2.5f + (float)direction * 7.3f, dy * 2.5f + 3.1f);
+        return saturate((blot - 0.12f) / 0.8f) * 0.94f + h * 0.06f;
+    }
     default: return h;
     }
 }
@@ -392,7 +437,9 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
     case ENTER_KALEIDO:
     case ENTER_TETRIS:
     case ENTER_RIPPLE:
-    case ENTER_CRT: break;
+    case ENTER_CRT:
+    case ENTER_COMB:
+    case ENTER_BOUNCE: break;
     default: return 0;
     }
     memcpy(incoming, to->cells, sizeof(Cell) * (size_t)n);
@@ -405,6 +452,19 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
         for (int col = 0; col < cols; col++) {
             Cell *dst = grid_at(to, col, row);
             switch (how) {
+            case ENTER_COMB: {
+                // Bands of the new picture slide in from both sides at once, alternating like the teeth of a comb.
+                int sign = (row / 2) & 1 ? -1 : 1, at = col - sign * (int)((1 - p) * (1 - p) * (float)cols + 0.5f);
+                *dst = at >= 0 && at < cols ? *cell_or_blank(in, to, at, row) : *cell_or_blank(before, from, col, row);
+                break;
+            }
+            case ENTER_BOUNCE: {
+                // The new picture drops in from above, lands, and bounces once before it settles.
+                float lift = p < 0.6f ? 1 - (p / 0.6f) * (p / 0.6f) : 0.18f * msin((p - 0.6f) / 0.4f * PI_F);
+                int at = row + (int)(lift * (float)rows + 0.5f);
+                *dst = at < rows ? *cell_or_blank(in, to, col, at) : *cell_or_blank(before, from, col, row);
+                break;
+            }
             case ENTER_PUSH: {
                 // The new picture slides in from one side and shoves the old one off the other.
                 int horizontal = direction < 2, span = horizontal ? cols : rows, sign = direction & 1 ? -1 : 1;
@@ -588,7 +648,9 @@ static Entrance still_entrance(Entrance how) {
     case ENTER_TETRIS: return ENTER_MELT;
     case ENTER_RIPPLE:
     case ENTER_CRT: return ENTER_RADIAL;
-    case ENTER_FLIP: return ENTER_BLINDS;
+    case ENTER_FLIP:
+    case ENTER_COMB: return ENTER_BLINDS;
+    case ENTER_BOUNCE: return ENTER_WIPE;
     default: return how;
     }
 }
