@@ -5,22 +5,55 @@
 
 #include <string.h>
 
-// Each mood writes its titles in a few faces of its own; one is picked at random, and a title too wide for any of them
-// falls back to the plainer, narrower ones.
-#define TITLE_CHOICES 7
+// Each mood writes its titles in faces of its own; one is picked at random, and a title too wide for any of them, even
+// wrapped, falls back to the plainer, narrower ones.
+#define TITLE_CHOICES 14
 
 enum { INTRO_DECODE, INTRO_TYPED, INTRO_RAIN, INTRO_SWEEP, INTRO_BLOOM, INTROS };
 
 static const FigletId TITLE_FACES[MOOD_COUNT][TITLE_CHOICES] = {
-    [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER, FIGLET_DIGITAL, FIGLET_PIXEL, FIGLET_SCANLINE, FIGLET_WIRE},
-    [MOOD_AMBIENT] = {FIGLET_SCRIPT, FIGLET_LEAN, FIGLET_SLANT, FIGLET_SMSCRIPT, FIGLET_SMSLANT, FIGLET_NEON, FIGLET_DOTS},
-    [MOOD_SYNTHWAVE] = {FIGLET_LEAN, FIGLET_SLANT, FIGLET_SHADOW, FIGLET_DOTS, FIGLET_SMSLANT, FIGLET_SCANLINE, FIGLET_NEON},
-    [MOOD_LOFI] = {FIGLET_SCRIPT, FIGLET_SHADOW, FIGLET_STANDARD, FIGLET_SMSHADOW, FIGLET_BUBBLE, FIGLET_NEON, FIGLET_WIRE},
-    [MOOD_TRANCE] = {FIGLET_SLANT, FIGLET_LEAN, FIGLET_BIG, FIGLET_SMSLANT, FIGLET_DOTS, FIGLET_WIRE, FIGLET_NEON},
-    [MOOD_JUNGLE] = {FIGLET_BIG, FIGLET_BLOCK, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_WIRE, FIGLET_SCANLINE},
-    [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN, FIGLET_BUBBLE, FIGLET_SMSCRIPT, FIGLET_DOTS, FIGLET_NEON},
-    [MOOD_DUB] = {FIGLET_SHADOW, FIGLET_BLOCK, FIGLET_BIG, FIGLET_SMSHADOW, FIGLET_DOTS, FIGLET_NEON, FIGLET_WIRE},
-    [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_SCANLINE, FIGLET_WIRE}};
+    [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER, FIGLET_DIGITAL, FIGLET_PIXEL, FIGLET_SCANLINE, FIGLET_WIRE,
+                     FIGLET_DOOM, FIGLET_REV, FIGLET_COMPUTER, FIGLET_SMKEYBOARD, FIGLET_SPEED, FIGLET_LARRY3D, FIGLET_EPIC},
+    [MOOD_AMBIENT] = {FIGLET_SCRIPT, FIGLET_LEAN, FIGLET_SLANT, FIGLET_SMSCRIPT, FIGLET_SMSLANT, FIGLET_NEON, FIGLET_DOTS,
+                      FIGLET_STELLAR, FIGLET_PEBBLES, FIGLET_ROMAN, FIGLET_UNIVERS, FIGLET_ISOMETRIC3, FIGLET_JAZMINE,
+                      FIGLET_KBAN},
+    [MOOD_SYNTHWAVE] = {FIGLET_LEAN, FIGLET_SLANT, FIGLET_SHADOW, FIGLET_DOTS, FIGLET_SMSLANT, FIGLET_SCANLINE, FIGLET_NEON,
+                        FIGLET_JAZMINE, FIGLET_STARWARS, FIGLET_SMISOME1, FIGLET_ISOMETRIC1, FIGLET_LARRY3D, FIGLET_FENDER,
+                        FIGLET_SPEED},
+    [MOOD_LOFI] = {FIGLET_SCRIPT, FIGLET_SHADOW, FIGLET_STANDARD, FIGLET_SMSHADOW, FIGLET_BUBBLE, FIGLET_NEON, FIGLET_WIRE,
+                   FIGLET_PUFFY, FIGLET_FUZZY, FIGLET_BULBHEAD, FIGLET_GRACEFUL, FIGLET_ROUNDED, FIGLET_DOUBLE,
+                   FIGLET_CRICKET},
+    [MOOD_TRANCE] = {FIGLET_SLANT, FIGLET_LEAN, FIGLET_BIG, FIGLET_SMSLANT, FIGLET_DOTS, FIGLET_WIRE, FIGLET_NEON,
+                     FIGLET_ISOMETRIC1, FIGLET_ISOMETRIC3, FIGLET_UNIVERS, FIGLET_COLOSSAL, FIGLET_STARWARS,
+                     FIGLET_SMISOME1, FIGLET_DIAMOND},
+    [MOOD_JUNGLE] = {FIGLET_BIG, FIGLET_BLOCK, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_WIRE, FIGLET_SCANLINE,
+                     FIGLET_SPEED, FIGLET_GRAFFITI, FIGLET_POISON, FIGLET_EPIC, FIGLET_DOOM, FIGLET_AVATAR,
+                     FIGLET_RECTANGLES},
+    [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN, FIGLET_BUBBLE, FIGLET_SMSCRIPT, FIGLET_DOTS, FIGLET_NEON,
+                       FIGLET_TINKER_TOY, FIGLET_PEBBLES, FIGLET_BULBHEAD, FIGLET_PUFFY, FIGLET_ROMAN, FIGLET_STELLAR,
+                       FIGLET_NANCYJ},
+    [MOOD_DUB] = {FIGLET_SHADOW, FIGLET_BLOCK, FIGLET_BIG, FIGLET_SMSHADOW, FIGLET_DOTS, FIGLET_NEON, FIGLET_WIRE,
+                  FIGLET_THREE_D, FIGLET_COLOSSAL, FIGLET_NANCYJ_FANCY, FIGLET_BASIC, FIGLET_OGRE, FIGLET_DOTMATRIX,
+                  FIGLET_CRICKET},
+    [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_SCANLINE, FIGLET_WIRE,
+                      FIGLET_POISON, FIGLET_REV, FIGLET_GRAFFITI, FIGLET_DOOM, FIGLET_COLOSSAL, FIGLET_NANCYJ_FANCY,
+                      FIGLET_THREE_D}};
+
+// FIGlet's own space is a sliver; three of them keep the words apart behind the decoding scramble.
+static void title_text(const Piece *p, char *upper) {
+    int n = 0;
+    for (const char *s = p->comp.info.title; *s; s++) {
+        char c = *s >= 'a' && *s <= 'z' ? (char)(*s - 32) : *s;
+        for (int k = 0; k < (c == ' ' ? 3 : 1); k++) upper[n++] = c;
+    }
+    upper[n] = 0;
+}
+
+static int title_fits(Piece *p, const FigletFont *font, const char *text, int split) {
+    int wide = p->grid.cols - 4, tall = p->grid.rows - 4 < PIECE_ART_H ? p->grid.rows - 4 : PIECE_ART_H;
+    p->art_font = font && figlet_wrap(font, text, wide, tall, split, p->art, PIECE_ART_W, &p->art_layout) == 0 ? font : NULL;
+    return p->art_font != NULL;
+}
 
 static void layout_title(Piece *p, Rng *r) {
     const FigletId *own = TITLE_FACES[p->comp.info.mood];
@@ -29,32 +62,21 @@ static void layout_title(Piece *p, Rng *r) {
     FigletId fonts[TITLE_CHOICES + 3];
     for (int i = 0; i < TITLE_CHOICES; i++) fonts[i] = own[(first + i) % TITLE_CHOICES];
     fonts[TITLE_CHOICES] = FIGLET_STANDARD, fonts[TITLE_CHOICES + 1] = FIGLET_SLANT, fonts[TITLE_CHOICES + 2] = FIGLET_SMALL;
-    // FIGlet's own space is a sliver; three of them keep the words apart behind the decoding scramble.
     char upper[SEED_MAX * 3 + 1];
-    int n = 0;
-    for (const char *s = p->comp.info.title; *s; s++) {
-        char c = *s >= 'a' && *s <= 'z' ? (char)(*s - 32) : *s;
-        for (int k = 0; k < (c == ' ' ? 3 : 1); k++) upper[n++] = c;
-    }
-    upper[n] = 0;
-    for (unsigned i = 0; i < sizeof fonts / sizeof fonts[0]; i++) {
-        const FigletFont *font = figlet_font(fonts[i]);
-        if (!font) continue;
-        int w = figlet_render(font, upper, p->art, PIECE_ART_W);
-        if (w > 0 && w <= p->grid.cols - 4) {
-            p->art_font = font;
-            p->art_w = w;
-            p->art_h = font->height;
-            while (p->art_h > 1) {
-                int blank = 1;
-                for (int x = 0; x < w; x++) blank &= p->art[(p->art_h - 1) * PIECE_ART_W + x] == ' ';
-                if (!blank) break;
-                p->art_h--;
-            }
-            return;
-        }
-    }
-    p->art_font = NULL;
+    title_text(p, upper);
+    // Words stay whole in every face, wrapping onto more lines when a face is too wide for one; only a typed word
+    // too long for any line at all is broken, and then in the plain faces.
+    for (int split = 0; split < 2; split++)
+        for (unsigned i = split ? TITLE_CHOICES : 0; i < sizeof fonts / sizeof fonts[0]; i++)
+            if (title_fits(p, figlet_font(fonts[i]), upper, split)) return;
+}
+
+int piece_force_face(Piece *p, const char *name) {
+    char upper[SEED_MAX * 3 + 1];
+    title_text(p, upper);
+    for (int k = 0; k < FIGLET_FONTS; k++)
+        if (!strcmp(figlet_name((FigletId)k), name)) return title_fits(p, figlet_font((FigletId)k), upper, 0) ? 0 : -1;
+    return -1;
 }
 
 // Each seed decides how much of its piece answers the music, and where: all the way through, at the big moments,
@@ -156,11 +178,11 @@ double piece_length(const Piece *p) {
 }
 
 // When each cell of the title arrives, from 0 to 1, in each way a title can come in: decoded out of noise, typed
-// left to right, rained down column by column, swept in on a bright diagonal, or blooming from the middle.
-static float intro_order(int intro, int x, int y, int w, int h, uint32_t cell) {
+// out line by line, rained down column by column, swept in on a bright diagonal, or blooming from the middle.
+static float intro_order(int intro, int x, int y, int w, int h, float reading, uint32_t cell) {
     float across = ((float)x + 2) / (float)(w + 4), down = ((float)y + 1) / (float)(h + 2);
     switch (intro) {
-    case INTRO_TYPED: return across * 0.97f + down * 0.02f;
+    case INTRO_TYPED: return reading * 0.97f + down * 0.02f;
     case INTRO_RAIN: return hash01((uint32_t)(x + 2) * 2654435761u) * 0.55f + down * 0.4f;
     case INTRO_SWEEP: return (across * (float)(w + 4) + down * (float)(h + 2) * 2) / (float)(w + 4 + (h + 2) * 2);
     case INTRO_BLOOM: return mabs(across - 0.5f) * 1.6f + mabs(down - 0.5f) * 0.3f + hash01(cell) * 0.05f;
@@ -173,33 +195,41 @@ static void title_card(Piece *p, float t) {
     const float in = 0.8f, hold = 5.5f, out = 7.0f;
     if (!p->art_font || t < in || t > out) return;
     Grid *g = &p->grid;
-    int nudge, col0 = grid_center(g, p->art_w, &nudge), row0 = (g->rows - p->art_h) / 2;
+    const FigletLayout *lay = &p->art_layout;
+    int row0 = (g->rows - lay->height) / 2;
     float reveal = smoothstep(in, in + 1.6f, t), vanish = smoothstep(hold, out, t);
     Rgbf pearl = palette_ramp(p->palette, 1.0f), gold = palette_accent(p->palette, 1);
-    for (int y = -1; y <= p->art_h; y++)
-        for (int x = -2; x < p->art_w + 2; x++) {
-            int col = col0 + x, row = row0 + y;
-            if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) continue;
-            int inside = y >= 0 && y < p->art_h && x >= 0 && x < p->art_w;
-            char ch = inside ? p->art[y * PIECE_ART_W + x] : ' ';
-            float h = intro_order(p->intro, x, y, p->art_w, p->art_h, (uint32_t)(row * 977 + col * 131));
-            if (h > reveal || h < vanish) continue;
-            Cell *cell = grid_at(g, col, row);
-            if (ch == ' ') {
-                cell->glyph = ' ';
-                continue;
+    // A wrapped title centers and shades each line on its own, so every line looks like a title of one line.
+    for (int l = 0; l < lay->lines; l++) {
+        int w = lay->wide[l], tall = lay->tall[l], top = lay->top[l], shift = (lay->width - w) / 2;
+        int nudge, col0 = grid_center(g, w, &nudge);
+        for (int y = -1; y <= tall; y++)
+            for (int x = -2; x < w + 2; x++) {
+                int col = col0 + x, row = row0 + top + y;
+                if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) continue;
+                int inside = y >= 0 && y < tall && x >= 0 && x < w;
+                char ch = inside ? p->art[(top + y) * PIECE_ART_W + x] : ' ';
+                float reading = ((float)l + ((float)x + 2) / (float)(w + 4)) / (float)lay->lines;
+                float h = intro_order(p->intro, x + shift, top + y, lay->width, lay->height, reading,
+                                      (uint32_t)(row * 977 + col * 131));
+                if (h > reveal || h < vanish) continue;
+                Cell *cell = grid_at(g, col, row);
+                if (ch == ' ') {
+                    cell->glyph = ' ';
+                    continue;
+                }
+                Rgbf color = rgbf_mix(pearl, gold, (float)y / (float)(tall > 1 ? tall - 1 : 1));
+                int settling = h > reveal - 0.1f;
+                uint32_t roll = hash_u32((uint32_t)(row * 31 + col) ^ (uint32_t)(t * 20));
+                // The front of the arrival: noise for a decode, a cursor for typing, falling drops for rain, a bright
+                // edge for a sweep, and sparks for a bloom.
+                static const char *const FRONT[INTROS] = {"*+:.=#", "_", ":|", "/", "*+"};
+                const char *front = FRONT[p->intro];
+                int glyph = settling ? front[roll % strlen(front)] : ch;
+                if (settling && p->intro != INTRO_DECODE) color = rgbf_mix(color, pearl, 0.6f);
+                *cell = (Cell){(uint8_t)glyph, rgb_from_f(color), (uint8_t)nudge};
             }
-            Rgbf color = rgbf_mix(pearl, gold, (float)y / (float)(p->art_h > 1 ? p->art_h - 1 : 1));
-            int settling = h > reveal - 0.1f;
-            uint32_t roll = hash_u32((uint32_t)(row * 31 + col) ^ (uint32_t)(t * 20));
-            // The front of the arrival: noise for a decode, a cursor for typing, falling drops for rain, a bright edge
-            // for a sweep, and sparks for a bloom.
-            static const char *const FRONT[INTROS] = {"*+:.=#", "_", ":|", "/", "*+"};
-            const char *front = FRONT[p->intro];
-            int glyph = settling ? front[roll % strlen(front)] : ch;
-            if (settling && p->intro != INTRO_DECODE) color = rgbf_mix(color, pearl, 0.6f);
-            *cell = (Cell){(uint8_t)glyph, rgb_from_f(color), (uint8_t)nudge};
-        }
+    }
 }
 
 void piece_draw(Piece *p, double t, Screen *out, int calm, int still, const float *scope, int scope_frames) {

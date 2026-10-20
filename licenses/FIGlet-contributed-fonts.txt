@@ -1,0 +1,140 @@
+FIGlet contributed fonts
+========================
+
+The 38 title fonts in vendor/figlet-contributed/ come unmodified from FIGlet's contributed font
+collection:
+
+  ftp://ftp.figlet.org/pub/figlet/fonts/contributed.tar.gz
+  archive dated 23 Oct 2002, fetched 20 Oct 2026
+  sha256 2c569e052e638b28e4205023ae717f7b07e05695b728e4c80f4ce700354b18c8
+
+FIGlet's own license (FIGlet-LICENSE.txt) covers FIGlet and its standard fonts, not these. Each
+font belongs to the people named in its header. Most headers give no license terms at all; where a
+header does state terms, they are quoted below. None of them restricts redistribution. Each font's
+full header, with its authors' contact details, stays intact in its .flf file and in the app.
+
+
+3-d          Daniel Henninger.
+             No terms stated.
+
+avatar       Claude Martins, 02/95.
+             "Permission is hereby given to modify this font, as long as the modifier's name is
+             placed on a comment line."
+
+basic        Craig O'Flaherty, August 17, 1994.
+             No terms stated.
+
+bulbhead     Jef Poskanzer, 23 June 1994.
+             No terms stated.
+
+colossal     Jonathon (jon@mq.edu.au), 8 June 1994.
+             No terms stated.
+
+computer     Mike Rosulek, 7/12/95.
+             No terms stated.
+
+cricket      Leslie Bates, January 1, 1996, built on a signature by Wade Fincher and parts of
+             Chris Gill's Square font.
+             No terms stated.
+
+diamond      Ron Fritz, 8/94.
+             No terms stated.
+
+doom         Frans P. de Vries, 18 June 1996, based on Big by Glenn Chappell.
+             "Permission is hereby given to modify this font, as long as the modifier's name is
+             placed on a comment line."
+
+dotmatrix    Curtis Wanner, last revised 8/21/95.
+             No terms stated.
+
+double       Peter Weighill (posted to alt.ascii-art, 15 March 1994), converted to FIGlet by
+             Kent Nassen, 11/24/94.
+             No terms stated.
+
+epic         Claude Martins, 12/94.
+             "Permission is hereby given to modify this font, as long as the modifier's name is
+             placed on a comment line."
+
+fender       Scooter (jkratten@law.georgetown.edu), 8/94.
+             No terms stated.
+
+fuzzy        Juan Car, version 1.0, 2 February 1994.
+             No terms stated.
+
+graceful     Mikhael Goikhman, 20 January 2002.
+             "Permission is hereby given to modify this font, as long as the modifier's name is
+             added to this comment."
+
+graffiti     Leigh Purdie, made into a FIGlet font by Leigh Purdie and Tim Maggio, 5 March 1994.
+             No terms stated.
+
+isometric1   Lennert Stock (posted 15 July 1994: "if you wanna convert them, be my guest"),
+isometric3   converted to FIGlet by Kent Nassen, 8-10-94.
+             No other terms stated.
+
+jazmine      vampyr@acs.bu.edu.
+             No terms stated.
+
+kban         Randy Jae Weinstein, May 16, 1994.
+             No terms stated.
+
+larry3d      Larry Gelberg, after Juan Car's puffy, tweaked by Glenn Chappell, version 1.2,
+             2/24/94.
+             No terms stated.
+
+nancyj       vampyr@acs.bu.edu.
+             No terms stated.
+
+nancyj-fancy vampyr@acs.bu.edu, with tabs made blanks by Paul Burton.
+             No terms stated.
+
+ogre         Its header names only "Standard by Glenn Chappell & Ian Chai 3/93 -- based on .sig
+             of Frank Sheeran", FIGlet release 2.0, August 5, 1993.
+             No terms stated.
+
+pebbles      Felix Lee, made into a FIGlet font by Empath (7/94) and completed by Ryan Youck
+             (8/94).
+             No terms stated.
+
+poison       Vinney Thai (numbers and punctuation) and David Issel (capitals), composed by
+             Vinney Thai, October 23, 1994.
+             No terms stated.
+
+puffy        Juan Car, version 1.1, 5 March 1994.
+             No terms stated.
+
+rectangles   David Villegas, 12/94.
+             No terms stated.
+
+rev          Matt E. Thurston (as reverse.flf).
+             No terms stated.
+
+roman        Nick Miners, June 1994.
+             No terms stated.
+
+rounded      Nick Miners, May 1994.
+             No terms stated.
+
+smisome1     M. Lindsey, February 24, 1996, a smaller isometric1 (Kent Nassen, after Lennert
+             Stock).
+             No terms stated.
+
+smkeyboard   Kent Nassen, 11/22/94, after an idea posted to rec.arts.ascii by Bas Meijer and the
+             keyboard.flf of "SuperStreetFighter2Turbo".
+             No terms stated.
+
+speed        Claude Martins, 2/95, based on Slant.
+             "Permission is hereby given to modify this font, as long as the modifier's name is
+             placed on a comment line."
+
+starwars     Ryan Youck, December 25, 1994, based on Big by Glenn Chappell.
+             Its header adds: "I am not responsible for use of this font".
+
+stellar      Ron Fritz, 8/94.
+             No terms stated.
+
+tinker-toy   Wendell Hicken, 11/93.
+             No terms stated.
+
+univers      Normand Veilleux, made into a FIGlet font by Glenn Chappell, January 12, 1994.
+             No terms stated.

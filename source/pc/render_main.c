@@ -241,15 +241,9 @@ static int piece_video(Piece *p, const char *path, int fps, int scale, int wide)
     return rc;
 }
 
-// The title faces by FigletId, for the info file.
-static const char *const FACE_NAMES[] = {"standard", "slant",  "small",    "big",      "block",   "lean",   "script",
-                                         "shadow",   "banner", "bubble",   "digital",  "smscript", "smshadow", "smslant",
-                                         "pixel",    "dots",   "wire",     "scanline", "neon"};
-_Static_assert(sizeof FACE_NAMES / sizeof FACE_NAMES[0] == FIGLET_FONTS, "every title face needs a name");
-
 static const char *face_name(const FigletFont *font) {
     for (int k = 0; font && k < FIGLET_FONTS; k++)
-        if (figlet_font((FigletId)k) == font) return FACE_NAMES[k];
+        if (figlet_font((FigletId)k) == font) return figlet_name((FigletId)k);
     return "none";
 }
 
@@ -259,9 +253,10 @@ static void piece_info(const Piece *p, const char *path) {
     FILE *f = fopen(path, "w");
     if (!f) return;
     const SongInfo *info = &p->comp.info;
-    fprintf(f, "{\"title\": \"%s\", \"face\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, ",
-            info->title, face_name(p->art_font), mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale],
-            info->bpm, info->length);
+    fprintf(f, "{\"title\": \"%s\", \"face\": \"%s\", \"title_lines\": %d, \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, "
+               "\"length\": %.2f, ",
+            info->title, face_name(p->art_font), p->art_font ? p->art_layout.lines : 0, mood_names[info->mood],
+            note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length);
     fprintf(f, "\"palettes\": [");
     for (int i = 0; i < PALETTE_FAMILY; i++) fprintf(f, "%s\"%s\"", i ? ", " : "", p->direction.palettes[i]->name);
     fprintf(f, "], \"sections\": [");
@@ -381,7 +376,7 @@ static void bench(Piece *p, double rain_on_wii) {
 
 static int piece_main(int argc, char **argv) {
     const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL, *scene = NULL, *palette = NULL,
-               *entrance = NULL;
+               *entrance = NULL, *face = NULL;
     Mood mood = MOOD_ANY;
     LengthPref length = LENGTH_MEDIUM;
     int wide = 0, fps = 30, scale = 2, count = 0, benchmark = 0, calm = 0, still = 0;
@@ -403,6 +398,8 @@ static int piece_main(int argc, char **argv) {
             palette = argv[++i];
         else if (!strcmp(argv[i], "--entrance") && i + 1 < argc)
             entrance = argv[++i];
+        else if (!strcmp(argv[i], "--face") && i + 1 < argc)
+            face = argv[++i];
         else if (!strcmp(argv[i], "--times") && i + 1 < argc)
             count = parse_times(argv[++i], times, 64);
         else if (!strcmp(argv[i], "--fps") && i + 1 < argc)
@@ -433,6 +430,10 @@ static int piece_main(int argc, char **argv) {
     }
     if (palette && piece_force_palette(&p, palette) != 0) {
         fprintf(stderr, "no palette called %s\n", palette);
+        return 1;
+    }
+    if (face && piece_force_face(&p, face) != 0) {
+        fprintf(stderr, "no face called %s, or the title doesn't fit it\n", face);
         return 1;
     }
     // Every shot enters the named way, slowed to a second, for looking at one kind of transition.

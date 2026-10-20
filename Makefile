@@ -17,7 +17,7 @@ LIBS := -lfat -lwiikeyboard -lwiiuse -lbte -lasnd -logc -lm
 
 CORE := $(wildcard source/core/*.c)
 GENERATED := build/gen/font_faces.c build/gen/figlet_fonts.c
-FLF := $(wildcard vendor/figlet/*.flf assets/figlet/*.flf)
+FLF := $(wildcard vendor/figlet/*.flf vendor/figlet-contributed/*.flf assets/figlet/*.flf)
 WII_OBJECTS := $(patsubst source/%.c,build/wii/%.o,$(CORE) $(wildcard source/wii/*.c)) \
 	build/wii/gen/font_faces.o build/wii/gen/figlet_fonts.o
 
@@ -30,7 +30,7 @@ build/gen/font_faces.c: tools/gen_font.py $(wildcard vendor/fonts/terminus/*.bdf
 
 build/gen/figlet_fonts.c: tools/embed.py $(FLF)
 	@mkdir -p $(@D)
-	python3 tools/embed.py $@ $(foreach f,$(FLF),flf_$(basename $(notdir $(f)))=$(f))
+	python3 tools/embed.py $@ $(foreach f,$(FLF),flf_$(subst -,_,$(basename $(notdir $(f))))=$(f))
 
 build/wii/%.o: source/%.c
 	@mkdir -p $(@D)

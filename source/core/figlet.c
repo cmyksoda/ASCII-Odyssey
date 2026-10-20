@@ -16,12 +16,9 @@ enum {
     SM_SMUSH = 128,
 };
 
-extern const unsigned char flf_standard[], flf_slant[], flf_small[], flf_big[], flf_block[], flf_lean[], flf_script[],
-    flf_shadow[], flf_banner[], flf_bubble[], flf_digital[], flf_smscript[], flf_smshadow[], flf_smslant[], flf_pixel[],
-    flf_dots[], flf_wire[], flf_scanline[], flf_neon[];
-extern const unsigned int flf_standard_size, flf_slant_size, flf_small_size, flf_big_size, flf_block_size, flf_lean_size,
-    flf_script_size, flf_shadow_size, flf_banner_size, flf_bubble_size, flf_digital_size, flf_smscript_size,
-    flf_smshadow_size, flf_smslant_size, flf_pixel_size, flf_dots_size, flf_wire_size, flf_scanline_size, flf_neon_size;
+#define FIGLET_DATA(id, file) extern const unsigned char flf_##file[]; extern const unsigned int flf_##file##_size;
+FIGLET_FACES(FIGLET_DATA)
+#undef FIGLET_DATA
 
 static char *next_line(char **cursor) {
     char *line = *cursor;
@@ -174,21 +171,84 @@ int figlet_width(const FigletFont *f, const char *text) {
 const FigletFont *figlet_font(FigletId id) {
     static FigletFont fonts[FIGLET_FONTS];
     static int loaded[FIGLET_FONTS];
-    static const unsigned char *const data[] = {
-        flf_standard, flf_slant,   flf_small,    flf_big,      flf_block,   flf_lean,  flf_script, flf_shadow,
-        flf_banner,   flf_bubble,  flf_digital,  flf_smscript, flf_smshadow, flf_smslant, flf_pixel, flf_dots,
-        flf_wire,     flf_scanline, flf_neon};
-    const unsigned int sizes[] = {
-        flf_standard_size, flf_slant_size,   flf_small_size,    flf_big_size,      flf_block_size,   flf_lean_size,
-        flf_script_size,   flf_shadow_size,  flf_banner_size,   flf_bubble_size,   flf_digital_size, flf_smscript_size,
-        flf_smshadow_size, flf_smslant_size, flf_pixel_size,    flf_dots_size,    flf_wire_size,    flf_scanline_size,
-        flf_neon_size};
-    _Static_assert(sizeof data / sizeof data[0] == FIGLET_FONTS, "every face needs its data");
-    _Static_assert(sizeof sizes / sizeof sizes[0] == FIGLET_FONTS, "every face needs its size");
+#define FIGLET_DATA(id, file) flf_##file,
+    static const unsigned char *const data[] = {FIGLET_FACES(FIGLET_DATA)};
+#undef FIGLET_DATA
+#define FIGLET_SIZE(id, file) flf_##file##_size,
+    const unsigned int sizes[] = {FIGLET_FACES(FIGLET_SIZE)};
+#undef FIGLET_SIZE
     if (id < 0 || id >= FIGLET_FONTS) id = FIGLET_STANDARD;
     if (!loaded[id]) {
         if (figlet_load(&fonts[id], data[id], sizes[id]) != 0) return NULL;
         loaded[id] = 1;
     }
     return &fonts[id];
+}
+
+const char *figlet_name(FigletId id) {
+#define FIGLET_NAME(id, file) #file,
+    static const char *const names[] = {FIGLET_FACES(FIGLET_NAME)};
+#undef FIGLET_NAME
+    return id >= 0 && id < FIGLET_FONTS ? names[id] : "none";
+}
+
+static char wrap_rows[FIGLET_MAX_HEIGHT * 512];
+
+// A line of text rendered into wrap_rows, or -1 when it's wider than max_w.
+static int wrap_line(const FigletFont *f, const char *text, int max_w) {
+    int w = figlet_render(f, text, wrap_rows, 512);
+    return w > max_w ? -1 : w;
+}
+
+static int wrap_place(const FigletFont *f, const char *text, int max_w, int max_h, char *out, int stride, FigletLayout *lay) {
+    int w = wrap_line(f, text, max_w), tall = f->height, top = lay->lines ? lay->height + 1 : 0;
+    if (w <= 0 || lay->lines == FIGLET_LINES) return -1;
+    for (int blank = 1; blank && tall > 1; tall -= blank)
+        for (int x = 0; x < w; x++) blank &= wrap_rows[(tall - 1) * 512 + x] == ' ';
+    if (top + tall > max_h) return -1;
+    for (int y = 0; y < tall; y++) memcpy(out + (top + y) * stride, wrap_rows + y * 512, (size_t)w);
+    lay->top[lay->lines] = top, lay->wide[lay->lines] = w, lay->tall[lay->lines] = tall;
+    lay->lines++;
+    lay->height = top + tall;
+    if (w > lay->width) lay->width = w;
+    return 0;
+}
+
+int figlet_wrap(const FigletFont *f, const char *text, int max_w, int max_h, int split, char *out, int stride,
+                FigletLayout *layout) {
+    char line[128] = "", trial[128];
+    memset(layout, 0, sizeof *layout);
+    if (max_w > stride) return -1;
+    memset(out, ' ', (size_t)stride * (size_t)max_h);
+    for (const char *s = text; *s;) {
+        int gap = 0, end;
+        while (s[gap] == ' ') gap++;
+        for (end = gap; s[end] && s[end] != ' '; end++) {}
+        if (end == gap) break;
+        // A word joins the line, with the spaces before it, while the line still fits; otherwise it starts the next.
+        if (line[0]) {
+            snprintf(trial, sizeof trial, "%s%.*s", line, end, s);
+            if (wrap_line(f, trial, max_w) >= 0) {
+                memcpy(line, trial, sizeof line);
+                s += end;
+                continue;
+            }
+            if (wrap_place(f, line, max_w, max_h, out, stride, layout) != 0) return -1;
+            line[0] = 0;
+        }
+        int keep = end - gap;
+        snprintf(trial, sizeof trial, "%.*s", keep, s + gap);
+        while (wrap_line(f, trial, max_w) < 0) {
+            if (!split || keep == 1) return -1;
+            trial[--keep] = 0;
+        }
+        if (keep < end - gap) {
+            if (wrap_place(f, trial, max_w, max_h, out, stride, layout) != 0) return -1;
+        } else {
+            memcpy(line, trial, sizeof line);
+        }
+        s += gap + keep;
+    }
+    if (line[0] && wrap_place(f, line, max_w, max_h, out, stride, layout) != 0) return -1;
+    return layout->lines ? 0 : -1;
 }

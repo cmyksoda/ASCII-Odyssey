@@ -7,6 +7,7 @@
 #include "screen.h"
 
 #define PIECE_ART_W 200
+#define PIECE_ART_H (FIGLET_LINES * (FIGLET_MAX_HEIGHT + 1))
 
 // One voyage: the song, its score, the shots that picture it, and the grids they draw into.
 typedef struct {
@@ -22,8 +23,9 @@ typedef struct {
     Palette colors[PALETTE_FAMILY];
     const Palette *palette;
     const FigletFont *art_font;
-    char art[FIGLET_MAX_HEIGHT * PIECE_ART_W];
-    int art_w, art_h, intro;
+    char art[PIECE_ART_H * PIECE_ART_W];
+    FigletLayout art_layout;
+    int intro;
     // The backup reactivity plan, per section, for when the direction is set to follow it instead of each scene's own
     // nature: all the way through, at the big moments, swelling, or in pockets.
     float react[MAX_SECTIONS];
@@ -39,5 +41,7 @@ double piece_length(const Piece *p);
 int piece_force_scene(Piece *p, const char *name);
 // Paints every shot with the named hand-made palette; -1 when there's no such palette.
 int piece_force_palette(Piece *p, const char *name);
+// Writes the title in the named face; -1 when there's no such face or the title can't fit it.
+int piece_force_face(Piece *p, const char *name);
 
 #endif
