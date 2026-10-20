@@ -226,10 +226,10 @@ static const Cell *cell_or_blank(const Cell *cells, const Grid *g, int col, int 
 
 // Entrances that move whole pictures instead of revealing cells in place: pushes, doors, interlaced rows, a swirl or
 // a zoom on the way out, and the old picture breaking into tiles that fall away. Returns 0 for any other kind.
-static int move_pictures(Grid *from, Grid *to, const Shot *shot, float p) {
+static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, float p) {
     int cols = to->cols, rows = to->rows, n = cols * rows;
     if (n > (int)(sizeof incoming / sizeof incoming[0])) return 0;
-    switch (shot->entrance) {
+    switch (how) {
     case ENTER_PUSH:
     case ENTER_DOORS:
     case ENTER_INTERLACE:
@@ -244,10 +244,10 @@ static int move_pictures(Grid *from, Grid *to, const Shot *shot, float p) {
     for (int row = 0; row < rows; row++)
         for (int col = 0; col < cols; col++) {
             Cell *dst = grid_at(to, col, row);
-            switch (shot->entrance) {
+            switch (how) {
             case ENTER_PUSH: {
                 // The new picture slides in from one side and shoves the old one off the other.
-                int horizontal = shot->direction < 2, span = horizontal ? cols : rows, sign = shot->direction & 1 ? -1 : 1;
+                int horizontal = direction < 2, span = horizontal ? cols : rows, sign = direction & 1 ? -1 : 1;
                 int shift = (int)(p * (float)span + 0.5f), at = horizontal ? col : row;
                 int old_at = at + sign * shift, new_at = at + sign * (shift - span);
                 if (horizontal)
@@ -273,7 +273,7 @@ static int move_pictures(Grid *from, Grid *to, const Shot *shot, float p) {
             case ENTER_SWIRL:
             case ENTER_ZOOM: {
                 // The old picture twists like water down a drain, or rushes toward us, as the new one shows through.
-                float key = reveal_key(shot->entrance, shot->direction, col, row, to);
+                float key = reveal_key(how, direction, col, row, to);
                 if (key <= p) {
                     *dst = in[row * cols + col];
                     break;
@@ -281,7 +281,7 @@ static int move_pictures(Grid *from, Grid *to, const Shot *shot, float p) {
                 // In row heights, so the swirl turns round rather than oval.
                 float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio, dy = (float)row - cy;
                 float sx, sy;
-                if (shot->entrance == ENTER_SWIRL) {
+                if (how == ENTER_SWIRL) {
                     float r = mhypot(dx, dy) / cy, a = p * 3.0f * (1 - saturate(r * 0.8f)), c = mcos(a), s = msin(a);
                     sx = dx * c - dy * s, sy = dx * s + dy * c;
                 } else {
@@ -295,7 +295,7 @@ static int move_pictures(Grid *from, Grid *to, const Shot *shot, float p) {
             default: *dst = in[row * cols + col]; break;
             }
         }
-    if (shot->entrance == ENTER_SHATTER) {
+    if (how == ENTER_SHATTER) {
         // The old picture breaks into tiles, each dropping away under gravity after a moment of its own.
         for (int ty = 0; ty < rows; ty += 3)
             for (int tx = 0; tx < cols; tx += 6) {
@@ -314,15 +314,28 @@ static int move_pictures(Grid *from, Grid *to, const Shot *shot, float p) {
     return 1;
 }
 
+// With reduce motion on, the entrances that move whole pictures give way to reveals in place of a like shape.
+static Entrance still_entrance(Entrance how) {
+    switch (how) {
+    case ENTER_PUSH: return ENTER_WIPE;
+    case ENTER_DOORS:
+    case ENTER_ZOOM: return ENTER_RADIAL;
+    case ENTER_INTERLACE: return ENTER_BLINDS;
+    case ENTER_SWIRL: return ENTER_SPIRAL;
+    case ENTER_SHATTER: return ENTER_DISSOLVE;
+    default: return how;
+    }
+}
+
 // Moves a color away from the ground by k: toward it below 1, past itself above 1.
 static Rgb from_ground(Rgb c, Rgb ground, float k) {
     Rgbf a = rgbf(ground), b = rgbf(c);
     return rgb_from_f((Rgbf){a.r + (b.r - a.r) * k, a.g + (b.g - a.g) * k, a.b + (b.b - a.b) * k});
 }
 
-static void blend(Grid *from, Grid *to, const Shot *shot, float progress, float t, Rgb ground) {
-    if (move_pictures(from, to, shot, saturate(progress))) return;
-    if (shot->entrance == ENTER_FADE) {
+static void blend(Grid *from, Grid *to, Entrance how, int direction, float progress, float t, Rgb ground) {
+    if (move_pictures(from, to, how, direction, saturate(progress))) return;
+    if (how == ENTER_FADE) {
         // Through the bare ground: the old shot fades out, then the new one comes up.
         for (int i = 0; i < to->cols * to->rows; i++) {
             if (progress < 0.5f) {
@@ -334,18 +347,18 @@ static void blend(Grid *from, Grid *to, const Shot *shot, float progress, float 
         }
         return;
     }
-    int edged = shot->entrance != ENTER_DISSOLVE && shot->entrance != ENTER_DECODE && shot->entrance != ENTER_CHECKER;
+    int edged = how != ENTER_DISSOLVE && how != ENTER_DECODE && how != ENTER_CHECKER;
     for (int row = 0; row < to->rows; row++)
         for (int col = 0; col < to->cols; col++) {
-            float key = reveal_key(shot->entrance, shot->direction, col, row, to);
+            float key = reveal_key(how, direction, col, row, to);
             Cell *dst = grid_at(to, col, row);
             if (key > progress) {
                 *dst = *grid_at(from, col, row);
-            } else if (shot->entrance == ENTER_DECODE && key > progress - 0.12f && dst->glyph != ' ') {
+            } else if (how == ENTER_DECODE && key > progress - 0.12f && dst->glyph != ' ') {
                 // Cells about to settle flicker through random symbols first, like a signal locking on.
                 uint32_t roll = hash_u32((uint32_t)(row * 131 + col) ^ (uint32_t)(t * 24.0f));
                 dst->glyph = (uint8_t)SCRAMBLE[roll % (sizeof SCRAMBLE - 1)];
-            } else if (shot->entrance == ENTER_TYPEWRITER && key > progress - 0.01f) {
+            } else if (how == ENTER_TYPEWRITER && key > progress - 0.01f) {
                 // The cursor, just ahead of the text, in whichever of light or dark stands off the ground.
                 int dark = ground.r + ground.g + ground.b < 384;
                 dst->glyph = '_';
@@ -370,7 +383,8 @@ void direction_draw(Direction *d, Frame *f, Grid *scratch) {
         float progress = smoothstep(0.0f, shot->fade, since);
         f->fx->glow = mixf(glow, f->fx->glow, progress);
         f->fx->bg = rgb_mix(d->palettes[d->shots[i - 1].palette]->bg, d->palettes[shot->palette]->bg, progress);
-        blend(scratch, f->grid, shot, progress * 1.05f, f->t, f->fx->bg);
+        Entrance how = f->still ? still_entrance(shot->entrance) : shot->entrance;
+        blend(scratch, f->grid, how, shot->direction, progress * 1.05f, f->t, f->fx->bg);
     } else {
         render_shot(d, shot, f, f->grid);
         f->fx->bg = d->palettes[shot->palette]->bg;
