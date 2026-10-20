@@ -34,6 +34,8 @@ typedef enum {
     ENTER_STAR,
     ENTER_HEART,
     ENTER_KALEIDO,
+    ENTER_TETRIS,
+    ENTER_RIPPLE,
     ENTRANCES
 } Entrance;
 

@@ -10,7 +10,7 @@
 static const char *const NAMES[] = {
     "cut",    "dissolve", "wipe",    "diagonal", "radial", "iris",  "blinds", "checker", "spiral", "melt",
     "decode", "fade",     "push",    "doors",    "shatter", "typewriter", "swirl", "zoom", "interlace", "mosaic",
-    "slide",  "cascade",  "glitch",  "flip",     "star",   "heart", "kaleido"};
+    "slide",  "cascade",  "glitch",  "flip",     "star",   "heart", "kaleido", "tetris", "ripple"};
 _Static_assert(sizeof NAMES / sizeof NAMES[0] == ENTRANCES, "every entrance needs a name");
 const char *const *const entrance_names = NAMES;
 
@@ -18,7 +18,7 @@ static const Entrance SOFT[] = {ENTER_DISSOLVE, ENTER_WIPE,    ENTER_DIAGONAL,  
                                 ENTER_CHECKER,  ENTER_SPIRAL,  ENTER_MELT,       ENTER_DECODE,  ENTER_FADE,      ENTER_PUSH,
                                 ENTER_DOORS,    ENTER_SHATTER, ENTER_TYPEWRITER, ENTER_SWIRL,   ENTER_ZOOM,      ENTER_INTERLACE,
                                 ENTER_MOSAIC,   ENTER_SLIDE,   ENTER_CASCADE,    ENTER_GLITCH,  ENTER_FLIP,      ENTER_STAR,
-                                ENTER_HEART,    ENTER_KALEIDO};
+                                ENTER_HEART,    ENTER_KALEIDO, ENTER_TETRIS,     ENTER_RIPPLE};
 // A drop lands with a burst that opens from the middle or sweeps across in half a beat.
 static const Entrance BURST[] = {ENTER_RADIAL, ENTER_IRIS,   ENTER_CHECKER, ENTER_BLINDS,  ENTER_DIAGONAL,
                                  ENTER_PUSH,   ENTER_DOORS,  ENTER_GLITCH,  ENTER_FLIP,    ENTER_KALEIDO};
@@ -112,14 +112,16 @@ static int family_of(Entrance e) {
     case ENTER_DISSOLVE:
     case ENTER_FADE:
     case ENTER_MELT:
-    case ENTER_SWIRL: return FAMILY_SOFT;
+    case ENTER_SWIRL:
+    case ENTER_RIPPLE: return FAMILY_SOFT;
     case ENTER_DECODE:
     case ENTER_TYPEWRITER:
     case ENTER_CHECKER:
     case ENTER_BLINDS:
     case ENTER_INTERLACE:
     case ENTER_MOSAIC:
-    case ENTER_GLITCH: return FAMILY_DIGITAL;
+    case ENTER_GLITCH:
+    case ENTER_TETRIS: return FAMILY_DIGITAL;
     case ENTER_PUSH:
     case ENTER_SHATTER:
     case ENTER_ZOOM:
@@ -359,7 +361,9 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
     case ENTER_CASCADE:
     case ENTER_GLITCH:
     case ENTER_FLIP:
-    case ENTER_KALEIDO: break;
+    case ENTER_KALEIDO:
+    case ENTER_TETRIS:
+    case ENTER_RIPPLE: break;
     default: return 0;
     }
     memcpy(incoming, to->cells, sizeof(Cell) * (size_t)n);
@@ -476,9 +480,39 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 *dst = *cell_or_blank(src, to, (int)(cx + r * mcos(a) / ratio + 0.5f), (int)(cy + r * msin(a) + 0.5f));
                 break;
             }
+            case ENTER_TETRIS: *dst = before[row * cols + col]; break;
+            case ENTER_RIPPLE: {
+                // A ring of water spreads from the middle: the new picture lies inside it, and the pictures either side
+                // of the wavefront bend toward and away from it.
+                float ratio = (float)to->cell_w * to->pixel_aspect / (float)to->cell_h, dx = ((float)col - cx) * ratio, dy = (float)row - cy;
+                float d = mhypot(dx, dy), reach = mhypot(cx * ratio, cy) * 1.15f, front = p * reach, band = 3.0f;
+                const Cell *src = d < front ? in : before;
+                if (mabs(d - front) < band && d > 0.5f) {
+                    float bend = 2.5f * (1 - p) * msin((d - front) / band * PI_F), at = (d + bend) / d;
+                    *dst = *cell_or_blank(src, to, (int)(cx + dx * at / ratio + 0.5f), (int)(cy + dy * at + 0.5f));
+                } else {
+                    *dst = src[row * cols + col];
+                }
+                break;
+            }
             default: *dst = in[row * cols + col]; break;
             }
         }
+    if (how == ENTER_TETRIS) {
+        // Blocks of the new picture drop in from above and stack up from the bottom row, each landing exactly in place.
+        int bw = 4, bh = (int)(4.0f * (float)to->cell_w * to->pixel_aspect / (float)to->cell_h + 0.5f), stacks = (rows + bh - 1) / bh;
+        if (bh < 1) bh = 1;
+        for (int by = stacks - 1; by >= 0; by--)
+            for (int bx = 0; bx * bw < cols; bx++) {
+                float order = (float)(stacks - 1 - by) / (float)stacks * 0.7f + hash01((uint32_t)(by * 977 + bx) ^ 0x7e7u) * 0.3f;
+                float age = (p - order * 0.75f) / 0.25f;
+                if (age <= 0) continue;
+                int top = by * bh, fall = age >= 1 ? 0 : (int)((1 - age * age) * (float)(top + bh));
+                for (int y = top; y < top + bh && y < rows; y++)
+                    for (int x = bx * bw; x < bx * bw + bw && x < cols; x++)
+                        if (y - fall >= 0) *grid_at(to, x, y - fall) = in[y * cols + x];
+            }
+    }
     if (how == ENTER_SHATTER) {
         // The old picture breaks into tiles, each dropping away under gravity after a moment of its own.
         for (int ty = 0; ty < rows; ty += 3)
@@ -510,7 +544,9 @@ static Entrance still_entrance(Entrance how) {
     case ENTER_GLITCH:
     case ENTER_KALEIDO: return ENTER_DISSOLVE;
     case ENTER_SLIDE: return ENTER_WIPE;
-    case ENTER_CASCADE: return ENTER_MELT;
+    case ENTER_CASCADE:
+    case ENTER_TETRIS: return ENTER_MELT;
+    case ENTER_RIPPLE: return ENTER_RADIAL;
     case ENTER_FLIP: return ENTER_BLINDS;
     default: return how;
     }
