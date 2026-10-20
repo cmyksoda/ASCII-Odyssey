@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Small worlds: a turntable, a cassette, a music box's comb, a mobile, clockwork, a jungle canopy, a highway at
-// night, a sound system, a storm, desert dunes, a kelp forest and a meteor shower.
+// night, a sound system, a storm, desert dunes, a kelp forest, a meteor shower, a reel-to-reel deck and a carousel.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -866,4 +866,187 @@ void reels_draw(void *state, const Frame *f) {
         put_cell(g, cell_col(g, cx), cell_row(g, cy - h * 0.6f), label[0], panel);
     }
     f->fx->glow = 0.5f;
+}
+
+/* ---------- Carousel ---------- */
+
+#define HORSES 6
+
+typedef struct {
+    float bars_per_turn, sag;
+    uint32_t salt;
+} Carousel;
+
+void carousel_setup(void *state, Rng *r, const Frame *f) {
+    Carousel *c = state;
+    c->bars_per_turn = rng_between(r, 6, 10);
+    c->sag = rng_between(r, 0.08f, 0.15f);
+    c->salt = rng_u32(r);
+    (void)f;
+}
+
+// A carousel horse facing right, its pole through the saddle at column 4.
+static const char *const HORSE[4] = {"    |  ,^, ", " ~._|_/ o )", "  (_|___ _/", "   /|\\  /\\ "};
+
+static char mirror_glyph(char c) {
+    switch (c) {
+    case '/': return '\\';
+    case '\\': return '/';
+    case '(': return ')';
+    case ')': return '(';
+    default: return c;
+    }
+}
+
+// One horse with its pole at col and its ears at row, turned to face left on the far side.
+static void horse(Grid *g, int col, int row, int left, Rgbf body, Rgbf brass) {
+    for (int r = 0; r < 4; r++)
+        for (int c = 0; c < 11; c++) {
+            int src = left ? 10 - c : c;
+            char ch = HORSE[r][src];
+            if (ch != ' ') put_cell(g, col + c - (left ? 6 : 4), row + r, left ? mirror_glyph(ch) : ch, src == 4 ? brass : body);
+        }
+}
+
+// The mirrored column at the heart of the carousel, its panels turning with it.
+static void carousel_column(const Frame *f, float turn, float top, float deck, Rgbf brass, Rgbf cream) {
+    Grid *g = f->grid;
+    const float half = 0.11f;
+    for (int row = cell_row(g, top); row <= cell_row(g, deck); row++)
+        for (int col = cell_col(g, -half); col <= cell_col(g, half); col++) {
+            float u = cell_x(g, col) / half;
+            if (u < -1 || u > 1) continue;
+            float a = matan2(u, msqrt(1 - u * u)) - PI_F / 2 - turn;
+            int panel = (int)mfloor(a * 8 / TAU_F) & 1, edge = mabs(u) > 0.75f;
+            float shade = 0.45f + 0.4f * msqrt(1 - u * u);
+            put_cell(g, col, row, edge ? '|' : panel ? ':' : '#', frame_dim(f, edge || panel ? brass : cream, shade));
+        }
+}
+
+// A fairground carousel at night, turning once every several bars: painted horses rise and fall on brass poles in
+// time with the bar, bulbs chase round the canopy on the beat, and strings of lights run out from its flag.
+void carousel_draw(void *state, const Frame *f) {
+    Carousel *c = state;
+    Grid *g = f->grid;
+    const float rim = 0.95f, squash = 0.2f, top = 0.3f, peak = 0.68f, deck = -0.58f, orbit = 0.76f;
+    const float rise = peak - top, tilt = rim * squash;
+    float beat = f->score->beat, bar = beat * (float)f->score->info->beats_per_bar, gentle = f->still ? 0.5f : 1.0f;
+    float turn = TAU_F * f->t * gentle / (bar * c->bars_per_turn);
+    int beat_no = (int)mfloor(f->t / beat);
+    float chase = 0.4f + 0.6f * mexp(-(f->t - (float)beat_no * beat) / (beat * 0.6f)) * frame_bright(f);
+    Rgbf brass = palette_ramp(f->palette, 0.8f), cloth = palette_accent(f->palette, 0), cream = palette_ramp(f->palette, 0.92f);
+    Rgbf bulb = palette_ramp(f->palette, 1.0f);
+    dust_stars(f, c->salt, 0.0f, 0.55f);
+    int ground = cell_row(g, deck - tilt - 0.12f);
+    for (int row = ground; row < g->rows; row++)
+        for (int col = 0; col < g->cols; col++) {
+            Cell *cell = grid_at(g, col, row);
+            cell->glyph = hash01((uint32_t)(row * 977 + col) ^ c->salt) < 0.12f ? '.' : ' ';
+            cell->fg = rgb_from_f(frame_dim(f, brass, 0.25f));
+        }
+    // Strings of bulbs from the flag out to the edges of the night, every other one lit in turn.
+    for (int side = -1; side <= 1; side += 2) {
+        StrokePoint wire[21];
+        for (int k = 0; k < 21; k++) {
+            float u = (float)k / 20;
+            wire[k] = (StrokePoint){(float)side * u * (g->aspect + 0.05f), mixf(peak + 0.1f, 0.62f, u) - c->sag * 4 * u * (1 - u),
+                                    frame_dim(f, brass, 0.3f)};
+        }
+        stroke_draw(f->stroker, wire, 21, 0);
+        for (int k = 3; k < 21; k += 2) {
+            int lit = (k / 2 + beat_no) % 2 == 0;
+            Rgbf color = rgbf_mix(palette_accent(f->palette, k / 2), bulb, 0.3f);
+            put_cell(g, cell_col(g, wire[k].x), cell_row(g, wire[k].y) + 1, 'o', frame_dim(f, color, lit ? chase : 0.4f));
+        }
+    }
+    // The deck, seen from a little above, the seams of its boards turning with it.
+    for (int row = cell_row(g, deck + tilt); row <= cell_row(g, deck - tilt); row++)
+        for (int col = 0; col < g->cols; col++) {
+            float u = cell_x(g, col) / rim, v = (cell_y(g, row) - deck) / tilt;
+            if (u * u + v * v > 1) continue;
+            if (mfract((matan2(v, u) - turn) * 16 / TAU_F) < 0.12f) put_cell(g, col, row, '.', frame_dim(f, brass, 0.4f));
+        }
+    // The horses, back to front: the far side's dimmer and going the other way, the column between the two sides.
+    int order[HORSES];
+    float depth[HORSES];
+    for (int k = 0; k < HORSES; k++) {
+        order[k] = k;
+        depth[k] = msin(turn + (float)k * TAU_F / HORSES);
+    }
+    for (int i = 1; i < HORSES; i++)
+        for (int j = i; j > 0 && depth[order[j]] > depth[order[j - 1]]; j--) {
+            int swap = order[j];
+            order[j] = order[j - 1];
+            order[j - 1] = swap;
+        }
+    int column_drawn = 0;
+    for (int i = 0; i < HORSES; i++) {
+        int k = order[i];
+        float a = turn + (float)k * TAU_F / HORSES, z = depth[k], lift = orbit * squash * z, near = 1 - 0.45f * (z + 1) / 2;
+        if (!column_drawn && z <= 0) {
+            carousel_column(f, turn, top, deck, brass, cream);
+            column_drawn = 1;
+        }
+        // Neighbors rise and fall in turn, once a bar, the way a waltz sways.
+        float bob = 0.065f * gentle * msin(TAU_F * f->t / bar + (float)k * PI_F);
+        int col = cell_col(g, orbit * mcos(a)), ears = cell_row(g, -0.08f + lift + bob);
+        for (int row = cell_row(g, top + lift); row <= cell_row(g, deck + lift); row++) {
+            // A glint climbs the twisted brass.
+            int glint = (row + (int)(f->t * 6)) % 3 == 0;
+            put_cell(g, col, row, '|', frame_dim(f, brass, near * (glint ? 1.0f : 0.65f)));
+        }
+        Rgbf body = frame_dim(f, rgbf_mix(palette_accent(f->palette, k), cream, 0.35f), near);
+        horse(g, col, ears, z > 0, body, frame_dim(f, brass, near));
+    }
+    if (!column_drawn) carousel_column(f, turn, top, deck, brass, cream);
+    // The skirt round the deck and the canopy above, both turning: painted panels below, a striped roof and a
+    // scalloped valance above.
+    int last_panel = 0, inside = 0;
+    for (int col = 0; col < g->cols; col++) {
+        float x = cell_x(g, col), u = x / rim;
+        if (u <= -1 || u >= 1) {
+            inside = 0;
+            continue;
+        }
+        float front = -msqrt(1 - u * u), around = matan2(front, u) - turn;
+        int deck_edge = cell_row(g, deck + tilt * front), panel = (int)mfloor(around * 12 / TAU_F);
+        int border = inside && panel != last_panel;
+        last_panel = panel, inside = 1;
+        for (int r = 1; r <= 3; r++)
+            put_cell(g, col, deck_edge + r, border ? '|' : '=', frame_dim(f, panel & 1 ? cloth : brass, border ? 0.8f : 0.6f));
+        // Roof: follow the line from the peak through each cell down to the rim to find its stripe.
+        int rim_row = cell_row(g, top + tilt * front);
+        for (int row = cell_row(g, peak - mabs(u) * rise); row < rim_row; row++) {
+            float down = peak - cell_y(g, row), along = x * rise / (down * rim);
+            for (int it = 0; it < 2; it++) along = clampf(x * (rise + tilt * msqrt(1 - clampf(along * along, 0, 1))) / (down * rim), -1, 1);
+            float a = matan2(-msqrt(1 - along * along), along) - turn, facing = msqrt(1 - along * along);
+            int stripe = (int)mfloor(a * 12 / TAU_F) & 1;
+            put_cell(g, col, row, stripe ? '#' : ':', frame_dim(f, stripe ? cloth : cream, 0.25f + 0.35f * facing));
+        }
+        put_cell(g, col, rim_row, '=', frame_dim(f, brass, 0.85f));
+        float k = around * 18 / TAU_F, dip = msin(PI_F * mfract(k));
+        for (int r = 1; r <= 1 + (int)(dip * 2.2f); r++)
+            put_cell(g, col, rim_row + r, r == 1 ? '#' : 'V', frame_dim(f, (int)mfloor(k) & 1 ? cloth : cream, 0.75f));
+    }
+    // Bulbs hang from the low point of every scallop, and a mirror shines in every panel of the skirt.
+    for (int s = 0; s < 18; s++) {
+        float a = ((float)s + 0.5f) * TAU_F / 18 + turn;
+        if (msin(a) >= 0) continue;
+        int lit = (s + beat_no) % 3 == 0;
+        Rgbf color = rgbf_mix(palette_accent(f->palette, s), bulb, 0.4f);
+        put_cell(g, cell_col(g, rim * mcos(a)), cell_row(g, top + tilt * msin(a)) + 4, 'o', frame_dim(f, color, lit ? chase : 0.4f));
+    }
+    for (int s = 0; s < 12; s++) {
+        float a = ((float)s + 0.5f) * TAU_F / 12 + turn;
+        if (msin(a) >= 0) continue;
+        put_cell(g, cell_col(g, rim * mcos(a)), cell_row(g, deck + tilt * msin(a)) + 2, 'o', frame_dim(f, bulb, 0.5f + 0.5f * chase));
+    }
+    // The roof's edges and its flag.
+    line(f, 0, peak, -rim, top, brass);
+    line(f, 0, peak, rim, top, brass);
+    int flag_col = cell_col(g, 0), flag_row = cell_row(g, peak);
+    for (int r = 1; r <= 3; r++) put_cell(g, flag_col, flag_row - r, '|', brass);
+    put_cell(g, flag_col + 1, flag_row - 3, (int)(f->t * 3) % 2 ? '~' : '=', cloth);
+    put_cell(g, flag_col + 2, flag_row - 3, '>', cloth);
+    f->fx->glow = 0.55f;
 }

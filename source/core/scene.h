@@ -151,6 +151,7 @@ SCENE(piano)
 SCENE(reels)
 SCENE(palms)
 SCENE(slitscan)
+SCENE(carousel)
 #undef SCENE
 
 #endif

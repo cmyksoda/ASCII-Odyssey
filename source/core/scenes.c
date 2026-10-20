@@ -1267,6 +1267,7 @@ const SceneKind scene_kinds[] = {
     {"reel to reel", W(0, 0, 1, 2, 0, 0, 0, 3, 1), 0.45f, 1, 0, reels_setup, reels_draw},
     {"palms", W(0, 0, 3, 1, 1, 0, 0, 0, 0), 0.3f, 0, 0, palms_setup, palms_draw},
     {"slitscan", W(1, 0, 2, 0, 3, 0, 0, 0, 2), 0.85f, 1, 0, slitscan_setup, slitscan_draw},
+    {"carousel", W(0, 1, 0, 1, 0, 0, 3, 0, 0), 0.4f, 1, 0, carousel_setup, carousel_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
 _Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS, "the scene table outgrew MAX_SCENE_KINDS");
