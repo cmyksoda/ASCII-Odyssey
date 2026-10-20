@@ -63,7 +63,7 @@ def card(p, page):
   <pre class="fig" aria-label="{title}">{html.escape(p['art'])}</pre>
   <p class="meta">{p['mood']} <span class="dot">·</span> {p['key']} <span class="dot">·</span> {p['bpm']} BPM <span class="dot">·</span> {clock(p['length'])} <span class="dot">·</span> {palettes} <span class="dot">·</span> {scenes} scenes</p>
   <video controls preload="none" playsinline poster="{page}/{p['slug']}.jpg" src="{page}/{p['slug']}.mp4"></video>
-  <div class="arrangement" data-total="{total:.2f}" tabindex="0" role="slider" aria-label="Shots in {title}: tall ones answer the music">{''.join(blocks)}<div class="playhead" hidden></div></div>
+  <div class="arrangement" data-total="{total:.2f}" tabindex="0" role="slider" aria-label="Shots in {title}, tall where the scene answers the music">{''.join(blocks)}<div class="playhead" hidden></div></div>
   <div class="react" role="group" aria-label="Your reaction to {title}">
     <button type="button" data-reaction="love">Love it</button>
     <button type="button" data-reaction="okay">It's okay</button>
