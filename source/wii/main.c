@@ -86,11 +86,11 @@ static const Tour TOURS[] = {
      "4.7:up,5.0:confirm"},
     // Start on the first press, then the tracker view, then the info view.
     {"overlays", 20.0, {1.6, 9.0, 15.0}, 3, 0, "1.0:confirm,6.0:one,12.0:two"},
-    // Every scene in turn over a real piece, two and a half music seconds each, with its own timings and a shot.
+    // Every scene in turn over a real piece, two music seconds each, with its own timings and a shot.
     {"scenes", 200.0, {0}, 0, 1, "1.0:confirm"},
 };
 
-#define SCENE_SECONDS 2.5
+#define SCENE_SECONDS 2.0
 
 // Presses a tour's scripted buttons as their moments come, one per frame, the way a person with a remote would.
 static unsigned scripted(const char **cursor, double wall) {
@@ -310,7 +310,7 @@ int main(int argc, char **argv) {
                     scene = want;
                     shot = 0;
                 }
-                if (scene >= 0 && !shot && clock.music >= (double)scene * SCENE_SECONDS + 1.8) {
+                if (scene >= 0 && !shot && clock.music >= (double)(scene + 1) * SCENE_SECONDS - 0.5) {
                     int w, h;
                     const void *xfb = video_xfb(&w, &h);
                     beacon_shot(scene_kinds[scene].name, xfb, w, h);
