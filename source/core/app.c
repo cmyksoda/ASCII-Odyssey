@@ -17,6 +17,7 @@ typedef enum {
     STATE_TITLE,
     STATE_SETTINGS,
     STATE_KEYS,
+    STATE_ABOUT,
     STATE_COMPOSING,
     STATE_PLAYING,
     STATE_PAUSED,
@@ -27,11 +28,26 @@ typedef enum { MENU_NOTICE, MENU_TITLE, MENU_PAUSE, MENU_END } MenuKind;
 
 typedef enum { OVERLAY_NONE, OVERLAY_TRACKER, OVERLAY_INFO } Overlay;
 
-static const char *const NOTICE_ITEMS[] = {"SAIL AS IT IS", "CALMER: LESS FLASHING AND MOTION"};
-static const char *const NOTICE_LINES[] = {"a gentle note before you sail", "", "voyages pulse and move with their music,",
-                                           "and some flash a little on the beat.", "",
+static const char *const NOTICE_ITEMS[] = {"SAIL AS IT IS", "SAIL CALMER"};
+static const char *const NOTICE_LINES[] = {"a gentle note before you sail", "", "some voyages flash a little on the beat.",
                                            "you can change this any time in settings."};
-static const char *const TITLE_ITEMS[] = {"START", "SETTINGS", "EXIT"};
+static const char *const TITLE_ITEMS[] = {"START", "SETTINGS", "ABOUT", "EXIT"};
+static const char *const ABOUT_LINES[] = {"how a voyage is made",
+                                          "",
+                                          "every voyage grows from a seed, a little name",
+                                          "like violet lagoon. the seed is all it needs.",
+                                          "",
+                                          "it picks one of ten vibes, then a tempo, a key,",
+                                          "its instruments and the shape of the song.",
+                                          "every note is written fresh and played by a tiny",
+                                          "tracker, with sounds built from scratch.",
+                                          "",
+                                          "the pictures follow along: each part of the song",
+                                          "gets its own scenes, colors and transitions,",
+                                          "and the drops hit hardest.",
+                                          "",
+                                          "the same seed always sails the same voyage,",
+                                          "so you can share the ones you love <3"};
 static const char *const PAUSE_ITEMS[] = {"RESUME", "RESTART", "NEW VOYAGE", "TITLE"};
 static const char *const END_ITEMS[] = {"PLAY AGAIN", "NEW VOYAGE", "TITLE"};
 
@@ -116,7 +132,7 @@ static void open_menu(App *a, MenuKind kind) {
         break;
     case MENU_TITLE:
         a->menu.items = TITLE_ITEMS;
-        a->menu.count = 3;
+        a->menu.count = 4;
         a->menu.top = a->ui.rows / 2 + 1;
         break;
     case MENU_PAUSE:
@@ -264,11 +280,11 @@ static void setting_value(const App *a, int row, char *out, int size) {
     switch (row) {
     case ROW_SEED:
         if (s->seed_mode == SEED_TYPED)
-            snprintf(out, (size_t)size, "%s", s->typed_seed);
+            snprintf(out, (size_t)size, "%s", s->typed_seed[0] ? s->typed_seed : "type a seed...");
         else if (s->seed_mode == SEED_LAST)
             snprintf(out, (size_t)size, "last: %s", a->config.last_seed[0] ? a->config.last_seed : "none yet");
         else
-            snprintf(out, (size_t)size, "a new one each time");
+            snprintf(out, (size_t)size, "random");
         break;
     case ROW_MOOD: snprintf(out, (size_t)size, "%s", s->mood < 0 ? "any" : mood_names[s->mood]); break;
     case ROW_LENGTH: snprintf(out, (size_t)size, "%s", lengths[s->length]); break;
@@ -293,10 +309,15 @@ static int wrap(int v, int n) {
 static void setting_step(App *a, int row, int dir) {
     Settings *s = &a->config.settings;
     switch (row) {
-    case ROW_SEED: s->seed_mode = (SeedMode)wrap((int)s->seed_mode + dir, s->typed_seed[0] ? SEED_MODES : SEED_TYPED); break;
-    case ROW_MOOD:
-        s->mood = wrap(s->mood + 1 + dir, MOOD_COUNT + 1) - 1;
+    case ROW_SEED: s->seed_mode = (SeedMode)wrap((int)s->seed_mode + dir, SEED_MODES); break;
+    case ROW_MOOD: {
+        static const int ORDER[MOOD_COUNT + 1] = {MOOD_ANY,     MOOD_8BIT,   MOOD_16BIT,    MOOD_AMBIENT,   MOOD_DUB,   MOOD_DUBSTEP,
+                                                  MOOD_KEYGEN, MOOD_LOFI,   MOOD_MUSICBOX, MOOD_SYNTHWAVE, MOOD_TRANCE};
+        int at = 0;
+        while (at < MOOD_COUNT && ORDER[at] != s->mood) at++;
+        s->mood = ORDER[wrap(at + dir, MOOD_COUNT + 1)];
         break;
+    }
     case ROW_LENGTH: s->length = (LengthPref)wrap((int)s->length + dir, 3); break;
     case ROW_AFTER: s->after = (AfterPiece)wrap((int)s->after + dir, AFTER_MODES); break;
     case ROW_VOLUME: s->volume = s->volume + dir < 0 ? 0 : s->volume + dir > VOLUME_STEPS ? VOLUME_STEPS : s->volume + dir; break;
@@ -316,10 +337,22 @@ static void setting_step(App *a, int row, int dir) {
     a->settings_changed = 1;
 }
 
-// Rows sit two apart when the screen has room, and pack closer inside a wide margin.
+// Rows sit two apart whenever the screen can hold them, which every margin the setting offers does, so a margin
+// moves the block a row at most. It centers, nudged up when the footer needs the room below.
 static int setting_y(const App *a, int row) {
-    int spacing = a->ui.rows >= ROW_COUNT * 2 + 8 ? 2 : 1;
-    return (a->ui.rows - (ROW_COUNT - 1) * spacing) / 2 + 1 + row * spacing;
+    int rows = a->ui.rows, spacing = rows >= ROW_COUNT * 2 + 3 ? 2 : 1, span = (ROW_COUNT - 1) * spacing;
+    int top = (rows - span) / 2 + 1;
+    if (spacing == 2 && top > rows - 3 - span) top = rows - 3 - span;
+    return top + row * spacing;
+}
+
+static int settings_heading_row(const App *a) {
+    int top = setting_y(a, 0);
+    return top >= 3 ? top - 3 : top - 2;
+}
+
+static int settings_footer_row(const App *a) {
+    return setting_y(a, ROW_COUNT - 1) + 2 <= a->ui.rows - 2 ? a->ui.rows - 2 : a->ui.rows - 1;
 }
 
 static void leave_settings(App *a, AppRequest *req) {
@@ -362,10 +395,17 @@ static void settings_frame(App *a, const AppClock *clock, const Input *in, AppRe
     }
     float pulse = 0.5f + 0.5f * msin((float)clock->wall * 4.2f);
     Rgb arrow = rgb_mix(ACCENT, MENU_LIT, pulse * 0.35f);
-    int label_col = g->cols / 2 - 22, value_col = g->cols / 2 + 2;
+    int label_col = g->cols / 2 - 22, value_col = g->cols / 2 + 2, reach = 23;
+    // The backing sits evenly about the middle: as far right as the labels reach left, unless a long seed needs more.
+    for (int row = 0; row < ROW_DONE; row++) {
+        char value[48];
+        setting_value(a, row, value, sizeof value);
+        int need = value_col + (int)strlen(value) + 4 - g->cols / 2;
+        if (need > reach) reach = need;
+    }
     // The heading gets a wider patch of quiet sky, so no stray star reads as part of it.
-    clear_behind(a, &a->scene, g->cols / 2 - 8, setting_y(a, 0) - 3, 16, 1);
-    text_center(a, &a->scene, setting_y(a, 0) - 3, "settings", ACCENT);
+    clear_behind(a, &a->scene, g->cols / 2 - 8, settings_heading_row(a), 16, 1);
+    text_center(a, &a->scene, settings_heading_row(a), "settings", ACCENT);
     for (int row = 0; row < ROW_COUNT; row++) {
         int y = setting_y(a, row), lit = row == a->setting;
         if (row == ROW_DONE) {
@@ -381,7 +421,7 @@ static void settings_frame(App *a, const AppClock *clock, const Input *in, AppRe
         }
         char value[48];
         setting_value(a, row, value, sizeof value);
-        clear_behind(a, &a->scene, label_col, y, value_col + 30 - label_col, 0);
+        clear_behind(a, &a->scene, g->cols / 2 - reach + 1, y, 2 * reach - 2, 0);
         grid_text(g, label_col, y, ROW_LABELS[row], lit ? MENU_LIT : MENU_DIM);
         grid_text(g, value_col, y, value, lit ? MENU_LIT : NOTE);
         if (lit) {
@@ -389,7 +429,7 @@ static void settings_frame(App *a, const AppClock *clock, const Input *in, AppRe
             grid_put(g, value_col + (int)strlen(value) + 1, y, '>', arrow);
         }
     }
-    text_center(a, &a->scene, g->rows - 2, a->setting == ROW_SEED ? "a  type a seed      left right  change      b  back"
+    text_center(a, &a->scene, settings_footer_row(a), a->setting == ROW_SEED ? "a  type a seed      left right  change      b  back"
                                                                   : "left right  change      a  choose      b  back",
                 FOOTER);
 }
@@ -411,6 +451,21 @@ static void keys_frame(App *a, const AppClock *clock, const Input *in, AppReques
     keyboard_extent(&a->ui, &col, &row, &w, &h);
     for (int y = row; y < row + h; y++) clear_behind(a, &a->scene, col, y, w, 0);
     keyboard_draw(&a->keys, &a->ui, clock->wall);
+}
+
+// About, over a quiet patch of sky; any button goes back to the title.
+static void about_frame(App *a, const Input *in) {
+    int lines = (int)(sizeof ABOUT_LINES / sizeof ABOUT_LINES[0]), top = (a->ui.rows - lines) / 2 - 1;
+    for (int i = 0; i < lines; i++) {
+        clear_behind(a, &a->scene, a->ui.cols / 2 - 26, top + i, 52, 0);
+        if (ABOUT_LINES[i][0]) text_center(a, &a->scene, top + i, ABOUT_LINES[i], i ? NOTE : ACCENT);
+    }
+    text_center(a, &a->scene, a->ui.rows - 2, "a  b  back", FOOTER);
+    if (in->pressed & (INPUT_CONFIRM | INPUT_BACK | INPUT_HOME)) {
+        a->state = STATE_TITLE;
+        open_menu(a, MENU_TITLE);
+        a->menu.selected = 2;
+    }
 }
 
 // The first boot's note: either answer is saved, so it never comes back.
@@ -442,6 +497,10 @@ static void title_frame(App *a, const AppClock *clock, const Input *in, Screen *
         settings_frame(a, clock, in, req);
         return;
     }
+    if (a->state == STATE_ABOUT) {
+        about_frame(a, in);
+        return;
+    }
     if (a->state == STATE_KEYS) {
         keys_frame(a, clock, in, req);
         return;
@@ -459,7 +518,7 @@ static void title_frame(App *a, const AppClock *clock, const Input *in, Screen *
     char footer[64];
     if (a->config.fixed_seed[0])
         snprintf(footer, sizeof footer, "next voyage: %s", a->config.fixed_seed);
-    else if (s->seed_mode == SEED_TYPED)
+    else if (s->seed_mode == SEED_TYPED && s->typed_seed[0])
         snprintf(footer, sizeof footer, "next voyage: %s", s->typed_seed);
     else if (s->seed_mode == SEED_LAST && a->config.last_seed[0])
         snprintf(footer, sizeof footer, "next voyage: %s", a->config.last_seed);
@@ -473,7 +532,8 @@ static void title_frame(App *a, const AppClock *clock, const Input *in, Screen *
         a->state = STATE_SETTINGS;
         a->setting = 0;
     }
-    if (chosen == 2 || (in->pressed & INPUT_HOME)) req->quit = 1;
+    if (chosen == 2) a->state = STATE_ABOUT;
+    if (chosen == 3 || (in->pressed & INPUT_HOME)) req->quit = 1;
 }
 
 static void end_card(App *a, Piece *p, float time) {
@@ -695,6 +755,7 @@ void app_frame(App *a, const AppClock *clock, const Input *in, Screen *out, AppR
         req->start_music = 1;
     }
     if (a->state == STATE_NOTICE || a->state == STATE_TITLE || a->state == STATE_SETTINGS || a->state == STATE_KEYS ||
+        a->state == STATE_ABOUT ||
         a->state == STATE_COMPOSING || !a->piece)
         title_frame(a, clock, in, out, req);
     else
