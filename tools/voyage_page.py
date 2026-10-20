@@ -17,7 +17,7 @@ import subprocess
 import sys
 
 SHELF = os.path.expanduser('~/Documents/Artifacts')
-MOOD_ORDER = ['synthwave', 'keygen', 'ambient', 'lo-fi', 'trance', 'dubstep', 'music box', 'dub']
+MOOD_ORDER = ['synthwave', 'keygen', '8-bit', '16-bit', 'ambient', 'lo-fi', 'trance', 'dubstep', 'music box', 'dub']
 FILLED = {'ROUND', 'TITLE_ART', 'TITLE', 'PAGE', 'INSTALL', 'PIECES', 'STILLS'}
 
 

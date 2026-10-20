@@ -24,9 +24,9 @@ static const FigletId TITLE_FACES[MOOD_COUNT][TITLE_CHOICES] = {
     [MOOD_TRANCE] = {FIGLET_SLANT, FIGLET_LEAN, FIGLET_BIG, FIGLET_SMSLANT, FIGLET_DOTS, FIGLET_WIRE, FIGLET_NEON,
                      FIGLET_LARRY3D, FIGLET_STELLAR, FIGLET_UNIVERS, FIGLET_COLOSSAL, FIGLET_STARWARS,
                      FIGLET_FENDER, FIGLET_DIAMOND},
-    [MOOD_JUNGLE] = {FIGLET_BIG, FIGLET_BLOCK, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_WIRE, FIGLET_SCANLINE,
-                     FIGLET_SPEED, FIGLET_GRAFFITI, FIGLET_POISON, FIGLET_EPIC, FIGLET_DOOM, FIGLET_AVATAR,
-                     FIGLET_RECTANGLES},
+    [MOOD_8BIT] = {FIGLET_PIXEL, FIGLET_SCANLINE, FIGLET_BLOCK, FIGLET_DIGITAL, FIGLET_BANNER, FIGLET_BIG, FIGLET_DOTS,
+                   FIGLET_COMPUTER, FIGLET_RECTANGLES, FIGLET_WIRE, FIGLET_DOOM, FIGLET_LARRY3D, FIGLET_AVATAR,
+                   FIGLET_EPIC},
     [MOOD_MUSICBOX] = {FIGLET_SCRIPT, FIGLET_STANDARD, FIGLET_LEAN, FIGLET_BUBBLE, FIGLET_SMSCRIPT, FIGLET_DOTS, FIGLET_NEON,
                        FIGLET_TINKER_TOY, FIGLET_PEBBLES, FIGLET_BULBHEAD, FIGLET_PUFFY, FIGLET_ROMAN, FIGLET_STELLAR,
                        FIGLET_NANCYJ},
@@ -116,7 +116,8 @@ int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const
     rng_init(&r, hash, "visuals");
     palette_family(&r, p->comp.info.mood, p->colors);
     p->palette = &p->colors[0];
-    int chunky = p->comp.info.mood == MOOD_KEYGEN && rng_chance(&r, 50);
+    // 8-bit always draws in big pixels; keygen does half the time.
+    int chunky = (p->comp.info.mood == MOOD_KEYGEN && rng_chance(&r, 50)) || p->comp.info.mood == MOOD_8BIT;
     int design = chunky ? 8 : 6, height = chunky ? 16 : 12;
     if (grid_init(&p->grid, vp, design, height) != 0 || grid_init(&p->scratch, vp, design, height) != 0) return -1;
     if (canvas_init(&p->canvas, &p->grid) != 0 || stroker_init(&p->stroker, &p->grid) != 0) return -1;

@@ -26,7 +26,7 @@ static const Entrance BURST[] = {ENTER_RADIAL, ENTER_IRIS,   ENTER_CHECKER, ENTE
                                  ENTER_PUSH,   ENTER_DOORS,  ENTER_GLITCH,  ENTER_FLIP,    ENTER_KALEIDO};
 
 static int edm(Mood m) {
-    return m == MOOD_SYNTHWAVE || m == MOOD_TRANCE || m == MOOD_KEYGEN || m == MOOD_JUNGLE || m == MOOD_DUBSTEP;
+    return m == MOOD_SYNTHWAVE || m == MOOD_TRANCE || m == MOOD_KEYGEN || m == MOOD_8BIT || m == MOOD_DUBSTEP;
 }
 
 // How many shots a section gets: each a few bars long, from about ten seconds in a quiet passage to eight and a half
@@ -140,7 +140,7 @@ static int family_of(Entrance e) {
 
 static const int FAMILY_TASTE[MOOD_COUNT][FAMILIES] = {
     [MOOD_KEYGEN] = {1, 5, 2, 2, 1},   [MOOD_AMBIENT] = {5, 1, 2, 1, 1}, [MOOD_SYNTHWAVE] = {1, 2, 3, 3, 1},
-    [MOOD_LOFI] = {4, 2, 2, 1, 2},     [MOOD_TRANCE] = {2, 1, 4, 3, 1},  [MOOD_JUNGLE] = {1, 3, 2, 4, 0},
+    [MOOD_LOFI] = {4, 2, 2, 1, 2},     [MOOD_TRANCE] = {2, 1, 4, 3, 1},  [MOOD_8BIT] = {1, 5, 3, 2, 3},
     [MOOD_MUSICBOX] = {5, 1, 2, 1, 3}, [MOOD_DUB] = {4, 1, 2, 2, 1},     [MOOD_DUBSTEP] = {1, 3, 2, 4, 0}};
 
 static Entrance pick_soft_entrance(Rng *r, Mood mood, const int used[ENTRANCES], Entrance previous) {
