@@ -48,6 +48,9 @@ typedef struct {
     void (*draw)(void *state, const Frame *f);
 } SceneKind;
 
+// Room for every kind of scene in per-kind tables; the scene table is checked against it when it compiles.
+#define MAX_SCENE_KINDS 128
+
 extern const SceneKind scene_kinds[];
 extern const int scene_kind_count;
 
@@ -131,6 +134,20 @@ SCENE(lightning)
 SCENE(dunes)
 SCENE(kelp)
 SCENE(meteors)
+SCENE(pong)
+SCENE(invaders)
+SCENE(maze)
+SCENE(halo)
+SCENE(pulsar)
+SCENE(julia)
+SCENE(koi)
+SCENE(train)
+SCENE(campfire)
+SCENE(hourglass)
+SCENE(birds)
+SCENE(planet)
+SCENE(street)
+SCENE(piano)
 #undef SCENE
 
 #endif

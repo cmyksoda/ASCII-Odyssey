@@ -467,7 +467,7 @@ static void solids_setup(void *state, Rng *r, const Frame *f) {
     s->count = rng_range(r, 1, 3);
     s->spin_x = rng_between(r, 0.2f, 0.5f);
     s->spin_y = rng_between(r, 0.3f, 0.7f);
-    s->size = rng_between(r, 0.38f, 0.55f);
+    s->size = rng_between(r, 0.45f, 0.62f);
     (void)f;
 }
 
@@ -493,7 +493,13 @@ static void solid(const Frame *f, const float (*v)[3], int nv, const int (*e)[2]
         stroke_draw(f->stroker, seg, 2, 0);
     }
     for (int i = 0; i < nv && i < 12; i++)
-        if (depth[i] < 0) put_cell(f->grid, cell_col(f->grid, px[i]), cell_row(f->grid, py[i]), 'o', color);
+        if (depth[i] < 0) put_cell(f->grid, cell_col(f->grid, px[i]), cell_row(f->grid, py[i]), depth[i] < -0.6f ? '*' : 'o', color);
+}
+
+static void solid_of(const Frame *f, int shape, float scale, float ax, float ay, float cx, Rgbf color) {
+    if (shape == 0) solid(f, CUBE, 8, CUBE_EDGES, 12, scale * 0.8f, ax, ay, cx, color);
+    if (shape == 1) solid(f, OCTA, 6, OCTA_EDGES, 12, scale * 1.2f, ax, ay, cx, color);
+    if (shape == 2) solid(f, ICOSA, 12, ICOSA_EDGES, 30, scale * 0.62f, ax, ay, cx, color);
 }
 
 static void solids_draw(void *state, const Frame *f) {
@@ -505,11 +511,15 @@ static void solids_draw(void *state, const Frame *f) {
         float offset = s->count > 1 ? ((float)i - 0.5f) * 1.1f : 0;
         float scale = s->size * (1 + kick) * (s->count > 1 ? 0.7f : 1.0f);
         Rgbf color = i ? palette_accent(f->palette, 0) : rgbf_mix(palette_ramp(f->palette, 1.0f), palette_accent(f->palette, 2), 0.35f);
-        float ax = t * s->spin_x + (float)i, ay = t * s->spin_y * (i ? -1.0f : 1.0f);
         int shape = (s->shape + i) % 3;
-        if (shape == 0) solid(f, CUBE, 8, CUBE_EDGES, 12, scale * 0.8f, ax, ay, offset, color);
-        if (shape == 1) solid(f, OCTA, 6, OCTA_EDGES, 12, scale * 1.2f, ax, ay, offset, color);
-        if (shape == 2) solid(f, ICOSA, 12, ICOSA_EDGES, 30, scale * 0.62f, ax, ay, offset, color);
+        // Two fading echoes trail each solid, the way a vector display's phosphor lingers.
+        for (int echo = 2; echo >= 0; echo--) {
+            float te = t - (float)echo * 0.09f, ax = te * s->spin_x + (float)i, ay = te * s->spin_y * (i ? -1.0f : 1.0f);
+            solid_of(f, shape, scale, ax, ay, offset, frame_dim(f, color, echo ? 0.25f + 0.15f * (float)(2 - echo) : 1.0f));
+        }
+        // A lone solid holds another inside it, turning the other way.
+        if (s->count == 1)
+            solid_of(f, (shape + 1) % 3, scale * 0.42f, -t * s->spin_x * 1.3f, -t * s->spin_y * 1.3f, offset, palette_accent(f->palette, 1));
     }
     f->fx->glow = 0.5f;
 }
@@ -552,20 +562,26 @@ static float aurora_glow(const Aurora *a, float x, float y, float t, float swell
 static void aurora_draw(void *state, const Frame *f) {
     Aurora *a = state;
     Grid *g = f->grid;
-    static const char rays[] = " .':;|!";
-    float swell = frame_pulse(f, ROLE_PAD, 1.0f, 0.25f) + frame_pulse(f, ROLE_BELL, 0.7f, 0.2f);
+    static const char rays[] = " .':;|!|";
+    // A second, fainter curtain hangs higher and folds faster, in another color.
+    Aurora b = *a;
+    b.seed += 17, b.base += 0.22f, b.amp *= 0.7f, b.k1 *= 1.3f, b.fold_k *= 1.4f, b.w1 *= -1;
+    float swell = 0.12f * msin(f->t * 0.35f) + frame_pulse(f, ROLE_PAD, 1.0f, 0.25f) + frame_pulse(f, ROLE_BELL, 0.7f, 0.2f);
     float t = f->local;
     int ground_row = cell_row(g, a->ground);
     dust_stars(f, 0xa707a, 0.03f, 0.85f);
     for (int col = 0; col < g->cols; col++) {
         float x = ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect;
         for (int row = 0; row < ground_row && row < g->rows; row++) {
-            float y = 1 - ((float)row + 0.5f) / (float)g->rows * 2, above;
-            float glow = aurora_glow(a, x, y, t, swell, &above);
-            if (glow < 0.1f) continue;
-            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.5f + 0.5f * glow), palette_accent(f->palette, 0),
-                                  smoothstep(0.15f, 0.7f, above));
-            *grid_at(g, col, row) = (Cell){(uint8_t)rays[clampi((int)(glow * 7.5f), 1, 6)], rgb_from_f(color), 0};
+            float y = 1 - ((float)row + 0.5f) / (float)g->rows * 2, above, above_b;
+            float glow = aurora_glow(a, x, y, t, swell, &above), second = aurora_glow(&b, x, y, t, swell, &above_b) * 0.75f;
+            int far = second > glow;
+            if (far) glow = second, above = above_b;
+            if (glow < 0.09f) continue;
+            Rgbf hue = palette_accent(f->palette, far ? 2 : 0);
+            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.55f + 0.45f * glow), hue, smoothstep(0.1f, 0.6f, above));
+            color = rgbf_mix(color, palette_ramp(f->palette, 1.0f), smoothstep(0.75f, 1.1f, glow) * 0.5f);
+            *grid_at(g, col, row) = (Cell){(uint8_t)rays[clampi((int)(glow * 8.5f), 1, 7)], rgb_from_f(color), 0};
         }
         // The lake below the mountains repeats the sky upside down, broken into ripples.
         for (int row = ground_row + 1; row < g->rows; row++) {
@@ -1209,7 +1225,7 @@ const SceneKind scene_kinds[] = {
     {"fire", W(2, 0, 1, 0, 1, 2, 0, 0, 3), 0.85f, 1, 0, fire_setup, fire_draw},
     {"twister", W(3, 0, 1, 0, 2, 0, 0, 0, 1), 0.7f, 1, 0, twister_setup, twister_draw},
     {"rotozoom", W(3, 0, 2, 0, 2, 1, 0, 0, 1), 0.75f, 1, 0, rotozoom_setup, rotozoom_draw},
-    {"vector balls", W(2, 0, 1, 0, 3, 0, 0, 1, 1), 0.6f, 1, 0, balls_setup, balls_draw},
+    {"vector balls", W(2, 0, 1, 0, 3, 0, 0, 1, 1), 0.6f, 1, 1, balls_setup, balls_draw},
     {"torus", W(1, 0, 2, 0, 2, 0, 0, 1, 2), 0.6f, 1, 0, torus_setup, torus_draw},
     {"spirograph", W(1, 1, 0, 0, 2, 0, 3, 1, 0), 0.45f, 1, 0, spirograph_setup, spirograph_draw},
     {"turntable", W(0, 0, 1, 3, 0, 0, 0, 3, 1), 0.3f, 0, 0, turntable_setup, turntable_draw},
@@ -1224,8 +1240,23 @@ const SceneKind scene_kinds[] = {
     {"dunes", W(0, 2, 1, 1, 0, 0, 0, 2, 0), 0.25f, 0, 0, dunes_setup, dunes_draw},
     {"kelp", W(0, 2, 0, 1, 0, 0, 1, 2, 0), 0.25f, 0, 0, kelp_setup, kelp_draw},
     {"meteors", W(0, 2, 1, 1, 1, 0, 2, 0, 0), 0.3f, 0, 0, meteors_setup, meteors_draw},
+    {"pong", W(3, 0, 1, 0, 0, 0, 0, 0, 1), 0.55f, 1, 0, pong_setup, pong_draw},
+    {"invaders", W(3, 0, 1, 0, 0, 0, 0, 0, 1), 0.7f, 1, 0, invaders_setup, invaders_draw},
+    {"maze", W(2, 0, 1, 1, 0, 0, 0, 0, 0), 0.45f, 1, 0, maze_setup, maze_draw},
+    {"halo", W(1, 1, 2, 0, 2, 0, 1, 1, 3), 0.65f, 1, 0, halo_setup, halo_draw},
+    {"pulsar", W(1, 1, 2, 1, 1, 0, 0, 3, 2), 0.5f, 1, 0, pulsar_setup, pulsar_draw},
+    {"julia", W(2, 2, 1, 0, 3, 0, 0, 1, 1), 0.4f, 0, 1, julia_setup, julia_draw},
+    {"koi", W(0, 3, 0, 2, 0, 0, 2, 1, 0), 0.25f, 0, 0, koi_setup, koi_draw},
+    {"train", W(0, 1, 2, 3, 0, 0, 0, 1, 0), 0.3f, 0, 0, train_setup, train_draw},
+    {"campfire", W(0, 2, 0, 2, 0, 0, 1, 0, 0), 0.25f, 0, 0, campfire_setup, campfire_draw},
+    {"hourglass", W(0, 1, 0, 1, 0, 0, 2, 0, 0), 0.2f, 0, 0, hourglass_setup, hourglass_draw},
+    {"birds", W(0, 2, 2, 1, 1, 0, 1, 0, 0), 0.3f, 0, 0, birds_setup, birds_draw},
+    {"planet", W(2, 2, 2, 0, 2, 0, 0, 1, 2), 0.3f, 0, 1, planet_setup, planet_draw},
+    {"rainy street", W(0, 0, 1, 3, 0, 0, 0, 2, 1), 0.3f, 0, 0, street_setup, street_draw},
+    {"piano roll", W(1, 2, 1, 2, 0, 0, 3, 1, 0), 0.45f, 1, 0, piano_setup, piano_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
+_Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS, "the scene table outgrew MAX_SCENE_KINDS");
 
 int scene_in_use(const SceneKind *k) {
     for (int m = 0; m < MOOD_COUNT; m++)

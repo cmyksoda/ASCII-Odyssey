@@ -52,15 +52,20 @@ void canvas_max(Canvas *c, int i, int j, float ink, Rgbf color) {
 }
 
 void canvas_disc(Canvas *c, float x, float y, float radius, float ink, Rgbf color) {
-    float soft = c->sx * 1.5f;
-    int i0 = (int)((x - radius - soft + c->aspect) / c->sx), i1 = (int)((x + radius + soft + c->aspect) / c->sx) + 1;
-    int j0 = (int)((1 - (y + radius + soft)) / c->sy), j1 = (int)((1 - (y - radius - soft)) / c->sy) + 1;
-    for (int j = j0 < 0 ? 0 : j0; j <= j1 && j < c->h; j++)
+    float soft = c->sx * 1.5f, inner = radius - soft * 0.5f, outer = radius + soft * 0.5f;
+    // Squared distances settle every sample but those on the soft rim without a square root.
+    float inner2 = inner > 0 ? inner * inner : 0, outer2 = outer * outer;
+    int i0 = (int)((x - outer + c->aspect) / c->sx), i1 = (int)((x + outer + c->aspect) / c->sx) + 1;
+    int j0 = (int)((1 - (y + outer)) / c->sy), j1 = (int)((1 - (y - outer)) / c->sy) + 1;
+    for (int j = j0 < 0 ? 0 : j0; j <= j1 && j < c->h; j++) {
+        float dy = canvas_y(c, j) - y;
         for (int i = i0 < 0 ? 0 : i0; i <= i1 && i < c->w; i++) {
-            float d = mhypot(canvas_x(c, i) - x, canvas_y(c, j) - y);
-            float a = 1 - smoothstep(radius - soft * 0.5f, radius + soft * 0.5f, d);
+            float dx = canvas_x(c, i) - x, d2 = dx * dx + dy * dy;
+            if (d2 >= outer2) continue;
+            float a = d2 <= inner2 ? 1 : 1 - smoothstep(inner, outer, msqrt(d2));
             if (a > 0) canvas_over(c, i, j, a * ink, color);
         }
+    }
 }
 
 void canvas_line(Canvas *c, float x0, float y0, float x1, float y1, float width, float ink, Rgbf color) {

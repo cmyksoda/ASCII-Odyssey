@@ -201,7 +201,7 @@ void rotozoom_draw(void *state, const Frame *f) {
 
 /* ---------- Vector balls ---------- */
 
-#define BALLS 96
+#define BALLS 72
 
 typedef struct {
     int from, to;
@@ -237,7 +237,7 @@ static void ball_place(int shape, int i, float out[3]) {
         break;
     }
     case 2: {
-        float a = (float)(i % 16) / 16 * TAU_F, c = (float)(i / 16) / 6 * TAU_F;
+        float a = (float)(i % 12) / 12 * TAU_F, c = (float)(i / 12) / 6 * TAU_F;
         out[0] = (0.75f + 0.3f * mcos(c)) * mcos(a), out[1] = 0.3f * msin(c), out[2] = (0.75f + 0.3f * mcos(c)) * msin(a);
         break;
     }
@@ -284,8 +284,9 @@ void balls_draw(void *state, const Frame *f) {
         Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.4f + 0.6f * near), palette_accent(f->palette, i % 3), 0.4f);
         // A ball with a lit crown: the body, then a smaller, brighter disc toward its top left.
         canvas_disc(cv, px[i], py[i], radius, 0.55f + 0.35f * near, frame_dim(f, color, 0.5f + 0.5f * near));
-        canvas_disc(cv, px[i] - radius * 0.3f, py[i] + radius * 0.3f, radius * 0.45f, 1.0f,
-                    rgbf_mix(color, palette_ramp(f->palette, 1.0f), 0.6f));
+        if (near > 0.35f)
+            canvas_disc(cv, px[i] - radius * 0.3f, py[i] + radius * 0.3f, radius * 0.45f, 1.0f,
+                        rgbf_mix(color, palette_ramp(f->palette, 1.0f), 0.6f));
     }
     frame_resolve(f);
     dust_stars(f, 0xba115, 0.004f, 0.6f);
@@ -451,4 +452,58 @@ void spirograph_draw(void *state, const Frame *f) {
     stroke_draw(f->stroker, pts, 32, 1);
     put_cell(g, cell_col(g, x), cell_row(g, y), '*', palette_ramp(f->palette, 1.0f));
     f->fx->glow = 0.6f;
+}
+
+/* ---------- Julia set ---------- */
+
+typedef struct {
+    float angle, speed, zoom, ox, oy;
+} Julia;
+
+void julia_setup(void *state, Rng *r, const Frame *f) {
+    Julia *j = state;
+    j->angle = rng_between(r, 0, TAU_F);
+    j->speed = rng_between(r, 0.025f, 0.05f) * (rng_chance(r, 50) ? 1 : -1);
+    j->zoom = rng_between(r, 1.15f, 1.5f);
+    j->ox = rng_between(r, -0.15f, 0.15f);
+    j->oy = rng_between(r, -0.1f, 0.1f);
+    (void)f;
+}
+
+#define JULIA_STEPS 26
+
+// A Julia set whose parameter circles the edge of the Mandelbrot set, so its coastlines unfurl, pinch off into
+// islands and fold back again; each band of escape speed takes the next shade.
+void julia_draw(void *state, const Frame *f) {
+    Julia *j = state;
+    Grid *g = f->grid;
+    static const char ramp[] = " .,:-=+*#%";
+    float a = j->angle + f->local * j->speed, cr = 0.7885f * mcos(a), ci = 0.7885f * msin(a);
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row) * j->zoom + j->oy;
+        for (int col = 0; col < g->cols; col++) {
+            float zr = cell_x(g, col) * j->zoom + j->ox, zi = y, m = 0;
+            int n = 0;
+            for (; n < JULIA_STEPS; n++) {
+                float r2 = zr * zr, i2 = zi * zi;
+                if (r2 + i2 > 16) {
+                    m = r2 + i2;
+                    break;
+                }
+                zi = 2 * zr * zi + ci;
+                zr = r2 - i2 + cr;
+            }
+            if (n == JULIA_STEPS) continue;
+            // A smooth count, so the bands blend instead of stepping.
+            float smooth = (float)n + 1 - mlog2(mlog2(m) * 0.5f), level = saturate(smooth / (float)JULIA_STEPS * 1.6f);
+            // Points that fly off at once stay dark, so the set's coastline stands out against open space.
+            level = saturate((level - 0.16f) / 0.84f);
+            level *= level * (3 - 2 * level);
+            int i = (int)(level * 9.99f);
+            if (i <= 0) continue;
+            Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * level), palette_accent(f->palette, (int)(smooth * 0.4f)), 0.35f);
+            put_cell(g, col, row, ramp[i], color);
+        }
+    }
+    f->fx->glow = 0.55f;
 }

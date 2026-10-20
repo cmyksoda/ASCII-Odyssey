@@ -65,7 +65,7 @@ void petals_draw(void *state, const Frame *f) {
     }
     // Petals falling: each turns over as it goes, showing a different face.
     static const char faces[] = "`.,'~-";
-    int count = g->cols * g->rows / 45;
+    int count = g->cols * g->rows / 28;
     for (int i = 0; i < count; i++) {
         uint32_t id = p->salt + (uint32_t)i * 2654435761u;
         float speed = 0.06f + 0.06f * hash01(id + 2), life = 2.2f / speed;
@@ -226,7 +226,7 @@ void lanterns_draw(void *state, const Frame *f) {
     for (int row = horizon + 1; row < g->rows; row++)
         for (int col = 0; col < g->cols; col++)
             if (hash01((uint32_t)(row * 977 + col * 131) ^ (uint32_t)(f->t * 1.5f + (float)row)) < 0.05f) put_cell(g, col, row, '-', frame_dim(f, dim, 0.6f));
-    int count = 34;
+    int count = 50;
     for (int i = 0; i < count; i++) {
         uint32_t id = l->salt + (uint32_t)i * 2246822519u;
         float depth = hash01(id), speed = l->rise * (0.5f + depth), life = (1.0f - l->water + 0.2f) / speed;
@@ -235,7 +235,7 @@ void lanterns_draw(void *state, const Frame *f) {
         float y = l->water + age * speed;
         float flicker = 0.75f + 0.25f * msin(f->t * (3 + 2 * hash01(id + 3)) + (float)i);
         int col = cell_col(g, x), row = cell_row(g, y);
-        if (depth > 0.6f) {
+        if (depth > 0.5f) {
             lantern(f, col, row, flicker, warm, paper);
             put_cell_under(g, col - 2, row, '.', frame_dim(f, warm, 0.3f * flicker));
             put_cell_under(g, col + 2, row, '.', frame_dim(f, warm, 0.3f * flicker));
@@ -436,12 +436,12 @@ void fireflies_draw(void *state, const Frame *f) {
         }
     }
     Rgbf light = palette_accent(f->palette, 1);
-    for (int i = 0; i < 64; i++) {
+    for (int i = 0; i < 96; i++) {
         uint32_t id = p->salt + (uint32_t)i * 2246822519u;
         float x = (noise_value(f->t * 0.05f + (float)i * 7.3f, 1) * 2 - 1) * g->aspect * 1.1f;
         float y = p->grass + 0.05f + noise_value(f->t * 0.04f + (float)i * 3.1f, 5) * 0.75f;
         float blink = msin(f->t * (1.2f + hash01(id) * 1.5f) + hash01(id + 1) * TAU_F);
-        if (blink < 0.2f) continue;
+        if (blink < 0.05f) continue;
         int col = cell_col(g, x), row = cell_row(g, y);
         put_cell(g, col, row, blink > 0.75f ? '*' : 'o', frame_dim(f, light, 0.4f + blink * 0.8f));
         if (blink > 0.6f) {
