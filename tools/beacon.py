@@ -69,9 +69,10 @@ def main():
             log.write(f'{stamp} {text[4:]}\n')
             log.flush()
         elif text.startswith('SHOT '):
-            _, name, w, h, n = text.split(' ')
+            # A scene's name can hold spaces ("digital rain"); its size and byte count are always the last three fields.
+            name, w, h, n = text[5:].rsplit(' ', 3)
             data = stream.read(int(n))
-            path = os.path.join(args.out, f'{name}.png')
+            path = os.path.join(args.out, f"{name.replace(' ', '-')}.png")
             yuyv_to_png(data, int(w), int(h), path)
             print(f'beacon: shot {path}', flush=True)
 

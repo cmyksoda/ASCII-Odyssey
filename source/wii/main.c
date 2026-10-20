@@ -87,7 +87,7 @@ static const Tour TOURS[] = {
     // Start on the first press, then the tracker view, then the info view.
     {"overlays", 20.0, {1.6, 9.0, 15.0}, 3, 0, "1.0:confirm,6.0:one,12.0:two"},
     // Every scene in turn over a real piece, 1.8 music seconds each (54 frames to time), with its own timings and a shot.
-    {"scenes", 200.0, {0}, 0, 1, "1.0:confirm"},
+    {"scenes", 230.0, {0}, 0, 1, "1.0:confirm"},
 };
 
 #define SCENE_SECONDS 1.8
@@ -204,7 +204,10 @@ int main(int argc, char **argv) {
     else
         config.first_boot = !tour;
     read_seed_file(last_file, config.last_seed, sizeof config.last_seed);
+    // A shot stalls the loop while it uploads, and the music plays on meanwhile, so a timing run can go without them.
+    int shots = 1;
     for (int i = 0; i < argc; i++) {
+        if (argv[i] && !strcmp(argv[i], "shots=off")) shots = 0;
         if (argv[i] && !strncmp(argv[i], "seed=", 5)) seed_normalize(argv[i] + 5, config.fixed_seed, sizeof config.fixed_seed);
         for (int m = 0; argv[i] && !strncmp(argv[i], "mood=", 5) && m < MOOD_COUNT; m++)
             if (!strcmp(argv[i] + 5, mood_names[m])) config.settings.mood = m;
@@ -310,7 +313,7 @@ int main(int argc, char **argv) {
                     scene = want;
                     shot = 0;
                 }
-                if (scene >= 0 && !shot && clock.music >= (double)(scene + 1) * SCENE_SECONDS - 0.5) {
+                if (scene >= 0 && shots && !shot && clock.music >= (double)(scene + 1) * SCENE_SECONDS - 0.5) {
                     int w, h;
                     const void *xfb = video_xfb(&w, &h);
                     beacon_shot(scene_kinds[scene].name, xfb, w, h);

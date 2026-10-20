@@ -9,7 +9,7 @@ ip=$1 dol=$2 tour=$3 out=$4
 shift 4
 port=47110
 host=$(ip -4 route get "$ip" | sed -n 's/.* src \([0-9.]*\).*/\1/p')
-python3 "$(dirname "$0")/beacon.py" --port "$port" --out "$out" --timeout 240 &
+python3 "$(dirname "$0")/beacon.py" --port "$port" --out "$out" --timeout 300 &
 listener=$!
 sleep 1
 if ! WIILOAD="tcp:$ip" "${DEVKITPRO:-/opt/devkitpro}/tools/bin/wiiload" "$dol" "beacon=$host:$port" "tour=$tour" "$@"; then
