@@ -10,7 +10,8 @@
 static const char *const NAMES[] = {
     "cut",    "dissolve", "wipe",    "diagonal", "radial", "iris",  "blinds", "checker", "spiral", "melt",
     "decode", "fade",     "push",    "doors",    "shatter", "typewriter", "swirl", "zoom", "interlace", "mosaic",
-    "slide",  "cascade",  "glitch",  "flip",     "star",   "heart", "kaleido", "tetris", "ripple"};
+    "slide",  "cascade",  "glitch",  "flip",     "star",   "heart", "kaleido", "tetris", "ripple", "halftone",
+    "pinwheel", "honeycomb", "crt"};
 _Static_assert(sizeof NAMES / sizeof NAMES[0] == ENTRANCES, "every entrance needs a name");
 const char *const *const entrance_names = NAMES;
 
@@ -18,7 +19,8 @@ static const Entrance SOFT[] = {ENTER_DISSOLVE, ENTER_WIPE,    ENTER_DIAGONAL,  
                                 ENTER_CHECKER,  ENTER_SPIRAL,  ENTER_MELT,       ENTER_DECODE,  ENTER_FADE,      ENTER_PUSH,
                                 ENTER_DOORS,    ENTER_SHATTER, ENTER_TYPEWRITER, ENTER_SWIRL,   ENTER_ZOOM,      ENTER_INTERLACE,
                                 ENTER_MOSAIC,   ENTER_SLIDE,   ENTER_CASCADE,    ENTER_GLITCH,  ENTER_FLIP,      ENTER_STAR,
-                                ENTER_HEART,    ENTER_KALEIDO, ENTER_TETRIS,     ENTER_RIPPLE};
+                                ENTER_HEART,    ENTER_KALEIDO, ENTER_TETRIS,     ENTER_RIPPLE,  ENTER_HALFTONE,  ENTER_PINWHEEL,
+                                ENTER_HONEYCOMB, ENTER_CRT};
 // A drop lands with a burst that opens from the middle or sweeps across in half a beat.
 static const Entrance BURST[] = {ENTER_RADIAL, ENTER_IRIS,   ENTER_CHECKER, ENTER_BLINDS,  ENTER_DIAGONAL,
                                  ENTER_PUSH,   ENTER_DOORS,  ENTER_GLITCH,  ENTER_FLIP,    ENTER_KALEIDO};
@@ -113,7 +115,8 @@ static int family_of(Entrance e) {
     case ENTER_FADE:
     case ENTER_MELT:
     case ENTER_SWIRL:
-    case ENTER_RIPPLE: return FAMILY_SOFT;
+    case ENTER_RIPPLE:
+    case ENTER_HALFTONE: return FAMILY_SOFT;
     case ENTER_DECODE:
     case ENTER_TYPEWRITER:
     case ENTER_CHECKER:
@@ -121,7 +124,8 @@ static int family_of(Entrance e) {
     case ENTER_INTERLACE:
     case ENTER_MOSAIC:
     case ENTER_GLITCH:
-    case ENTER_TETRIS: return FAMILY_DIGITAL;
+    case ENTER_TETRIS:
+    case ENTER_CRT: return FAMILY_DIGITAL;
     case ENTER_PUSH:
     case ENTER_SHATTER:
     case ENTER_ZOOM:
@@ -302,6 +306,28 @@ static float reveal_key(Entrance how, int direction, int col, int row, const Gri
         float fill = mhypot(dx, dy) / reach / heart_reach(matan2(-dy, dx)) / heart_cover(g->aspect);
         return fill * 0.94f + h * 0.06f;
     }
+    case ENTER_HALFTONE: {
+        // A printer's screen of dots at 45 degrees, each growing from its middle until they merge, the middle first.
+        float u = (dx + dy) * 0.7071f / 0.12f, v = (dx - dy) * 0.7071f / 0.12f;
+        return mhypot(mfract(u) - 0.5f, mfract(v) - 0.5f) / 0.7071f * 0.78f + mhypot(dx, dy) / reach * 0.17f + h * 0.05f;
+    }
+    case ENTER_PINWHEEL: {
+        // Four to seven blades fanning open round the middle, their tips trailing a little.
+        float a = (matan2(dy, dx) + PI_F) / TAU_F * (float)(4 + direction);
+        return mfract(direction & 1 ? -a : a) * 0.82f + mhypot(dx, dy) / reach * 0.12f + h * 0.06f;
+    }
+    case ENTER_HONEYCOMB: {
+        // Whole hexagons of a honeycomb pop in, a wave of them spreading from the middle with a little shuffle.
+        float s = 0.07f, fq = (0.57735f * dx - 0.33333f * dy) / s, fr = 0.66667f * dy / s, fs = -fq - fr;
+        float q = mfloor(fq + 0.5f), r = mfloor(fr + 0.5f), t = mfloor(fs + 0.5f);
+        float eq = mabs(q - fq), er = mabs(r - fr), et = mabs(t - fs);
+        if (eq > er && eq > et)
+            q = -r - t;
+        else if (er > et)
+            r = -q - t;
+        float hx = s * 1.7320508f * (q + r * 0.5f), hy = s * 1.5f * r;
+        return mhypot(hx, hy) / reach * 0.8f + hash01((uint32_t)((int)q * 92821 + (int)r * 68917)) * 0.2f;
+    }
     default: return h;
     }
 }
@@ -363,7 +389,8 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
     case ENTER_FLIP:
     case ENTER_KALEIDO:
     case ENTER_TETRIS:
-    case ENTER_RIPPLE: break;
+    case ENTER_RIPPLE:
+    case ENTER_CRT: break;
     default: return 0;
     }
     memcpy(incoming, to->cells, sizeof(Cell) * (size_t)n);
@@ -495,6 +522,17 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
                 }
                 break;
             }
+            case ENTER_CRT: {
+                // An old television warming up: a dot of the new picture stretches into a line across the middle, and
+                // the line opens out into the whole picture, squashed at first and filling out as it grows.
+                float wide = saturate(p / 0.3f), tall = saturate((p - 0.3f) / 0.7f), half_h = 0.5f + tall * (cy - 0.5f);
+                float ox = (float)col + 0.5f - cx, oy = (float)row + 0.5f - cy;
+                if (wide > 0 && mabs(ox) <= wide * cx && mabs(oy) <= half_h)
+                    *dst = *cell_or_blank(in, to, (int)mfloor(cx + ox / wide), (int)mfloor(cy + oy * cy / half_h));
+                else
+                    *dst = before[row * cols + col];
+                break;
+            }
             default: *dst = in[row * cols + col]; break;
             }
         }
@@ -546,7 +584,8 @@ static Entrance still_entrance(Entrance how) {
     case ENTER_SLIDE: return ENTER_WIPE;
     case ENTER_CASCADE:
     case ENTER_TETRIS: return ENTER_MELT;
-    case ENTER_RIPPLE: return ENTER_RADIAL;
+    case ENTER_RIPPLE:
+    case ENTER_CRT: return ENTER_RADIAL;
     case ENTER_FLIP: return ENTER_BLINDS;
     default: return how;
     }

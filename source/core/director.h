@@ -36,6 +36,10 @@ typedef enum {
     ENTER_KALEIDO,
     ENTER_TETRIS,
     ENTER_RIPPLE,
+    ENTER_HALFTONE,
+    ENTER_PINWHEEL,
+    ENTER_HONEYCOMB,
+    ENTER_CRT,
     ENTRANCES
 } Entrance;
 
