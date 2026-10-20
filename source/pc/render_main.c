@@ -241,13 +241,27 @@ static int piece_video(Piece *p, const char *path, int fps, int scale, int wide)
     return rc;
 }
 
-// What the voyage page shows about a piece: its facts, its palettes, its sections, and its shots with their scenes.
+// The title faces by FigletId, for the info file.
+static const char *const FACE_NAMES[] = {"standard", "slant",  "small",    "big",      "block",   "lean",   "script",
+                                         "shadow",   "banner", "bubble",   "digital",  "smscript", "smshadow", "smslant",
+                                         "pixel",    "dots",   "wire",     "scanline", "neon"};
+_Static_assert(sizeof FACE_NAMES / sizeof FACE_NAMES[0] == FIGLET_FONTS, "every title face needs a name");
+
+static const char *face_name(const FigletFont *font) {
+    for (int k = 0; font && k < FIGLET_FONTS; k++)
+        if (figlet_font((FigletId)k) == font) return FACE_NAMES[k];
+    return "none";
+}
+
+// What the voyage page shows about a piece: its facts, its title's face, its palettes, its sections, and its shots
+// with their scenes.
 static void piece_info(const Piece *p, const char *path) {
     FILE *f = fopen(path, "w");
     if (!f) return;
     const SongInfo *info = &p->comp.info;
-    fprintf(f, "{\"title\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, ", info->title,
-            mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale], info->bpm, info->length);
+    fprintf(f, "{\"title\": \"%s\", \"face\": \"%s\", \"mood\": \"%s\", \"key\": \"%s %s\", \"bpm\": %d, \"length\": %.2f, ",
+            info->title, face_name(p->art_font), mood_names[info->mood], note_names[info->key.tonic], scale_names[info->key.scale],
+            info->bpm, info->length);
     fprintf(f, "\"palettes\": [");
     for (int i = 0; i < PALETTE_FAMILY; i++) fprintf(f, "%s\"%s\"", i ? ", " : "", p->direction.palettes[i]->name);
     fprintf(f, "], \"sections\": [");

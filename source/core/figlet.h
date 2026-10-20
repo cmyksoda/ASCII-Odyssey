@@ -33,6 +33,9 @@ typedef enum {
     FIGLET_SMSLANT,
     FIGLET_PIXEL,
     FIGLET_DOTS,
+    FIGLET_WIRE,
+    FIGLET_SCANLINE,
+    FIGLET_NEON,
     FIGLET_FONTS
 } FigletId;
 

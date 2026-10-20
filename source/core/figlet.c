@@ -18,10 +18,10 @@ enum {
 
 extern const unsigned char flf_standard[], flf_slant[], flf_small[], flf_big[], flf_block[], flf_lean[], flf_script[],
     flf_shadow[], flf_banner[], flf_bubble[], flf_digital[], flf_smscript[], flf_smshadow[], flf_smslant[], flf_pixel[],
-    flf_dots[];
+    flf_dots[], flf_wire[], flf_scanline[], flf_neon[];
 extern const unsigned int flf_standard_size, flf_slant_size, flf_small_size, flf_big_size, flf_block_size, flf_lean_size,
     flf_script_size, flf_shadow_size, flf_banner_size, flf_bubble_size, flf_digital_size, flf_smscript_size,
-    flf_smshadow_size, flf_smslant_size, flf_pixel_size, flf_dots_size;
+    flf_smshadow_size, flf_smslant_size, flf_pixel_size, flf_dots_size, flf_wire_size, flf_scanline_size, flf_neon_size;
 
 static char *next_line(char **cursor) {
     char *line = *cursor;
@@ -176,11 +176,13 @@ const FigletFont *figlet_font(FigletId id) {
     static int loaded[FIGLET_FONTS];
     static const unsigned char *const data[] = {
         flf_standard, flf_slant,   flf_small,    flf_big,      flf_block,   flf_lean,  flf_script, flf_shadow,
-        flf_banner,   flf_bubble,  flf_digital,  flf_smscript, flf_smshadow, flf_smslant, flf_pixel, flf_dots};
+        flf_banner,   flf_bubble,  flf_digital,  flf_smscript, flf_smshadow, flf_smslant, flf_pixel, flf_dots,
+        flf_wire,     flf_scanline, flf_neon};
     const unsigned int sizes[] = {
         flf_standard_size, flf_slant_size,   flf_small_size,    flf_big_size,      flf_block_size,   flf_lean_size,
         flf_script_size,   flf_shadow_size,  flf_banner_size,   flf_bubble_size,   flf_digital_size, flf_smscript_size,
-        flf_smshadow_size, flf_smslant_size, flf_pixel_size,    flf_dots_size};
+        flf_smshadow_size, flf_smslant_size, flf_pixel_size,    flf_dots_size,    flf_wire_size,    flf_scanline_size,
+        flf_neon_size};
     _Static_assert(sizeof data / sizeof data[0] == FIGLET_FONTS, "every face needs its data");
     _Static_assert(sizeof sizes / sizeof sizes[0] == FIGLET_FONTS, "every face needs its size");
     if (id < 0 || id >= FIGLET_FONTS) id = FIGLET_STANDARD;
