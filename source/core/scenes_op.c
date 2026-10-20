@@ -59,7 +59,7 @@ void vortex_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // A checkerboard wrapped round a point and zooming into it forever: tiles swell as they reach the edge and dwindle to
-// nothing in the dark eye at the heart, spiralling when the board is twisted. Kicks lunge it forward, and snares spin a
+// nothing in the dark eye at the heart, spiraling when the board is twisted. Kicks lunge it forward, and snares spin a
 // dartboard's rings.
 void vortex_draw(void *state, const Frame *f) {
     Vortex *v = state;
@@ -367,7 +367,7 @@ void truchet_draw(void *state, const Frame *f) {
                 for (int c = 0; c < tr->size; c++) {
                     int col = tx * tr->size + c, row = ty * tall + r;
                     if (col >= g->cols || row >= g->rows) continue;
-                    // Within the tile, u runs right and v runs up; the arcs are centred on two opposite corners.
+                    // Within the tile, u runs right and v runs up; the arcs are centered on two opposite corners.
                     float u = ((float)c + 0.5f) / (float)tr->size, v = 1 - ((float)r + 0.5f) / (float)tall;
                     float ax = turned ? 1.0f : 0.0f, du1 = u - ax, dv1 = v, du2 = u - (1 - ax), dv2 = v - 1;
                     float d1 = mhypot(du1, dv1), d2 = mhypot(du2, dv2);
@@ -569,7 +569,7 @@ void cafewall_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-// The cafe wall illusion: courses of light and dark tiles with grey mortar between, each course shifted against the
+// The cafe wall illusion: courses of light and dark tiles with gray mortar between, each course shifted against the
 // next, so perfectly level rows seem to slope. The courses slide to and fro in a wave, so the slopes seem to breathe
 // and flip; each kick nudges them along.
 void cafewall_draw(void *state, const Frame *f) {
@@ -724,7 +724,7 @@ void gems_draw(void *state, const Frame *f) {
             }
             float off = mabs(r - ring) / 0.06f, halo = off < 1 ? (1 - off * off) * (1 - off * off) : 0;
             if (halo > best) best = halo, which = 2;
-            // A faint glass ground fills each hexagon, and neighbouring hexagons take the colors in turn.
+            // A faint glass ground fills each hexagon, and neighboring hexagons take the colors in turn.
             best = mmax(best, 0.14f + 0.1f * (1 - r));
             int turn = ((int)(qx - qz) % 3 + 3) % 3, i = (int)(saturate(best) * 8.99f);
             if (i <= 0) continue;
@@ -751,7 +751,7 @@ void tiletwist_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-// A grid of squares, each turning the opposite way to its neighbours, so star-shaped gaps open between them and close
+// A grid of squares, each turning the opposite way to its neighbors, so star-shaped gaps open between them and close
 // again; the turning spreads outward from the middle in a wave, and every kick gives it a push.
 void tiletwist_draw(void *state, const Frame *f) {
     TileTwist *w = state;
@@ -760,7 +760,7 @@ void tiletwist_draw(void *state, const Frame *f) {
     chord_inks(f, inks);
     float contrast = frame_contrast(f), pace = frame_pace(f), s = w->size;
     float t = (f->local * w->speed + frame_surge(f, ROLE_KICK, 0.25f, 0.6f)) * pace;
-    // Every tile's turn, worked out once: the grid is TILES_ACROSS by TILES_DOWN, centred on the screen.
+    // Every tile's turn, worked out once: the grid is TILES_ACROSS by TILES_DOWN, centered on the screen.
     static float tc[TILES_DOWN][TILES_ACROSS], ts[TILES_DOWN][TILES_ACROSS];
     int half_x = TILES_ACROSS / 2, half_y = TILES_DOWN / 2;
     for (int ty = 0; ty < TILES_DOWN; ty++)
@@ -808,7 +808,7 @@ void limit_setup(void *state, Rng *r, const Frame *f) {
     // The tiles' mirrors: the x axis, the line at angle a, and a circle square to the rim meeting that line at pi / q.
     float d2 = cq * cq / (cq * cq - sa * sa), x = 1 / msqrt(d2);
     c->cos_a = mcos(a), c->sin_a = sa, c->center = msqrt(d2), c->radius2 = d2 - 1, c->radius = msqrt(d2 - 1);
-    // One hop carries the middle of a polygon onto its neighbour's, 2 atanh(1 / center) away.
+    // One hop carries the middle of a polygon onto its neighbor's, 2 atanh(1 / center) away.
     c->step = mlog2((1 + x) / (1 - x)) * 0.6931472f;
     c->odd = pq[0] & 1;
     c->spin = rng_between(r, 0.04f, 0.1f) * (rng_chance(r, 50) ? 1 : -1);
@@ -830,7 +830,7 @@ void limit_draw(void *state, const Frame *f) {
     float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
     float travel = (frame_travel(f, c->speed * 0.5f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.8f)) * pace;
     int hops = mfloor_i(travel / c->step);
-    // An odd polygon's neighbour sits half a turn round from it, so the view turns with each hop and never jumps.
+    // An odd polygon's neighbor sits half a turn round from it, so the view turns with each hop and never jumps.
     float turn = f->local * c->spin * pace + (c->odd && (hops & 1) ? PI_F : 0), ct = mcos(turn), st = msin(turn);
     float a = mtanh((travel - (float)hops * c->step) * 0.5f), radius = 0.97f, cw = 2 * g->aspect / (float)g->cols;
     if (!c->half) dust_stars(f, c->salt, 0.003f, 0.35f);
@@ -1033,7 +1033,7 @@ void ktunnel_draw(void *state, const Frame *f) {
         float y = cell_y(g, row);
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), r = mhypot(x, y) + 0.001f, depth = k->depth / r + travel;
-            // Folded between two mirrors: across each wedge and back, so every wedge mirrors its neighbours.
+            // Folded between two mirrors: across each wedge and back, so every wedge mirrors its neighbors.
             float s = (matan2(y, x) + turn + depth * k->twist) / wedge;
             s -= 2 * mfloor(s * 0.5f);
             if (s > 1) s = 2 - s;

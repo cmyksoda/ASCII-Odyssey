@@ -8,7 +8,7 @@
 // Notes the keyboard asks the platform to chime: key presses climb a pentatonic scale.
 enum { CHIME_NONE = -1, CHIME_KEYS = 10, CHIME_DELETE = CHIME_KEYS, CHIME_DICE, CHIME_DONE, CHIME_COUNT };
 
-typedef enum { KEYS_OPEN, KEYS_DONE, KEYS_CANCELLED } KeysState;
+typedef enum { KEYS_OPEN, KEYS_DONE, KEYS_CANCELED } KeysState;
 
 typedef struct {
     char text[SEED_MAX + 1];

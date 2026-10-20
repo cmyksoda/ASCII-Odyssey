@@ -173,7 +173,7 @@ static int press(Keyboard *k, uint64_t entropy) {
         seed_random(entropy, k->text, sizeof k->text);
         k->len = (int)strlen(k->text);
         return CHIME_DICE;
-    case ACTION_CANCEL: k->state = KEYS_CANCELLED; return CHIME_NONE;
+    case ACTION_CANCEL: k->state = KEYS_CANCELED; return CHIME_NONE;
     default: finish(k); return CHIME_DONE;
     }
 }
@@ -209,7 +209,7 @@ int keyboard_update(Keyboard *k, const Input *in, const Grid *ui, uint64_t entro
         if (k->len)
             chime = erase(k) ? CHIME_DELETE : CHIME_NONE;
         else
-            k->state = KEYS_CANCELLED;
+            k->state = KEYS_CANCELED;
     }
     if (in->pressed & INPUT_PAUSE) {
         finish(k);

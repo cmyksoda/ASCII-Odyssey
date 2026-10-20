@@ -167,7 +167,7 @@ void cassette_draw(void *state, const Frame *f) {
             line(f, x + mcos(a) * 0.025f, wy + msin(a) * 0.025f, x + mcos(a) * 0.065f, wy + msin(a) * 0.065f, hub);
         }
     }
-    // The tape's run from the left pack down past the head and up onto the right one, marks on it travelling at the
+    // The tape's run from the left pack down past the head and up onto the right one, marks on it traveling at the
     // tape's speed.
     StrokePoint run[4] = {{-w * 0.48f - (0.26f - 0.17f * progress), wy, tape}, {-w * 0.8f, -h * 0.7f, tape},
                           {w * 0.8f, -h * 0.7f, tape}, {w * 0.48f + 0.09f + 0.17f * progress, wy, tape}};

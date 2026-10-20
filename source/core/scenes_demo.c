@@ -353,7 +353,7 @@ void torus_draw(void *state, const Frame *f) {
             stroke_draw(f->stroker, pts, 48, 1);
         }
     } else {
-        // A (p, q) knot, with two thinner strands spiralling round it.
+        // A (p, q) knot, with two thinner strands spiraling round it.
         float pk = 2, qk = t->form == 1 ? 3.0f : 5.0f;
         for (int strand = 0; strand < 3; strand++) {
             for (int k = 0; k < 96; k++) {
