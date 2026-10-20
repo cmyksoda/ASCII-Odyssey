@@ -18,7 +18,7 @@ import sys
 
 SHELF = os.path.expanduser('~/Documents/Artifacts')
 MOOD_ORDER = ['synthwave', 'keygen', 'ambient', 'lo-fi', 'trance', 'dubstep', 'music box', 'dub']
-FILLED = {'ROUND', 'TITLE_ART', 'TITLE', 'PAGE', 'INSTALL', 'PIECES', 'FACES'}
+FILLED = {'ROUND', 'TITLE_ART', 'TITLE', 'PAGE', 'INSTALL', 'PIECES', 'STILLS'}
 
 
 def figlet(text, font):
@@ -77,24 +77,27 @@ def card(p, page):
 </article>'''
 
 
-def faces(render_dir, media, page):
-    # Title faces rendered on their own, each writing the same seed, so she can keep or drop them one by one.
-    folder = os.path.join(render_dir, 'faces')
+def stills(render_dir, media, page):
+    # Pictures to keep or drop one by one, like title faces or a palette in other voyages, captioned from stills.json.
+    folder = os.path.join(render_dir, 'stills')
     if not os.path.isdir(folder):
         return ''
-    os.makedirs(os.path.join(media, 'faces'), exist_ok=True)
+    listed = os.path.join(folder, 'stills.json')
+    shown = json.load(open(listed)) if os.path.exists(listed) else [
+        {'file': n, 'caption': n[:-4]} for n in sorted(os.listdir(folder)) if n.endswith('.jpg')]
+    os.makedirs(os.path.join(media, 'stills'), exist_ok=True)
     cards = []
-    for name in sorted(n[:-4] for n in os.listdir(folder) if n.endswith('.jpg')):
-        shutil.copyfile(os.path.join(folder, f'{name}.jpg'), os.path.join(media, 'faces', f'{name}.jpg'))
-        label = html.escape(name)
+    for still in shown:
+        shutil.copyfile(os.path.join(folder, still['file']), os.path.join(media, 'stills', still['file']))
+        name, caption = html.escape(still['file'][:-4]), html.escape(still['caption'])
         cards.append(f'''
-    <figure class="face" data-face="{label}">
-      <img src="{page}/faces/{label}.jpg" alt="A title written in {label}" loading="lazy" width="640" height="480">
+    <figure class="still" data-still="{name}">
+      <img src="{page}/stills/{html.escape(still['file'])}" alt="{caption}" loading="lazy" width="640" height="480">
       <figcaption>
-        <span>{label}</span>
-        <span class="react" role="group" aria-label="Keep {label}?">
+        <span>{caption}</span>
+        <span class="react" role="group" aria-label="Keep this one?">
           <button type="button" data-reaction="love">Love it</button>
-          <button type="button" data-reaction="drop">Drop it</button>
+          <button type="button" data-reaction="no">Not quite</button>
         </span>
       </figcaption>
     </figure>''')
@@ -140,7 +143,7 @@ def main():
     page = page.replace('{{TITLE}}', html.escape(title)).replace('{{PAGE}}', page_name)
     page = page.replace('{{INSTALL}}', INSTALL.format(zip=html.escape(os.path.basename(package))) if package else WAITING)
     page = page.replace('{{PIECES}}', '\n'.join(card(p, page_name) for p in pieces))
-    page = page.replace('{{FACES}}', faces(render_dir, media, page_name))
+    page = page.replace('{{STILLS}}', stills(render_dir, media, page_name))
     with open(os.path.join(SHELF, page_name + '.html'), 'w') as f:
         f.write(page)
     subprocess.run([os.path.join(SHELF, 'refresh-index.py')], check=False, cwd=SHELF)
