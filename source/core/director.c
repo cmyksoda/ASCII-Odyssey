@@ -422,7 +422,8 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
             case ENTER_MOSAIC: {
                 // The old picture coarsens into blocks, and the new one sharpens back out of them.
                 float coarse = 1 - mabs(2 * p - 1);
-                int bw = 1 + (int)(coarse * 10), bh = 1 + (int)(coarse * 7);
+                // Blocks as tall as they are wide on screen, given the cells' shape.
+                int bw = 1 + (int)(coarse * 10), bh = 1 + (int)(coarse * 10 * (float)to->cell_w * to->pixel_aspect / (float)to->cell_h);
                 *dst = *cell_or_blank(p < 0.5f ? before : in, to, col / bw * bw + bw / 2, row / bh * bh + bh / 2);
                 break;
             }
