@@ -56,6 +56,17 @@ static int title_fits(Piece *p, const FigletFont *font, const char *text, int sp
     return p->art_font != NULL;
 }
 
+// Whether a face fills its letters with dense glyphs, rather than drawing them in thin strokes that wash out on paper.
+static int filled_face(const FigletFont *f) {
+    static const char DENSE[] = "#@$%&8BMWNQHKXDOGR0=[]";
+    int ink = 0, dense = 0;
+    for (int c = 'A'; c <= 'Z'; c++)
+        for (int r = 0; r < f->height; r++)
+            for (const char *s = f->rows[c - 32][r]; s && *s; s++)
+                if (*s != ' ' && *s != f->hardblank) ink++, dense += strchr(DENSE, *s) != NULL;
+    return dense * 4 >= ink;
+}
+
 static void layout_title(Piece *p, Rng *r) {
     const FigletId *own = TITLE_FACES[p->comp.info.mood];
     int first = rng_range(r, 0, TITLE_CHOICES);
@@ -65,6 +76,10 @@ static void layout_title(Piece *p, Rng *r) {
     fonts[TITLE_CHOICES] = FIGLET_STANDARD, fonts[TITLE_CHOICES + 1] = FIGLET_SLANT, fonts[TITLE_CHOICES + 2] = FIGLET_SMALL;
     char upper[SEED_MAX * 3 + 1];
     title_text(p, upper);
+    // On a light ground the mood's filled faces get the first try; failing those, the usual order below.
+    if (p->palette->light)
+        for (int i = 0; i < TITLE_CHOICES; i++)
+            if (filled_face(figlet_font(fonts[i])) && title_fits(p, figlet_font(fonts[i]), upper, 0)) return;
     // Words stay whole in every face, wrapping onto more lines when a face is too wide for one; only a typed word
     // too long for any line at all is broken, and then in the plain faces.
     for (int split = 0; split < 2; split++)
@@ -203,6 +218,15 @@ static void title_card(Piece *p, float t) {
     // their letters.
     float reveal = (1 + band) * smoothstep(in, in + 1.6f, t), vanish = smoothstep(hold, out, t);
     Rgbf pearl = palette_ramp(p->palette, 1.0f), gold = palette_accent(p->palette, 1);
+    // On a light ground the title shades toward its darkest accent instead, part way to the ink, so no line of it
+    // fades into the paper.
+    if (p->palette->light) {
+        for (int i = 0; i < 3; i++) {
+            Rgbf a = palette_accent(p->palette, i);
+            if (0.21f * a.r + 0.72f * a.g + 0.07f * a.b < 0.21f * gold.r + 0.72f * gold.g + 0.07f * gold.b) gold = a;
+        }
+        gold = rgbf_mix(gold, pearl, 0.35f);
+    }
     // A wrapped title centers and shades each line on its own, so every line looks like a title of one line.
     for (int l = 0; l < lay->lines; l++) {
         int w = lay->wide[l], tall = lay->tall[l], top = lay->top[l], shift = (lay->width - w) / 2;

@@ -67,7 +67,8 @@ void platformer_draw(void *state, const Frame *f) {
         int hill = (int)((3 + 2.5f * msin(wx * 0.07f + (float)(p->salt % 31)) + 1.5f * msin(wx * 0.19f)) * tall);
         for (int y = 0; y < hill; y++) put_cell_under(g, col, floor_row - 2 - y, y == hill - 1 ? '^' : ':', frame_dim(f, ground, 0.55f));
     }
-    // The ground itself, with question blocks over some flat stretches and coins over every leap.
+    // The ground itself, with question blocks over some flat stretches and coins over every leap. The hero takes
+    // each coin as it reaches it, leaving a sparkle for a moment.
     int coins = 0;
     for (int col = 0; col < g->cols; col++) {
         int wc = (int)(scroll + (float)col), h = ground_at(p, wc), s = wc / STRETCH, at = wc % STRETCH;
@@ -82,7 +83,10 @@ void platformer_draw(void *state, const Frame *f) {
             float u = (float)(at - 1) / 10.0f;
             int y = floor_row - 1 - (int)(7 * 4 * u * (1 - u));
             static const char spin[4] = {'o', 'O', '0', 'O'};
-            put_cell(g, col, y, spin[(int)(f->t * 8 + (float)wc) & 3], coin);
+            if (col > hx)
+                put_cell(g, col, y, spin[(int)(f->t * 8 + (float)wc) & 3], coin);
+            else if (col >= hx - 3)
+                put_cell(g, col, y - 1, col == hx ? '*' : '+', frame_dim(f, coin, (float)(col - hx + 4) / 4.0f));
         }
     }
     // Where the hero is in the air: one arc over the feature ahead, or a small hop on the kick.
