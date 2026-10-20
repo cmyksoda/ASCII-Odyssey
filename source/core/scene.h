@@ -152,6 +152,13 @@ SCENE(reels)
 SCENE(palms)
 SCENE(slitscan)
 SCENE(carousel)
+SCENE(vortex)
+SCENE(spiral)
+SCENE(opart)
+SCENE(mirror)
+SCENE(moire)
+SCENE(truchet)
+SCENE(squares)
 #undef SCENE
 
 #endif
