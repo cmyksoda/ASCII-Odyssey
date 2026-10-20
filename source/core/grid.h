@@ -55,8 +55,6 @@ int grid_init(Grid *g, const Viewport *vp, int design_w, int cell_h);
 void grid_free(Grid *g);
 void grid_clear(Grid *g);
 void grid_put(Grid *g, int col, int row, int glyph, Rgb fg);
-// Writes only over blank cells, for stars and sparks that sit behind the picture.
-void grid_put_under(Grid *g, int col, int row, int glyph, Rgb fg);
 int grid_text(Grid *g, int col, int row, const char *text, Rgb fg);
 // Where text w cells wide starts so it sits centered; when the grid can only fit it half a cell off, the caller
 // nudges the cells it draws.
@@ -91,7 +89,5 @@ static inline Rgbf rgbf_add(Rgbf a, Rgbf b) {
 Rgb rgb_from_f(Rgbf c);
 Rgb rgb_mix(Rgb a, Rgb b, float t);
 Rgb rgb_scale(Rgb c, float k);
-Rgb rgb_add(Rgb a, Rgb b);
-Rgb rgb_hex(uint32_t hex);
 
 #endif

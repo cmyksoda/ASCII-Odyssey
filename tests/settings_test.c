@@ -1,19 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Settings survive a trip through settings.txt, and a damaged file falls back to defaults.
+#include "check.h"
 #include "core/settings.h"
 
 #include <stdio.h>
 #include <string.h>
-
-static int failures;
-
-#define CHECK(cond)                                                                                                    \
-    do {                                                                                                               \
-        if (!(cond)) {                                                                                                 \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
 
 static void round_trip(void) {
     Settings a, b;

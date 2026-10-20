@@ -85,13 +85,11 @@ typedef struct {
     int top[FIGLET_LINES], wide[FIGLET_LINES], tall[FIGLET_LINES];
 } FigletLayout;
 
-int figlet_load(FigletFont *f, const unsigned char *flf, unsigned int size);
 const FigletFont *figlet_font(FigletId id);
 const char *figlet_name(FigletId id);
 // Lays text out like the figlet command with no width limit. out holds height rows of stride max_w; returns the width
 // used, or -1 if it didn't fit.
 int figlet_render(const FigletFont *f, const char *text, char *out, int max_w);
-int figlet_width(const FigletFont *f, const char *text);
 // Lays text out over up to FIGLET_LINES lines a row apart into max_h rows of out: words fill each line while it stays
 // within max_w, and with split set, a word too wide for a line of its own is broken across lines. Returns 0, or -1.
 int figlet_wrap(const FigletFont *f, const char *text, int max_w, int max_h, int split, char *out, int stride,

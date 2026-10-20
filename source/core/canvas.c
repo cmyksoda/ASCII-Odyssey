@@ -32,7 +32,8 @@ void canvas_clear(Canvas *c) {
     memset(c->color, 0, sizeof(Rgbf) * c->w * c->h);
 }
 
-void canvas_over(Canvas *c, int i, int j, float ink, Rgbf color) {
+// Paints ink over what is there, the way a translucent layer would.
+static void canvas_over(Canvas *c, int i, int j, float ink, Rgbf color) {
     if (i < 0 || j < 0 || i >= c->w || j >= c->h || ink <= 0) return;
     int k = j * c->w + i;
     if (ink > 1) ink = 1;

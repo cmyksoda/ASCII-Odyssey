@@ -1,20 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Every title face loads, draws only glyphs the font atlas has, lays out like the figlet command, and wraps a long
 // title inside the rows it's given.
+#include "check.h"
 #include "core/figlet.h"
 
 #include <stdio.h>
 #include <string.h>
-
-static int failures;
-
-#define CHECK(cond)                                                                                                    \
-    do {                                                                                                               \
-        if (!(cond)) {                                                                                                 \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
 
 static void every_face_loads_with_printable_glyphs(void) {
     for (int id = 0; id < FIGLET_FONTS; id++) {

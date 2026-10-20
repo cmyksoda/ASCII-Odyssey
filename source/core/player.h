@@ -31,7 +31,6 @@ typedef struct {
     float volume, pan, pitch, target_pitch, cutoff, wobble;
     uint8_t porta, vibrato_speed, vibrato_depth, slide, arpeggio, retrigger;
     float vibrato_phase;
-    int retrigger_count;
     PatternCell cell;
     Voice *voice;
 } Channel;
@@ -68,7 +67,5 @@ void player_free(Player *p);
 // Interleaved stereo; returns fewer frames than asked once the song and its tails have finished.
 int player_render(Player *p, float *out, int frames);
 double player_seconds(const Player *p);
-// The global row being played: order * 64 + row.
-int player_row(const Player *p);
 
 #endif

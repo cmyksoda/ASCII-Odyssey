@@ -67,10 +67,6 @@ int beacon_start(int argc, char **argv) {
     return 0;
 }
 
-int beacon_active(void) {
-    return sock >= 0;
-}
-
 const char *beacon_tour(void) {
     return tour;
 }

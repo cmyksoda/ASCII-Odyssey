@@ -51,7 +51,7 @@ static const char *const ABOUT_LINES[] = {"how a voyage is made",
 static const char *const PAUSE_ITEMS[] = {"RESUME", "RESTART", "NEW VOYAGE", "TITLE"};
 static const char *const END_ITEMS[] = {"PLAY AGAIN", "NEW VOYAGE", "TITLE"};
 
-typedef enum {
+enum {
     ROW_SEED,
     ROW_MOOD,
     ROW_LENGTH,
@@ -64,7 +64,7 @@ typedef enum {
     ROW_SAVE,
     ROW_DONE,
     ROW_COUNT
-} SettingRow;
+};
 
 static const char *const ROW_LABELS[ROW_COUNT] = {"seed", "genre", "length", "after a voyage", "volume",
                                                  "reduce flashing", "reduce motion", "glow", "screen margin",

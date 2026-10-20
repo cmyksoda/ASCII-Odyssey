@@ -27,8 +27,6 @@ static inline float canvas_y(const Canvas *c, int j) {
     return 1 - ((float)j + 0.5f) * c->sy;
 }
 
-// Paints ink over what is there, the way a translucent layer would.
-void canvas_over(Canvas *c, int i, int j, float ink, Rgbf color);
 // Keeps the stronger of the two inks.
 void canvas_max(Canvas *c, int i, int j, float ink, Rgbf color);
 void canvas_disc(Canvas *c, float x, float y, float radius, float ink, Rgbf color);

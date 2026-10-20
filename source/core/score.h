@@ -35,7 +35,6 @@ const ScoreEvent *score_last(const Score *s, Role role, float t);
 int score_count(const Score *s, Role role, float from, float to);
 const Section *score_section(const Score *s, float t);
 const ChordMark *score_chord(const Score *s, float t);
-float score_beat_phase(const Score *s, float t);
 // Section energy, eased across section boundaries over a beat.
 float score_energy(const Score *s, float t);
 // The integral of energy from 0 to t, for motion whose speed follows the music.

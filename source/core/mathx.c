@@ -87,7 +87,7 @@ float mtanh(float x) {
     return (e - 1) / (e + 1);
 }
 
-float mrsqrt(float x) {
+static float mrsqrt(float x) {
     if (x <= 0) return 0;
     Bits b = {.f = x};
     b.u = 0x5f375a86u - (b.u >> 1);

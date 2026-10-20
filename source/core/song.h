@@ -31,8 +31,7 @@ enum {
     FX_NOTE_CUT,        // ECx: silence after x ticks
     FX_NOTE_DELAY,      // EDx: start the note x ticks late
     FX_FILTER,          // Zxx (from Impulse Tracker): low-pass cutoff, 0 closed to 255 open
-    FX_WOBBLE,          // Wxx: the filter LFO's rate in quarter cycles per beat, locked to the song (0 holds still)
-    FX_COUNT
+    FX_WOBBLE           // Wxx: the filter LFO's rate in quarter cycles per beat, locked to the song (0 holds still)
 };
 
 typedef struct {
@@ -135,7 +134,6 @@ typedef struct {
 Song *song_create(void);
 void song_free(Song *s);
 Pattern *song_pattern(Song *s, int index);
-int song_rows(const Song *s);
 double song_row_seconds(const Song *s);
 
 #endif

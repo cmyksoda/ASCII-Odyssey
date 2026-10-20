@@ -68,8 +68,7 @@ typedef enum {
     VOICE_FX_WIND,
     VOICE_FLUTE,
     VOICE_BASS_SLAP,
-    VOICE_ORCH_HIT,
-    VOICE_COUNT
+    VOICE_ORCH_HIT
 } VoiceKind;
 
 // tempo lets risers and gates fit the song's bars.

@@ -225,7 +225,7 @@ int main(int argc, char **argv) {
         if (argv[i] && !strcmp(argv[i], "length=short")) config.settings.length = LENGTH_SHORT;
         // A quiet run still mixes every voice, so its audio timings hold; only the console's output is turned down.
         if (argv[i] && !strncmp(argv[i], "volume=", 7))
-            config.settings.volume = atoi(argv[i] + 7) < 0 ? 0 : atoi(argv[i] + 7) % 11;
+            config.settings.volume = atoi(argv[i] + 7) < 0 ? 0 : atoi(argv[i] + 7) % (VOLUME_STEPS + 1);
     }
 
     App *app = app_create(&config);

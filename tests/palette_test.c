@@ -1,20 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The rainbow palette puts every hue on screen at once, on black, even in a scene of only two brightnesses, where a
 // ramp by brightness would show two colors.
+#include "check.h"
 #include "core/app.h"
 #include "core/piece.h"
 
 #include <stdio.h>
-
-static int failures;
-
-#define CHECK(cond)                                                                                                    \
-    do {                                                                                                               \
-        if (!(cond)) {                                                                                                 \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
 
 // Which sixth of the color wheel a color sits in, from red round to magenta, or -1 for a gray.
 static int sector(Rgb c) {

@@ -149,10 +149,6 @@ const ChordMark *score_chord(const Score *s, float t) {
     return info->chord_count ? &info->chords[0] : NULL;
 }
 
-float score_beat_phase(const Score *s, float t) {
-    return mfract(t / s->beat);
-}
-
 float score_energy(const Score *s, float t) {
     const SongInfo *info = s->info;
     const Section *now = score_section(s, t);

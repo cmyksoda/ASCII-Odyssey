@@ -35,7 +35,7 @@ static char *next_line(char **cursor) {
     return line;
 }
 
-int figlet_load(FigletFont *f, const unsigned char *flf, unsigned int size) {
+static int figlet_load(FigletFont *f, const unsigned char *flf, unsigned int size) {
     memset(f, 0, sizeof *f);
     f->data = malloc(size + 1);
     if (!f->data) return -1;
@@ -162,11 +162,6 @@ int figlet_render(const FigletFont *f, const char *text, char *out, int max_w) {
     for (int i = 0; i < max_w * f->height; i++)
         if (out[i] == f->hardblank || !out[i]) out[i] = ' ';
     return len;
-}
-
-int figlet_width(const FigletFont *f, const char *text) {
-    char scratch[FIGLET_MAX_HEIGHT * 512];
-    return figlet_render(f, text, scratch, 512);
 }
 
 const FigletFont *figlet_font(FigletId id) {

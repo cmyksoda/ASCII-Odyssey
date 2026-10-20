@@ -1,18 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The app's first screens answer the first press the way a player expects.
+#include "check.h"
 #include "core/app.h"
 
 #include <stdio.h>
-
-static int failures;
-
-#define CHECK(cond)                                                                                                    \
-    do {                                                                                                               \
-        if (!(cond)) {                                                                                                 \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
 
 static AppRequest press(App *app, unsigned buttons, double wall) {
     Input in = {0};

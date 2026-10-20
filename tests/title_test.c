@@ -1,20 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Once a title has arrived, every letter of it shows while it's held, whichever way it came in and whatever face it's
 // in.
+#include "check.h"
 #include "core/app.h"
 #include "core/piece.h"
 
 #include <stdio.h>
-
-static int failures;
-
-#define CHECK(cond)                                                                                                    \
-    do {                                                                                                               \
-        if (!(cond)) {                                                                                                 \
-            printf("FAIL %s:%d: %s\n", __FILE__, __LINE__, #cond);                                                     \
-            failures++;                                                                                                \
-        }                                                                                                              \
-    } while (0)
 
 static int cells_missing(Piece *p, float t) {
     Screen screen = {0};

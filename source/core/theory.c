@@ -17,11 +17,6 @@ static int mod(int a, int m) {
     return ((a % m) + m) % m;
 }
 
-int scale_size(Scale s) {
-    (void)s;
-    return 7;
-}
-
 static int degree_semitones(Scale s, int degree) {
     int octave = degree >= 0 ? degree / 7 : -((-degree + 6) / 7);
     return SCALES[s][mod(degree, 7)] + 12 * octave;
@@ -31,11 +26,7 @@ int key_pitch_class(Key k, int degree) {
     return mod(k.tonic + degree_semitones(k.scale, degree), 12);
 }
 
-int key_note(Key k, int degree, int octave) {
-    return 1 + octave * 12 + k.tonic + degree_semitones(k.scale, degree);
-}
-
-int key_contains(Key k, int pitch_class) {
+static int key_contains(Key k, int pitch_class) {
     for (int i = 0; i < 7; i++)
         if (mod(k.tonic + SCALES[k.scale][i], 12) == mod(pitch_class, 12)) return 1;
     return 0;
@@ -125,7 +116,8 @@ void chord_voice(const Chord *c, int voices, int low, int high, const int *previ
         }
 }
 
-int key_snap(Key k, int note) {
+// Nearest scale note to a pitch, for snapping melodic steps.
+static int key_snap(Key k, int note) {
     for (int d = 0; d < 3; d++) {
         if (key_contains(k, note - 1 - d)) return note - d;
         if (key_contains(k, note - 1 + d)) return note + d;

@@ -47,11 +47,6 @@ void grid_put(Grid *g, int col, int row, int glyph, Rgb fg) {
     *grid_at(g, col, row) = (Cell){(uint8_t)glyph, fg, 0};
 }
 
-void grid_put_under(Grid *g, int col, int row, int glyph, Rgb fg) {
-    if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) return;
-    if (grid_at(g, col, row)->glyph == ' ') grid_put(g, col, row, glyph, fg);
-}
-
 int grid_center(const Grid *g, int w, int *nudge) {
     *nudge = (g->cols - w) & 1;
     return (g->cols - w) / 2;
@@ -89,12 +84,4 @@ Rgb rgb_mix(Rgb a, Rgb b, float t) {
 
 Rgb rgb_scale(Rgb c, float k) {
     return (Rgb){channel(c.r * k), channel(c.g * k), channel(c.b * k)};
-}
-
-Rgb rgb_add(Rgb a, Rgb b) {
-    return (Rgb){channel((float)a.r + b.r), channel((float)a.g + b.g), channel((float)a.b + b.b)};
-}
-
-Rgb rgb_hex(uint32_t hex) {
-    return (Rgb){(uint8_t)(hex >> 16), (uint8_t)(hex >> 8), (uint8_t)hex};
 }

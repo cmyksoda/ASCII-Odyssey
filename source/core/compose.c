@@ -27,9 +27,7 @@ enum {
     CH_TEXTURE,
     CH_SUB,
     CH_CHORD,
-    CH_PERC2 = CH_CHORD + 4,
-    CH_FX2,
-    CH_VOX
+    CH_PERC2 = CH_CHORD + 4
 };
 
 typedef enum {
@@ -39,7 +37,6 @@ typedef enum {
     SL_HAT,
     SL_OHAT,
     SL_SHAKER,
-    SL_RIDE,
     SL_TOM,
     SL_RIM,
     SL_CRASH,
@@ -80,7 +77,6 @@ typedef enum {
 } GrooveSlot;
 
 #define DRUM_NOTE 49
-#define NONE (-1)
 #define COUNT(a) ((int)(sizeof(a) / sizeof((a)[0])))
 
 typedef struct {
@@ -2125,16 +2121,16 @@ static void effects(Composer *c) {
         const Section *sec = &c->info->sections[s];
         int start = sec->start_bar;
         if (sec->kind == SECTION_DROP) {
-            put(c, start, 0, CH_FX, 49, SL_IMPACT, 50, FX_NONE, 0);
+            put(c, start, 0, CH_FX, DRUM_NOTE, SL_IMPACT, 50, FX_NONE, 0);
             put(c, start, 0, crash_ch, DRUM_NOTE, SL_CRASH, 48, FX_NONE, 0);
         }
         if (sec->kind == SECTION_BUILD && sec->bars >= 2) {
-            put(c, start + sec->bars - 2, 0, CH_FX, 49, SL_RISER, 44, FX_NONE, 0);
-            put(c, start + sec->bars - 1, 0, sweep_ch, 49, SL_REVERSE, 40, FX_NONE, 0);
+            put(c, start + sec->bars - 2, 0, CH_FX, DRUM_NOTE, SL_RISER, 44, FX_NONE, 0);
+            put(c, start + sec->bars - 1, 0, sweep_ch, DRUM_NOTE, SL_REVERSE, 40, FX_NONE, 0);
         }
-        if (sec->kind == SECTION_BREAK) put(c, start, 0, CH_FX, 49, SL_DOWN, 40, FX_NONE, 0);
+        if (sec->kind == SECTION_BREAK) put(c, start, 0, CH_FX, DRUM_NOTE, SL_DOWN, 40, FX_NONE, 0);
         if (sec->kind == SECTION_INTRO && c->slot[SL_TEXTURE])
-            put(c, start, 0, CH_TEXTURE, 49, SL_TEXTURE, 40, FX_NONE, 0);
+            put(c, start, 0, CH_TEXTURE, DRUM_NOTE, SL_TEXTURE, 40, FX_NONE, 0);
     }
     // Lo-fi's crackle runs to the very last bar; other textures bow out two bars early.
     if (c->slot[SL_TEXTURE]) put_off(c, c->bars - (c->mood == MOOD_LOFI ? 1 : 2), 0, CH_TEXTURE);

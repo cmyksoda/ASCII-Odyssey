@@ -18,7 +18,6 @@ float mlog2(float x);
 float mpow(float base, float exponent);
 float mtanh(float x);
 float msqrt(float x);
-float mrsqrt(float x);
 float matan2(float y, float x);
 float mhypot(float x, float y);
 
@@ -67,11 +66,6 @@ static inline float smoothstep(float e0, float e1, float x) {
 static inline float ease_out(float t) {
     t = saturate(t);
     return 1 - (1 - t) * (1 - t) * (1 - t);
-}
-
-static inline float ease_in(float t) {
-    t = saturate(t);
-    return t * t * t;
 }
 
 static inline int clampi(int x, int lo, int hi) {

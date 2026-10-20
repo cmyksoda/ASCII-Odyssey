@@ -164,7 +164,7 @@ static void warp_draw(void *state, const Frame *f) {
 
 typedef struct {
     float speed, twist, spin;
-    int square, texture, around;
+    int square, texture;
     uint32_t seed;
 } Tunnel;
 

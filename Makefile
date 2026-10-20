@@ -70,9 +70,9 @@ pc render: build/odyssey-render
 
 TEST_SOURCES := $(wildcard tests/*_test.c)
 TEST_CORE := $(filter-out build/pc/pc/%,$(PC_OBJECTS))
-build/tests/%: tests/%.c $(TEST_CORE)
+build/tests/%: tests/%.c tests/check.h $(TEST_CORE)
 	@mkdir -p $(@D)
-	$(HOST_CC) $(HOST_CFLAGS) -Isource $^ -lz -lm -o $@
+	$(HOST_CC) $(HOST_CFLAGS) -Isource $(filter-out %.h,$^) -lz -lm -o $@
 
 test: $(patsubst tests/%.c,build/tests/%,$(TEST_SOURCES))
 	@for t in $^; do echo "== $$t"; ./$$t || exit 1; done

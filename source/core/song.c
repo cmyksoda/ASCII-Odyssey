@@ -35,10 +35,6 @@ Pattern *song_pattern(Song *s, int index) {
     return &s->patterns[index];
 }
 
-int song_rows(const Song *s) {
-    return s->order_length * s->pattern_rows;
-}
-
 double song_row_seconds(const Song *s) {
     return 2.5 / s->bpm * s->speed;
 }
