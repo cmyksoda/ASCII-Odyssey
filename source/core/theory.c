@@ -42,11 +42,15 @@ int key_contains(Key k, int pitch_class) {
 }
 
 Chord chord_build(Key k, int degree, Extension ext) {
-    Chord c = {.degree = degree, .ext = ext};
     int root = degree_semitones(k.scale, degree);
     int third = degree_semitones(k.scale, degree + 2) - root, fifth = degree_semitones(k.scale, degree + 4) - root;
     int seventh = degree_semitones(k.scale, degree + 6) - root, ninth = degree_semitones(k.scale, degree + 8) - root;
     int second = degree_semitones(k.scale, degree + 1) - root, fourth = degree_semitones(k.scale, degree + 3) - root;
+    // A flat ninth or second grinds against the root, and so does a raised fourth held over it (phrygian's tonic,
+    // lydian's fourth): those colors fall back to the plain chord.
+    if ((ext == EXT_SUS2 && second == 1) || (ext == EXT_SUS4 && fourth == 6)) ext = EXT_TRIAD;
+    if ((ext == EXT_NINTH || ext == EXT_ADD9) && ninth % 12 == 1) ext = ext == EXT_NINTH ? EXT_SEVENTH : EXT_TRIAD;
+    Chord c = {.degree = degree, .ext = ext};
     c.tones[c.count++] = 0;
     switch (ext) {
     case EXT_SUS2: c.tones[c.count++] = second; break;

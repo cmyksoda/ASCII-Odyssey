@@ -192,11 +192,11 @@ static const Part FORM_CHIP[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_VERSE,
                                  {SECTION_BREAK, 8, 0.4f, 1}, {SECTION_DROP, 16, 1.0f, 1},  {SECTION_OUTRO, 4, 0.3f, 0}};
 static const Part FORM_CHIP_RUSH[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_DROP, 16, 0.9f, 0}, {SECTION_VERSE, 8, 0.6f, 2},
                                       {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
-static const Part FORM_AMBIENT[] = {{SECTION_INTRO, 8, 0.2f, 0},    {SECTION_VERSE, 16, 0.4f, 0},    {SECTION_DROP, 16, 0.6f, 0},
+static const Part FORM_AMBIENT[] = {{SECTION_INTRO, 8, 0.2f, 0},    {SECTION_VERSE, 16, 0.4f, 2},    {SECTION_DROP, 16, 0.6f, 0},
                                     {SECTION_BREAK, 8, 0.3f, 1}, {SECTION_DROP, 16, 0.65f, 1}, {SECTION_OUTRO, 8, 0.2f, 0}};
 static const Part FORM_AMBIENT_TIDE[] = {{SECTION_INTRO, 8, 0.2f, 0},    {SECTION_DROP, 16, 0.5f, 0},     {SECTION_BREAK, 8, 0.3f, 1},
                                          {SECTION_VERSE, 8, 0.4f, 2}, {SECTION_DROP, 16, 0.65f, 1}, {SECTION_OUTRO, 8, 0.2f, 0}};
-static const Part FORM_LOFI[] = {{SECTION_INTRO, 4, 0.25f, 0},    {SECTION_VERSE, 16, 0.5f, 0},   {SECTION_DROP, 16, 0.65f, 0},
+static const Part FORM_LOFI[] = {{SECTION_INTRO, 4, 0.25f, 0},    {SECTION_VERSE, 16, 0.5f, 2},   {SECTION_DROP, 16, 0.65f, 0},
                                  {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_DROP, 16, 0.7f, 1}, {SECTION_OUTRO, 8, 0.3f, 0}};
 static const Part FORM_LOFI_TAPE[] = {{SECTION_INTRO, 4, 0.25f, 0},   {SECTION_DROP, 16, 0.6f, 0},    {SECTION_BREAK, 8, 0.35f, 1},
                                       {SECTION_VERSE, 8, 0.5f, 2}, {SECTION_DROP, 16, 0.7f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
@@ -212,11 +212,11 @@ static const Part FORM_JUNGLE[] = {{SECTION_INTRO, 8, 0.3f, 0},     {SECTION_DRO
                                    {SECTION_OUTRO, 8, 0.3f, 0}};
 static const Part FORM_JUNGLE_ROLL[] = {{SECTION_INTRO, 8, 0.3f, 0},    {SECTION_DROP, 16, 1.0f, 0},    {SECTION_BREAK, 8, 0.35f, 1},
                                         {SECTION_DROP, 16, 1.0f, 1}, {SECTION_DROP, 16, 1.0f, 2}, {SECTION_OUTRO, 8, 0.3f, 0}};
-static const Part FORM_WALTZ[] = {{SECTION_INTRO, 4, 0.2f, 0},    {SECTION_VERSE, 16, 0.4f, 0},   {SECTION_DROP, 16, 0.55f, 0},
+static const Part FORM_WALTZ[] = {{SECTION_INTRO, 4, 0.2f, 0},    {SECTION_VERSE, 16, 0.4f, 2},   {SECTION_DROP, 16, 0.55f, 0},
                                   {SECTION_BREAK, 8, 0.3f, 1}, {SECTION_DROP, 16, 0.6f, 1}, {SECTION_OUTRO, 4, 0.2f, 0}};
 static const Part FORM_WALTZ_ROUND[] = {{SECTION_INTRO, 4, 0.2f, 0},    {SECTION_DROP, 16, 0.5f, 0}, {SECTION_VERSE, 8, 0.4f, 2},
                                         {SECTION_DROP, 16, 0.6f, 1}, {SECTION_OUTRO, 4, 0.2f, 0}};
-static const Part FORM_DUB[] = {{SECTION_INTRO, 8, 0.3f, 0},     {SECTION_VERSE, 16, 0.5f, 0},   {SECTION_DROP, 16, 0.75f, 0},
+static const Part FORM_DUB[] = {{SECTION_INTRO, 8, 0.3f, 0},     {SECTION_VERSE, 16, 0.5f, 2},   {SECTION_DROP, 16, 0.75f, 0},
                                 {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_DROP, 16, 0.8f, 1}, {SECTION_OUTRO, 8, 0.3f, 0}};
 static const Part FORM_DUBSTEP[] = {{SECTION_INTRO, 8, 0.3f, 0},    {SECTION_BUILD, 8, 0.75f, 0}, {SECTION_DROP, 16, 1.0f, 0},
                                     {SECTION_BREAK, 8, 0.35f, 1}, {SECTION_BUILD, 8, 0.8f, 1},  {SECTION_DROP, 16, 1.0f, 1},
@@ -381,7 +381,6 @@ static int phrase_bars(SectionKind kind, float bars, int between_drops) {
     switch (kind) {
     case SECTION_DROP:
         n = (int)(bars / 8 + 0.5f) * 8;
-        if (bars >= 11 && n < 16) n = 16;
         return n < 8 ? 8 : n;
     case SECTION_BUILD: return bars >= 6 ? 8 : 4;
     case SECTION_VERSE:
@@ -396,6 +395,15 @@ static int phrase_bars(SectionKind kind, float bars, int between_drops) {
     }
 }
 
+// A kept part's length once the form is scaled; drops take a set length when one is given.
+static int part_bars(const Part *form, const int *keep, int count, int i, float scale, int drop_bars) {
+    if (form[i].kind == SECTION_DROP && drop_bars) return drop_bars;
+    int drop_before = 0, drop_after = 0;
+    for (int k = 0; k < i; k++) drop_before |= keep[k] && form[k].kind == SECTION_DROP;
+    for (int k = i + 1; k < count; k++) drop_after |= keep[k] && form[k].kind == SECTION_DROP;
+    return phrase_bars(form[i].kind, (float)form[i].bars * scale, drop_before && drop_after);
+}
+
 static void plan_form(Composer *c, LengthPref length) {
     const MoodSpec *spec = &MOODS[c->mood];
     int variant = rng_range(&c->rng, 0, spec->forms[1].parts ? 2 : 1);
@@ -403,30 +411,50 @@ static void plan_form(Composer *c, LengthPref length) {
     int count = spec->forms[variant].count;
     static const float targets[3] = {65, 110, 170};
     float bar_seconds = (float)c->beats_per_bar * 60.0f / (float)c->info->bpm, budget = targets[length] / bar_seconds;
-    // Whole parts leave, highest rank first, until the rest fit at full size; scaling everything down instead
-    // would chop the arrangement into fragments.
-    int keep[MAX_SECTIONS], natural = 0, rank = 0;
-    for (int i = 0; i < count; i++) {
-        keep[i] = 1;
-        natural += form[i].bars;
-        if (form[i].rank > rank) rank = form[i].rank;
-    }
-    for (; rank > 0 && (float)natural > budget * 1.2f; rank--)
-        for (int i = 0; i < count; i++)
-            if (keep[i] && form[i].rank == rank) {
-                keep[i] = 0;
-                natural -= form[i].bars;
+    // Each way of fitting the form is tried: whole parts leaving, highest rank first, with drops at their scaled
+    // length or set to eight or sixteen bars. The plan nearest the length wins; running long, losing parts, drops
+    // taking under two fifths of the piece and above all a single drop each cost extra, though a short piece may
+    // settle for one.
+    static const int drop_sizes[3] = {0, 8, 16};
+    int top = 0, best_rank = 0, best_drop = 0, keep[MAX_SECTIONS];
+    for (int i = 0; i < count; i++)
+        if (form[i].rank > top) top = form[i].rank;
+    float best_cost = 1e9f, best_scale = 1, lone = length == LENGTH_SHORT ? 0.25f : 1.0f;
+    for (int rank = top; rank >= 0; rank--) {
+        int natural = 0, drops = 0;
+        for (int i = 0; i < count; i++) {
+            keep[i] = form[i].rank <= rank;
+            if (!keep[i]) continue;
+            natural += form[i].bars;
+            drops += form[i].kind == SECTION_DROP;
+        }
+        float scale = clampf(budget / (float)natural, 0.5f, 1.6f);
+        for (int d = 0; d < 3; d++) {
+            int planned = 0, dropped = 0;
+            for (int i = 0; i < count; i++) {
+                if (!keep[i]) continue;
+                int bars = part_bars(form, keep, count, i, scale, drop_sizes[d]);
+                planned += bars;
+                if (form[i].kind == SECTION_DROP) dropped += bars;
             }
-    float scale = clampf(budget / (float)natural, 0.5f, 1.6f);
+            float off = ((float)planned - budget) / budget, share = (float)dropped / (float)planned;
+            float cost = (off > 0 ? off * 1.5f : -off) + 0.1f * (float)(top - rank) + (drops < 2 ? lone : 0.0f) +
+                         mmax(0, 0.4f - share);
+            if (cost < best_cost) {
+                best_cost = cost;
+                best_rank = rank;
+                best_drop = drop_sizes[d];
+                best_scale = scale;
+            }
+        }
+    }
+    for (int i = 0; i < count; i++) keep[i] = form[i].rank <= best_rank;
     SongInfo *info = c->info;
     info->section_count = 0;
     int bar = 0;
     for (int i = 0; i < count && info->section_count < MAX_SECTIONS; i++) {
         if (!keep[i]) continue;
-        int drop_before = 0, drop_after = 0;
-        for (int k = 0; k < i; k++) drop_before |= keep[k] && form[k].kind == SECTION_DROP;
-        for (int k = i + 1; k < count; k++) drop_after |= keep[k] && form[k].kind == SECTION_DROP;
-        int bars = phrase_bars(form[i].kind, (float)form[i].bars * scale, drop_before && drop_after);
+        int bars = part_bars(form, keep, count, i, best_scale, best_drop);
         if (bar + bars > MAX_BARS) break;
         Section *s = &info->sections[info->section_count++];
         s->kind = form[i].kind;
@@ -1674,7 +1702,8 @@ static void hook_in_break(Composer *c, int b, const Melody *m, int first) {
 
 static void melodies(Composer *c) {
     Melody hook = {0}, verse = {0}, varied = {0};
-    int have_hook = 0, have_verse = 0, have_varied = 0;
+    int have_hook = 0, have_verse = 0, have_varied = 0, drops = 0;
+    for (int s = 0; s < c->info->section_count; s++) drops += c->info->sections[s].kind == SECTION_DROP;
     Mood mood = c->mood;
     MelodyStyle hs = hook_style(mood), vs = verse_style(mood);
     // Each piece sings in its own part of the range.
@@ -1696,14 +1725,15 @@ static void melodies(Composer *c) {
                     write_period(c, b, &hs, &hook);
                     have_hook = 1;
                 }
-                // The back half's drops sing the hook's answers anew, under a second voice.
+                // The back half's drops sing the hook's answers anew, under a second voice. A piece with a single
+                // drop gives it that full arrangement, or moods that save their melody for the second would never sing.
                 int second = b >= c->half_bar;
                 if (second && !have_varied) {
                     vary_period(c, b, &hook, &hs, &varied);
                     have_varied = 1;
                 }
                 Melody part = slice(c, second ? &varied : &hook, bars);
-                hook_in_drop(c, b, &part, second);
+                hook_in_drop(c, b, &part, second || drops == 1);
                 break;
             }
             case SECTION_VERSE: {
