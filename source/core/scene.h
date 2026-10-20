@@ -65,6 +65,10 @@ Rgbf frame_dim(const Frame *f, Rgbf color, float k);
 // How strongly light set off by single notes may flare: fully in a reactive scene, a third as much for viewers who
 // asked for calmer pictures, not at all in a still one.
 float frame_bright(const Frame *f);
+// Pictures made of nothing but stripes and checks can trouble light-sensitive eyes, so they're drawn at this share of
+// their contrast for viewers who asked for calmer pictures, and move at this share of their speed for less motion.
+float frame_contrast(const Frame *f);
+float frame_pace(const Frame *f);
 // Beat pulses in reactive scenes (none in still ones), softer for viewers who asked for calmer pictures.
 float frame_pulse(const Frame *f, Role role, float tau, float strength);
 // Distance covered since the shot began at a base speed plus a share that follows the music's energy.

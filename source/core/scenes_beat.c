@@ -82,8 +82,9 @@ void kaleidoscope_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     static const char ramp[] = " .:-+*#";
     float kick = frame_pulse(f, ROLE_KICK, 0.22f, 1.0f);
-    float turn = f->local * k->spin + frame_surge(f, ROLE_SNARE, 0.25f, 0.4f);
-    float zoom = k->zoom * (1 - 0.15f * kick), t = f->local * k->drift + frame_travel(f, 0, 0.08f);
+    float pace = frame_pace(f), contrast = frame_contrast(f);
+    float turn = (f->local * k->spin + frame_surge(f, ROLE_SNARE, 0.25f, 0.4f)) * pace;
+    float zoom = k->zoom * (1 - 0.15f * kick), t = (f->local * k->drift + frame_travel(f, 0, 0.08f)) * pace;
     const ChordMark *chord = score_chord(f->score, f->t);
     float shift = chord ? (float)chord->chord.root_pc / 12.0f : 0, wedge = TAU_F / (float)k->folds;
     const ScoreEvent *kicks[6];
@@ -111,6 +112,7 @@ void kaleidoscope_draw(void *state, const Frame *f) {
             float hue = mfract(radius * 0.6f + shift);
             Rgbf color = rgbf_mix(palette_ramp(f->palette, 0.3f + 0.7f * level), palette_accent(f->palette, (int)(hue * 3)), 0.45f * (1 - level * 0.5f));
             if (rings > 0.3f) color = rgbf_mix(color, palette_ramp(f->palette, 1.0f), rings * 0.8f);
+            if (contrast < 1) color = frame_dim(f, color, contrast);
             *grid_at(g, col, row) = (Cell){(uint8_t)ramp[i], rgb_from_f(color), 0};
         }
     }
@@ -637,9 +639,10 @@ void checker_draw(void *state, const Frame *f) {
     Checker *c = state;
     Grid *g = f->grid;
     if (!c->ceiling) dust_stars(f, c->salt, 0.004f, 0.7f);
-    float travel = frame_travel(f, c->speed * 0.4f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.9f);
+    float pace = frame_pace(f), contrast = frame_contrast(f);
+    float travel = (frame_travel(f, c->speed * 0.4f, c->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.9f)) * pace;
     float side = c->sway * msin(f->local * 0.35f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
-    float bank = c->roll * msin(f->local * 0.3f) * (f->still ? 0.5f : 1.0f), bc = mcos(bank), bs = msin(bank);
+    float bank = c->roll * msin(f->local * 0.3f) * pace, bc = mcos(bank), bs = msin(bank);
     const ChordMark *chord = score_chord(f->score, f->t);
     int swap = chord ? chord->chord.root_pc % 3 : 0;
     Rgbf tile = palette_accent(f->palette, swap), glow = palette_ramp(f->palette, 0.9f);
@@ -658,14 +661,14 @@ void checker_draw(void *state, const Frame *f) {
             int edge = floor_tile(c->style, x + 0.12f, z) != parity || floor_tile(c->style, x - 0.12f, z) != parity ||
                        floor_tile(c->style, x, z + 0.12f) != parity || floor_tile(c->style, x, z - 0.12f) != parity;
             int glyph = fog > 0.5f ? (edge ? '+' : '#') : fog > 0.22f ? (edge ? '.' : '=') : '.';
-            Rgbf color = rgbf_mix(frame_dim(f, tile, fog * (0.75f + 0.45f * kick)), glow, (1 - fog) * 0.35f);
+            Rgbf color = rgbf_mix(frame_dim(f, tile, fog * (0.75f + 0.45f * kick) * contrast), glow, (1 - fog) * 0.35f * contrast);
             *grid_at(g, col, row) = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
         }
     }
     // The horizon line, bright and pulsing, tilting as the floor banks.
     for (int col = 0; col < g->cols; col++) {
         float sx = cell_x(g, col);
-        put_cell(g, col, cell_row(g, c->horizon - sx * bs / bc), '=', frame_dim(f, glow, 0.7f + 0.4f * kick));
+        put_cell(g, col, cell_row(g, c->horizon - sx * bs / bc), '=', frame_dim(f, glow, (0.7f + 0.4f * kick) * contrast));
     }
     f->fx->glow = 0.55f;
 }

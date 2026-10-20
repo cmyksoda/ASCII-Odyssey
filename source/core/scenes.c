@@ -22,6 +22,14 @@ float frame_bright(const Frame *f) {
     return f->react * (f->calm ? 0.3f : 1.0f);
 }
 
+float frame_contrast(const Frame *f) {
+    return f->calm ? 0.6f : 1.0f;
+}
+
+float frame_pace(const Frame *f) {
+    return f->still ? 0.5f : 1.0f;
+}
+
 float frame_pulse(const Frame *f, Role role, float tau, float strength) {
     if (f->react <= 0) return 0;
     float p = score_pulse(f->score, role, f->t, f->calm ? tau * 2.5f : tau);

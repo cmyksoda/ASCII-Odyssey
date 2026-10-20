@@ -26,16 +26,6 @@ static void chord_inks(const Frame *f, Rgbf inks[3]) {
         inks[k] = rgbf_mix(palette_accent(f->palette, before + k), palette_accent(f->palette, now->chord.root_pc + k), ease);
 }
 
-// Pictures made of nothing but stripes and checks are the kind that can trouble light-sensitive eyes, so viewers who
-// asked for calmer pictures get them at lower contrast, and viewers who asked for less motion get them at half speed.
-static float op_contrast(const Frame *f) {
-    return f->calm ? 0.6f : 1.0f;
-}
-
-static float op_pace(const Frame *f) {
-    return f->still ? 0.5f : 1.0f;
-}
-
 // The glyph for a line running in direction (dx, dy), with y up the screen.
 static int slope_glyph(float dx, float dy) {
     if (mabs(dy) < 0.4f * mabs(dx)) return '-';
@@ -69,7 +59,7 @@ void vortex_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Rgbf inks[3];
     chord_inks(f, inks);
-    float pace = op_pace(f), contrast = op_contrast(f);
+    float pace = frame_pace(f), contrast = frame_contrast(f);
     float zoom = (frame_travel(f, v->speed * 0.5f, v->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.8f)) * pace;
     float turn = f->local * v->spin * pace, kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
     for (int row = 0; row < g->rows; row++) {
@@ -115,8 +105,8 @@ void spiral_draw(void *state, const Frame *f) {
     Rgbf inks[3];
     chord_inks(f, inks);
     float sign = s->speed > 0 ? 1.0f : -1.0f;
-    float flow = (frame_travel(f, s->speed * 0.6f, s->speed) + sign * frame_surge(f, ROLE_KICK, 0.2f, 0.6f)) * op_pace(f);
-    float contrast = op_contrast(f);
+    float flow = (frame_travel(f, s->speed * 0.6f, s->speed) + sign * frame_surge(f, ROLE_KICK, 0.2f, 0.6f)) * frame_pace(f);
+    float contrast = frame_contrast(f);
     for (int row = 0; row < g->rows; row++) {
         float y = cell_y(g, row);
         for (int col = 0; col < g->cols; col++) {
@@ -155,7 +145,7 @@ void opart_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Rgbf inks[3];
     chord_inks(f, inks);
-    float t = f->local * op_pace(f), kick = frame_pulse(f, ROLE_KICK, 0.25f, 1.0f), contrast = op_contrast(f);
+    float t = f->local * frame_pace(f), kick = frame_pulse(f, ROLE_KICK, 0.25f, 1.0f), contrast = frame_contrast(f);
     float lx = 0.55f * g->aspect * msin(t * 0.37f + o->phase), ly = 0.45f * msin(t * 0.29f + o->phase * 1.3f);
     float swell = 0.3f + 0.35f * kick, lens2 = o->lens * o->lens;
     for (int row = 0; row < g->rows; row++) {
@@ -200,7 +190,7 @@ void mirror_draw(void *state, const Frame *f) {
     static const char ramp[] = " .:-=+*#@";
     Rgbf inks[3];
     chord_inks(f, inks);
-    float t = f->local * op_pace(f), kick = frame_pulse(f, ROLE_KICK, 0.22f, 1.0f), contrast = op_contrast(f);
+    float t = f->local * frame_pace(f), kick = frame_pulse(f, ROLE_KICK, 0.22f, 1.0f), contrast = frame_contrast(f);
     float a = t * m->spin, ca = mcos(a), sa = msin(a), scale = m->scale * (1 - 0.12f * kick);
     float bx[3], by[3];
     for (int k = 0; k < 3; k++) {
@@ -267,7 +257,7 @@ void moire_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Rgbf inks[3];
     chord_inks(f, inks);
-    float pace = op_pace(f), contrast = op_contrast(f), t = f->local * pace;
+    float pace = frame_pace(f), contrast = frame_contrast(f), t = f->local * pace;
     float flow = (frame_travel(f, m->speed * 0.5f, m->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.7f)) * pace;
     float ax = 0.6f * g->aspect * msin(t * 0.23f + m->phase[0]), ay = 0.5f * msin(t * 0.31f + m->phase[1]);
     float bx = 0.6f * g->aspect * msin(t * 0.19f + m->phase[2]), by = 0.5f * msin(t * 0.27f + m->phase[3]);
@@ -314,7 +304,7 @@ void truchet_draw(void *state, const Frame *f) {
     chord_inks(f, inks);
     const ScoreEvent *kicks[TRUCHET_KICKS];
     int n = f->react > 0 && !f->still ? recent_notes(f->score, ROLE_KICK, f->t, f->local, kicks, TRUCHET_KICKS) : 0;
-    float pace = op_pace(f), contrast = op_contrast(f), flow = f->t * 0.8f * pace;
+    float pace = frame_pace(f), contrast = frame_contrast(f), flow = f->t * 0.8f * pace;
     for (int ty = 0; ty * tr->size < g->rows; ty++)
         for (int tx = 0; tx * tr->size < g->cols; tx++) {
             float cx = cell_x(g, tx * tr->size) + (float)tr->size / (float)g->cols * g->aspect;
@@ -368,7 +358,7 @@ void squares_draw(void *state, const Frame *f) {
     Rgbf inks[3];
     chord_inks(f, inks);
     float kick = frame_pulse(f, ROLE_KICK, 0.3f, 1.0f), twist = s->twist * (1 + 1.2f * kick);
-    float pace = op_pace(f), contrast = op_contrast(f);
+    float pace = frame_pace(f), contrast = frame_contrast(f);
     float flow = frame_travel(f, s->speed * 0.5f, s->speed) * pace, base = f->local * s->spin * pace;
     for (int row = 0; row < g->rows; row++) {
         float y = cell_y(g, row);
@@ -414,7 +404,7 @@ void boxtunnel_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Rgbf inks[3];
     chord_inks(f, inks);
-    float pace = op_pace(f), contrast = op_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
     float travel = (frame_travel(f, b->speed * 0.5f, b->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.9f)) * pace;
     float base = f->local * b->spin * pace;
     for (int row = 0; row < g->rows; row++) {
@@ -463,7 +453,7 @@ void honeycomb_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Rgbf inks[3];
     chord_inks(f, inks);
-    float contrast = op_contrast(f), t = f->local * op_pace(f), s = h->size;
+    float contrast = frame_contrast(f), t = f->local * frame_pace(f), s = h->size;
     const ScoreEvent *kicks[HONEY_KICKS];
     int n = f->react > 0 ? recent_notes(f->score, ROLE_KICK, f->t, 1.6f, kicks, HONEY_KICKS) : 0;
     // The three directions an edge of a pointy-topped hexagon faces, and the glyph that draws each edge.
@@ -531,7 +521,7 @@ void cafewall_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     Rgbf inks[3];
     chord_inks(f, inks);
-    float contrast = op_contrast(f), t = f->local * op_pace(f), nudge = frame_surge(f, ROLE_KICK, 0.2f, 0.5f) * op_pace(f);
+    float contrast = frame_contrast(f), t = f->local * frame_pace(f), nudge = frame_surge(f, ROLE_KICK, 0.2f, 0.5f) * frame_pace(f);
     Rgbf mortar = palette_ramp(f->palette, 0.45f);
     int band = w->course + 1;
     for (int row = 0; row < g->rows; row++) {
