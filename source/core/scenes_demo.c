@@ -463,7 +463,9 @@ typedef struct {
 
 void julia_setup(void *state, Rng *r, const Frame *f) {
     Julia *j = state;
-    j->angle = rng_between(r, 0, TAU_F);
+    // Round its circle the set is richest across two arcs: near 0 it thins to dust, near pi to a hollow outline.
+    // Starting within 0.4 of an arc's middle keeps a whole shot's drift inside it.
+    j->angle = (rng_chance(r, 50) ? 1.85f : 4.43f) + rng_between(r, -0.4f, 0.4f);
     j->speed = rng_between(r, 0.025f, 0.05f) * (rng_chance(r, 50) ? 1 : -1);
     j->zoom = rng_between(r, 1.15f, 1.5f);
     j->ox = rng_between(r, -0.15f, 0.15f);

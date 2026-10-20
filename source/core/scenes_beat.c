@@ -60,7 +60,10 @@ void kaleidoscope_draw(void *state, const Frame *f) {
             a -= mfloor(a / wedge) * wedge;
             if (a > wedge * 0.5f) a = wedge - a;
             float u = radius * mcos(a) * zoom, v = radius * msin(a) * zoom;
-            float shape = smoothstep(0.42f, 0.72f, noise_fbm(u + k->salt + t, v - t * 0.6f));
+            // A petal in every wedge and rings drifting outward, so the figure keeps a flower's bones when the noise
+            // it's built from runs thin.
+            float petal = (0.5f + 0.5f * mcos(a / wedge * TAU_F)) * (0.5f + 0.5f * mcos(radius * 7 * zoom - t * 6));
+            float shape = smoothstep(0.42f, 0.72f, noise_fbm(u + k->salt + t, v - t * 0.6f) * 0.7f + petal * 0.4f + 0.02f);
             // Rings racing outward from the center, one for each recent kick.
             float rings = 0;
             for (int i = 0; i < n_kicks; i++) {
@@ -246,15 +249,15 @@ void fireworks_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // One shell: sparks fly out, slow, fall and fade, each trailing a short tail of embers.
-static void burst(const Frame *f, const Fireworks *w, float bx, float by, float age, uint32_t id, float flare) {
+static void burst(const Frame *f, const Fireworks *w, float bx, float by, float age, uint32_t id, float flare, float size) {
     Grid *g = f->grid;
     Rgbf color = palette_accent(f->palette, (int)(id % 3)), second = palette_accent(f->palette, (int)(id % 3) + 1);
     Rgbf white = palette_ramp(f->palette, 1.0f);
-    int sparks = 36 + (int)(id % 20);
+    int sparks = (int)((float)(36 + (int)(id % 20)) * size);
     float life = mexp(-age / 1.1f);
     for (int s = 0; s < sparks; s++) {
         float a = (float)s / (float)sparks * TAU_F + hash01(id + (uint32_t)s) * 0.2f;
-        float speed = w->spread * (0.75f + 0.25f * hash01(id * 7u + (uint32_t)s));
+        float speed = w->spread * size * (0.75f + 0.25f * hash01(id * 7u + (uint32_t)s));
         // Calmer pictures skip the white burst: sparks start in their own color and burn lower.
         Rgbf c = rgbf_mix(white, s % 2 ? color : second, f->calm ? 1.0f : saturate(age * 2.5f));
         for (int k = 0; k < 4; k++) {
@@ -269,8 +272,15 @@ static void burst(const Frame *f, const Fireworks *w, float bx, float by, float 
     if (age < 0.18f && !f->calm) put_cell(g, cell_col(g, bx), cell_row(g, by), '#', frame_dim(f, white, 1.2f));
 }
 
+static void rocket(const Frame *f, float x, float y) {
+    Grid *g = f->grid;
+    put_cell(g, cell_col(g, x), cell_row(g, y), '|', palette_ramp(f->palette, 1.0f));
+    for (int t = 1; t < 4; t++)
+        put_cell_under(g, cell_col(g, x), cell_row(g, y) + t, t == 1 ? ':' : '.', frame_dim(f, palette_accent(f->palette, 1), 0.8f / (float)t));
+}
+
 // Rockets climb so that they burst exactly on the snares and claps, the score telling them when; every kick makes the
-// sparks flare.
+// sparks flare. Through bars with no drums to cue them, a smaller shell bursts on the downbeat.
 void fireworks_draw(void *state, const Frame *f) {
     Fireworks *w = state;
     Grid *g = f->grid;
@@ -286,16 +296,20 @@ void fireworks_draw(void *state, const Frame *f) {
             if (k >= 3 && hash01(id + 9) > 0.3f) continue;
             float bx = (hash01(id) * 1.4f - 0.7f) * g->aspect, by = 0.1f + hash01(id + 3) * 0.6f;
             float age = f->t - notes[i]->time;
-            if (age < 0) {
-                // Still climbing toward its moment, with a spark trail.
-                float climb = 1 + age / w->rise, y = -1 + (by + 1) * ease_out(climb);
-                put_cell(g, cell_col(g, bx), cell_row(g, y), '|', palette_ramp(f->palette, 1.0f));
-                for (int t = 1; t < 4; t++)
-                    put_cell_under(g, cell_col(g, bx), cell_row(g, y) + t, t == 1 ? ':' : '.', frame_dim(f, palette_accent(f->palette, 1), 0.8f / (float)t));
-            } else if (age < 2.8f) {
-                burst(f, w, bx, by, age, id, flare);
-            }
+            if (age < 0) rocket(f, bx, -1 + (by + 1) * ease_out(1 + age / w->rise));
+            else if (age < 2.8f) burst(f, w, bx, by, age, id, flare, 1.0f);
         }
+    }
+    float bar = f->score->beat * (float)f->score->info->beats_per_bar;
+    for (int b = (int)mfloor((f->t + w->rise) / bar); b >= 0 && (float)b * bar > f->t - 2.8f; b--) {
+        float when = (float)b * bar, age = f->t - when;
+        if (score_count(f->score, ROLE_SNARE, when - bar, when + bar) + score_count(f->score, ROLE_PERC, when - bar, when + bar) +
+                score_count(f->score, ROLE_CRASH, when - bar, when + bar) > 0)
+            continue;
+        uint32_t id = ((uint32_t)b * 2654435761u) ^ w->salt ^ 0xb0b0u;
+        float bx = (hash01(id) * 1.4f - 0.7f) * g->aspect, by = 0.2f + hash01(id + 3) * 0.45f;
+        if (age < 0) rocket(f, bx, -1 + (by + 1) * ease_out(1 + age / w->rise));
+        else burst(f, w, bx, by, age, id, flare, 0.65f);
     }
     if (w->hills) {
         StrokePoint pts[48];
