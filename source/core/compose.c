@@ -8,7 +8,7 @@
 #include <string.h>
 
 const char *const mood_names[MOOD_COUNT] = {"keygen", "ambient", "synthwave", "lo-fi", "trance",
-                                            "8-bit",  "music box", "dub",       "dubstep"};
+                                            "8-bit",  "music box", "dub",       "dubstep",  "16-bit"};
 const char *const section_names[SECTION_KINDS] = {"intro", "verse", "build", "drop", "break", "outro"};
 
 enum {
@@ -215,6 +215,12 @@ static const Part FORM_8BIT[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_VERSE,
                                  {SECTION_OUTRO, 4, 0.3f, 0}};
 static const Part FORM_8BIT_LOOP[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_DROP, 16, 0.9f, 0},  {SECTION_VERSE, 8, 0.6f, 2},
                                       {SECTION_BREAK, 8, 0.45f, 1}, {SECTION_DROP, 16, 1.0f, 1}, {SECTION_OUTRO, 4, 0.3f, 0}};
+// An adventure's theme: the strings and harp set out, the flute sings a verse, and the whole band takes the theme up.
+static const Part FORM_16BIT[] = {{SECTION_INTRO, 4, 0.3f, 0},    {SECTION_VERSE, 8, 0.55f, 2}, {SECTION_DROP, 16, 0.85f, 0},
+                                  {SECTION_BREAK, 8, 0.4f, 1}, {SECTION_VERSE, 8, 0.6f, 2},  {SECTION_DROP, 16, 1.0f, 1},
+                                  {SECTION_OUTRO, 4, 0.3f, 0}};
+static const Part FORM_16BIT_QUEST[] = {{SECTION_INTRO, 4, 0.3f, 0},  {SECTION_VERSE, 16, 0.55f, 2}, {SECTION_DROP, 16, 0.85f, 0},
+                                        {SECTION_BREAK, 8, 0.4f, 1}, {SECTION_DROP, 16, 1.0f, 1},   {SECTION_OUTRO, 4, 0.3f, 0}};
 static const Part FORM_WALTZ[] = {{SECTION_INTRO, 4, 0.2f, 0},    {SECTION_VERSE, 16, 0.4f, 2},   {SECTION_DROP, 16, 0.55f, 0},
                                   {SECTION_BREAK, 8, 0.3f, 1}, {SECTION_DROP, 16, 0.6f, 1}, {SECTION_OUTRO, 4, 0.2f, 0}};
 static const Part FORM_WALTZ_ROUND[] = {{SECTION_INTRO, 4, 0.2f, 0},    {SECTION_DROP, 16, 0.5f, 0}, {SECTION_VERSE, 8, 0.4f, 2},
@@ -327,6 +333,20 @@ static const MoodSpec MOODS[MOOD_COUNT] = {
                            .delay_feedback = 0, .delay_mix = 0, .duck_depth = 0, .duck_release = 0.1f,
                            .drive = 0, .pre_gain = 0.85f, .master_gain = 0.75f},
                    .lift_chance = 0},
+    // The SNES's sampled band: strings and harp under a flute, slap bass and orchestra hits, all through its echo.
+    [MOOD_16BIT] = {.bpm_lo = 92, .bpm_hi = 136,
+                    .scales = {[SCALE_MAJOR] = 35, [SCALE_MINOR] = 25, [SCALE_DORIAN] = 15, [SCALE_LYDIAN] = 10,
+                               [SCALE_MIXOLYDIAN] = 10, [SCALE_HARMONIC_MINOR] = 5},
+                    .chord_bars = 1, .forms = {FORM(FORM_16BIT), FORM(FORM_16BIT_QUEST)},
+                    .voices = {[SL_KICK] = V(VOICE_KICK), [SL_SNARE] = V(VOICE_SNARE), [SL_HAT] = V(VOICE_HAT_CLOSED),
+                               [SL_TOM] = V(VOICE_TOM), [SL_CRASH] = V(VOICE_CRASH), [SL_BASS] = V(VOICE_BASS_SLAP),
+                               [SL_PAD] = V(VOICE_PAD_STRINGS, VOICE_PAD_CHOIR), [SL_LEAD] = V(VOICE_FLUTE),
+                               [SL_ARP] = V(VOICE_HARP), [SL_BELL] = V(VOICE_BELL_FM, VOICE_CELESTA),
+                               [SL_KEYS] = V(VOICE_ORCH_HIT)},
+                    .mix = {.reverb_size = 0.4f, .reverb_damping = 0.6f, .reverb_mix = 0.15f, .delay_beats = 0.375f,
+                            .delay_feedback = 0.45f, .delay_mix = 0.4f, .duck_depth = 0, .duck_release = 0.1f,
+                            .drive = 0.05f, .pre_gain = 0.85f, .master_gain = 1.05f},
+                    .lift_chance = 20},
     [MOOD_MUSICBOX] = {.bpm_lo = 72, .bpm_hi = 100, .meter = 3,
                        .scales = {[SCALE_MAJOR] = 50, [SCALE_LYDIAN] = 20, [SCALE_HARMONIC_MINOR] = 15, [SCALE_MINOR] = 15},
                        .chord_bars = 1, .forms = {FORM(FORM_WALTZ), FORM(FORM_WALTZ_ROUND)},
@@ -542,6 +562,11 @@ static Extension pick_extension(Composer *c, int degree) {
         if (r < 22) return EXT_SUS2;
         return EXT_TRIAD;
     case MOOD_MUSICBOX: return r < 15 ? EXT_ADD9 : EXT_TRIAD;
+    case MOOD_16BIT:
+        if (r < 15) return EXT_ADD9;
+        if (r < 25) return EXT_SUS2;
+        if (r < 33 && degree != 4) return EXT_SEVENTH;
+        return EXT_TRIAD;
     case MOOD_DUB:
         if (r < 50) return EXT_SEVENTH;
         if (r < 80) return EXT_NINTH;
@@ -645,6 +670,10 @@ static void make_instruments(Composer *c) {
     if (c->mood == MOOD_DUB && c->slot[SL_RIM]) s->instruments[c->slot[SL_RIM] - 1].send_delay = 0.35f;
     // The drops' sub sits under everything at full weight, pumping only half as deep as the rest; dubstep's drops stand
     // on it hardest of all.
+    // The SNES played its samples back soft at the top, so every sound in a 16-bit piece is filtered like one.
+    if (c->mood == MOOD_16BIT)
+        for (int i = 0; i < s->instrument_count; i++)
+            if (!s->instruments[i].cutoff) s->instruments[i].cutoff = 0.84f;
     if (c->slot[SL_SUB]) {
         Instrument *sub = &s->instruments[c->slot[SL_SUB] - 1];
         sub->volume = c->mood == MOOD_DUBSTEP ? 1.6f : 1.0f;
@@ -878,6 +907,34 @@ static void drums_8bit(Composer *c, int bar) {
     }
 }
 
+static const char *const MARCH_KICKS[] = {"x.......x.......", "x.....x.x.......", "x...x...x...x...", "x.....x...x.x..."};
+static const char *const MARCH_HATS[] = {"x.x.x.x.x.x.x.x.", "x.xxx.x.x.xxx.x.", "..x...x...x...x."};
+
+// An adventure's kit: a march under the theme, quiet hats elsewhere, and timpani rolling into each new section.
+static void drums_16bit(Composer *c, int bar) {
+    SectionKind k = c->kind_of[bar];
+    int pos = c->bar_in_section[bar], last = section_last_bar(c, bar);
+    switch (k) {
+    case SECTION_VERSE:
+    case SECTION_DROP: {
+        int full = k == SECTION_DROP;
+        drum_line(c, bar, CH_KICK, SL_KICK, full ? MARCH_KICKS[groove(c, G_KICK, bar)] : "x.......x.......", full ? 56 : 48);
+        drum_line(c, bar, CH_SNARE, SL_SNARE, full && pos % 4 == 3 ? "....x.......x.xx" : "....x.......x...", full ? 50 : 40);
+        drum_line(c, bar, CH_HAT, SL_HAT, MARCH_HATS[groove(c, G_HATS, bar)], full ? 28 : 22);
+        if (last) tom_fill(c, bar);
+        break;
+    }
+    case SECTION_INTRO:
+    case SECTION_BREAK:
+        if (last) tom_fill(c, bar);
+        break;
+    case SECTION_OUTRO:
+        if (pos == 0) drum_line(c, bar, CH_KICK, SL_KICK, "x...............", 46);
+        break;
+    default: break;
+    }
+}
+
 static const char *const STEP_KICKS[] = {"x.........x.....", "x.......x.x.....", "x.....x...x.....", "x.........x..x.."};
 static const char *const STEP_HATS[] = {"x.x.x.x.x.x.x.x.", "x..x..x..x..x.x.", "xxx.x.xxx.x.x.x.", "..x...x...x...x."};
 
@@ -1054,6 +1111,8 @@ static const char *const SYNTH_BASS[] = {"r.o.r.o.r.o.r.oa", "rr.rrr.rrr.rrr.a",
                                          "r..r..r.o..r..ra"};
 static const char *const SYNTH_BASS_CALM[] = {"r.r.r.r.r.r.r.ra", "r.......r.....a.", "r..r..r...r..r.a", "r...r...r...r..a"};
 static const char *const CHIP_BASS[] = {"r.o.r.o.f.o.r.o.", "r.r.o.r.r.r.o.r.", "r..r..o.r..r..f.", "r.f.o.f.r.f.o.f."};
+static const char *const SLAP_DRIVE[] = {"r..r.o.r..r.o.r.", "r.o.r..or.o.r..o", "r..ro..rr..ro..r", "r.r.o.r.f.r.o.ra"};
+static const char *const SLAP_CALM[] = {"r.......r...f...", "r.....r.r.....f.", "r...o...r...o..."};
 static const char *const LOFI_BASS[] = {"r.........f.....", "r.....f...o.....", "r.......f.....c.", "r.........f...c."};
 static const char *const DUB_BASS[] = {"r.........f.....", "r.....f.........", "r......f..o.....", "r.........f...o."};
 
@@ -1148,6 +1207,9 @@ static void bass_part(Composer *c, int bar) {
         if (c->bar_in_section[bar] % MOODS[c->mood].chord_bars == 0) put(c, bar, 0, CH_BASS, root, SL_BASS, 52, FX_NONE, 0);
         break;
     case MOOD_KEYGEN: bass_pattern(c, bar, CHIP_BASS[groove(c, G_BASS, bar)], 1); break;
+    case MOOD_16BIT:
+        bass_pattern(c, bar, k == SECTION_DROP ? SLAP_DRIVE[groove(c, G_BASS, bar)] : SLAP_CALM[groove(c, G_BASS_CALM, bar)], 0);
+        break;
     default:
         if (build_end) {
             put(c, bar, 0, CH_BASS, root, SL_BASS, 56, FX_NONE, 0);
@@ -1263,6 +1325,12 @@ static void pulse_chords(Composer *c, int bar) {
         if (r[row] == 'x') put(c, bar, row, CH_ARP, root, SL_ARP, 28, FX_ARPEGGIO, param);
 }
 
+// The orchestra hit, on the chord's root at the top of each of a drop's phrases.
+static void orch_hits(Composer *c, int bar) {
+    if (!c->slot[SL_KEYS] || c->kind_of[bar] != SECTION_DROP || c->bar_in_section[bar] % 4) return;
+    put(c, bar, 0, CH_CHORD, 1 + 48 + chord_at(c, bar, 0)->root_pc, SL_KEYS, 44, FX_NONE, 0);
+}
+
 // The music box's waltz: a low harp root on the downbeat, then two chord tones on beats two and three.
 // The dyads borrow the drum channels, which a music box never needs.
 static void waltz(Composer *c, int bar) {
@@ -1306,6 +1374,7 @@ static const char *const ARPS_DRIVE[] = {"01232101", "0123", "0213", "0120", "32
 static const char *const ARPS_CALM[] = {"0123", "0213", "01", "0120", "0312"};
 static const char *const AMBIENT_ARPS[] = {"0123210", "0213", "0123", "3210", "01210", "02310"};
 static const int AMBIENT_RATES[] = {2, 3, 4};
+static const char *const HARP_ARPS[] = {"01232101", "0123", "02132031", "0121"};
 static const char *const WALTZ_ARPS[] = {"012101", "021202", "012321", "020121"};
 
 static void arpeggio(Composer *c, int bar, const char *pattern, int rate, int octave_shift, int vol) {
@@ -1387,6 +1456,7 @@ static MelodyStyle hook_style(Mood mood) {
     case MOOD_DUB: return (MelodyStyle){RHYTHMS_SPARSE, COUNT(RHYTHMS_SPARSE), 55, 72, CELLS_SPARSE};
     case MOOD_DUBSTEP: return (MelodyStyle){RHYTHMS_TRANCE, COUNT(RHYTHMS_TRANCE), 58, 77, CELLS_POP};
     case MOOD_MUSICBOX: return (MelodyStyle){RHYTHMS_WALTZ, COUNT(RHYTHMS_WALTZ), 60, 81, CELLS_LYRICAL};
+    case MOOD_16BIT: return (MelodyStyle){RHYTHMS_POP, COUNT(RHYTHMS_POP), 60, 81, CELLS_LYRICAL};
     default: return (MelodyStyle){RHYTHMS_POP, COUNT(RHYTHMS_POP), 55, 74, CELLS_POP};
     }
 }
@@ -1394,6 +1464,7 @@ static MelodyStyle hook_style(Mood mood) {
 static MelodyStyle verse_style(Mood mood) {
     if (mood == MOOD_MUSICBOX) return (MelodyStyle){RHYTHMS_WALTZ, COUNT(RHYTHMS_WALTZ), 58, 76, CELLS_LYRICAL};
     if (mood == MOOD_8BIT) return (MelodyStyle){RHYTHMS_POP, COUNT(RHYTHMS_POP), 60, 77, CELLS_POP};
+    if (mood == MOOD_16BIT) return (MelodyStyle){RHYTHMS_SPARSE, COUNT(RHYTHMS_SPARSE), 57, 74, CELLS_LYRICAL};
     return (MelodyStyle){RHYTHMS_SPARSE, COUNT(RHYTHMS_SPARSE), 53, 70, CELLS_SPARSE};
 }
 
@@ -1940,6 +2011,13 @@ static void pick_groove(Composer *c) {
         pick_pair(c, G_CHORDS, COUNT(PULSE_ARPS));
         break;
     case MOOD_MUSICBOX: pick_pair(c, G_ARP, COUNT(WALTZ_ARPS)); break;
+    case MOOD_16BIT:
+        pick_pair(c, G_KICK, COUNT(MARCH_KICKS));
+        pick_pair(c, G_HATS, COUNT(MARCH_HATS));
+        pick_pair(c, G_BASS, COUNT(SLAP_DRIVE));
+        pick_pair(c, G_BASS_CALM, COUNT(SLAP_CALM));
+        pick_pair(c, G_ARP, COUNT(HARP_ARPS));
+        break;
     case MOOD_DUBSTEP:
         pick_pair(c, G_KICK, COUNT(STEP_KICKS));
         pick_pair(c, G_HATS, COUNT(STEP_HATS));
@@ -2011,6 +2089,12 @@ static void write_parts(Composer *c) {
             if (k == SECTION_DROP || k == SECTION_BREAK)
                 arpeggio(c, bar, WALTZ_ARPS[groove(c, G_ARP, bar)], 2, -1, k == SECTION_BREAK ? 30 : 24);
             break;
+        case MOOD_16BIT:
+            drums_16bit(c, bar);
+            pads(c, bar, CH_PAD, k == SECTION_DROP ? 80 : 100);
+            arpeggio(c, bar, HARP_ARPS[groove(c, G_ARP, bar)], k == SECTION_DROP ? 1 : 2, 0, k == SECTION_DROP ? 22 : 28);
+            orch_hits(c, bar);
+            break;
         case MOOD_DUBSTEP:
             drums_dubstep(c, bar);
             pads(c, bar, CH_PAD, k == SECTION_DROP ? 50 : 100);
@@ -2051,7 +2135,12 @@ int compose(uint64_t seed, const char *title, Mood mood, LengthPref length, Comp
     }
     rng_init(&c->rng, seed, "compose");
     c->salt = hash_u32((uint32_t)seed ^ (uint32_t)(seed >> 32));
-    if (mood < 0 || mood >= MOOD_COUNT) mood = pick_mood(&c->rng);
+    if (mood < 0 || mood >= MOOD_COUNT) {
+        mood = pick_mood(&c->rng);
+        // 16-bit takes its tenth by the seed's own hash, not the draw, so every other seed keeps its mood; this salt
+        // also leaves every voyage reviewed so far where it was.
+        if (hash_u32(c->salt ^ 0x16b23u) % 10 == 0) mood = MOOD_16BIT;
+    }
     const MoodSpec *spec = &MOODS[mood];
     SongInfo *info = &out->info;
     seed_normalize(title ? title : "", info->title, sizeof info->title);

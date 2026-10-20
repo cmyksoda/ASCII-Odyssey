@@ -66,6 +66,9 @@ typedef enum {
     VOICE_FX_REVERSE_CRASH,
     VOICE_FX_CRACKLE,
     VOICE_FX_WIND,
+    VOICE_FLUTE,
+    VOICE_BASS_SLAP,
+    VOICE_ORCH_HIT,
     VOICE_COUNT
 } VoiceKind;
 

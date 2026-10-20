@@ -35,7 +35,10 @@ static const FigletId TITLE_FACES[MOOD_COUNT][TITLE_CHOICES] = {
                   FIGLET_CRICKET},
     [MOOD_DUBSTEP] = {FIGLET_BLOCK, FIGLET_BANNER, FIGLET_SHADOW, FIGLET_PIXEL, FIGLET_DIGITAL, FIGLET_SCANLINE, FIGLET_WIRE,
                       FIGLET_POISON, FIGLET_REV, FIGLET_GRAFFITI, FIGLET_DOOM, FIGLET_COLOSSAL, FIGLET_NANCYJ_FANCY,
-                      FIGLET_THREE_D}};
+                      FIGLET_THREE_D},
+    [MOOD_16BIT] = {FIGLET_ROMAN, FIGLET_STARWARS, FIGLET_COLOSSAL, FIGLET_GRACEFUL, FIGLET_STELLAR, FIGLET_NANCYJ_FANCY,
+                    FIGLET_EPIC, FIGLET_LARRY3D, FIGLET_FENDER, FIGLET_BIG, FIGLET_SHADOW, FIGLET_SLANT, FIGLET_PEBBLES,
+                    FIGLET_DOOM}};
 
 // FIGlet's own space is a sliver; three of them keep the words apart behind the decoding scramble.
 static void title_text(const Piece *p, char *upper) {

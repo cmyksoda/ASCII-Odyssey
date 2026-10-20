@@ -16,6 +16,7 @@ typedef enum {
     MOOD_MUSICBOX,
     MOOD_DUB,
     MOOD_DUBSTEP,
+    MOOD_16BIT,
     MOOD_COUNT,
     MOOD_ANY = -1
 } Mood;

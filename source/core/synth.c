@@ -1238,6 +1238,102 @@ static void wind(Instrument *ins, Rng *r) {
     ins->send_reverb = 0.4f;
 }
 
+/* ---------- The SNES's sampled band ---------- */
+
+// A sampled flute: a breathy chiff, then a round tone with a breath of air under it, soft at the top the way the
+// SNES's interpolation played everything back.
+static void flute(Instrument *ins, Rng *r, float bpm) {
+    base(ins, "flute", ROLE_LEAD, 0.42f);
+    uint32_t seed = rng_u32(r) | 1;
+    float breath = rng_between(r, 0.04f, 0.09f);
+    for (int k = 0; k < 2; k++) {
+        float root = 60.0f + 12.0f * (float)k, hz = note_hz(root);
+        Wave w = wave_new(0.9f);
+        Svf air, soft;
+        svf_reset(&air);
+        svf_reset(&soft);
+        svf_set(&air, hz * 2, 2.0f);
+        svf_set(&soft, 5500, 0.7f);
+        float phase = 0, chiff = 1, k_chiff = decay_factor(0.035f);
+        for (int i = 0; i < w.n; i++) {
+            phase += hz / RATE;
+            if (phase >= 1) phase -= 1;
+            float tone = msin(phase * TAU_F) + 0.18f * msin(2 * phase * TAU_F) + 0.06f * msin(3 * phase * TAU_F);
+            float rise = mmin(1.0f, (float)i / (0.03f * RATE));
+            w.s[i] = svf_low(&soft, tone * rise + svf_band(&air, white(&seed)) * (breath + 0.6f * chiff));
+            chiff *= k_chiff;
+        }
+        int loop_start = w.n / 2;
+        crossfade_loop(w.s, loop_start, w.n, w.n / 8);
+        keep(ins, &w, root, loop_start, w.n - loop_start, k ? 120 : (int)root + 9);
+    }
+    envelope(&ins->volume_env, bpm, 0.02f, 0.2f, 0.85f, 0.18f);
+    ins->send_reverb = 0.2f;
+    ins->send_delay = 0.35f;
+    ins->vibrato_depth = rng_between(r, 0.12f, 0.2f);
+    ins->vibrato_rate = rng_between(r, 4.8f, 5.6f);
+}
+
+// A slapped bass: a bright pop off the string that closes down fast into a round tone and rings away on its own.
+static void bass_slap(Instrument *ins, Rng *r) {
+    base(ins, "slap bass", ROLE_BASS, 0.6f);
+    uint32_t seed = rng_u32(r) | 1;
+    float pop = rng_between(r, 0.04f, 0.08f);
+    for (int k = 0; k < 2; k++) {
+        float root = 28.0f + 24.0f * (float)k, hz = note_hz(root);
+        Wave w = wave_new(1.4f);
+        Svf lp;
+        svf_reset(&lp);
+        float phase = 0, open = 4200, amp = 1, click = 1;
+        float k_open = decay_factor(pop), k_amp = decay_factor(0.9f), k_click = decay_factor(0.004f);
+        for (int i = 0; i < w.n; i++) {
+            if ((i & 31) == 0) svf_set(&lp, 180 + open, 1.4f);
+            phase += hz / RATE;
+            if (phase >= 1) phase -= 1;
+            float tone = saw(phase, hz / RATE) * 0.7f + msin(phase * TAU_F) * 0.5f;
+            w.s[i] = (svf_low(&lp, tone) + white(&seed) * 0.4f * click) * amp;
+            open *= k_open;
+            amp *= k_amp;
+            click *= k_click;
+        }
+        keep(ins, &w, root, 0, 0, k ? 120 : (int)root + 12);
+    }
+    ins->fadeout = 0.05f;
+    ins->ducked = 1;
+}
+
+// The orchestra hit: brass and strings struck at once on a root, fifth and octave, with a burst of bow noise.
+static void orch_hit(Instrument *ins, Rng *r) {
+    base(ins, "orchestra hit", ROLE_CHORD, 0.5f);
+    uint32_t seed = rng_u32(r) | 1;
+    static const float interval[4] = {0, 7, 12, 19};
+    for (int k = 0; k < 2; k++) {
+        float root = 37.0f + 12.0f * (float)k;
+        Wave w = wave_new(0.9f);
+        Svf lp;
+        svf_reset(&lp);
+        float ph[4] = {0}, open = 6000, amp = 1, noise = 1;
+        float k_open = decay_factor(0.12f), k_amp = decay_factor(0.22f), k_noise = decay_factor(0.03f);
+        for (int i = 0; i < w.n; i++) {
+            if ((i & 31) == 0) svf_set(&lp, 400 + open, 0.9f);
+            float v = 0;
+            for (int t = 0; t < 4; t++) {
+                float dt = note_hz(root + interval[t]) * (1 + 0.003f * (float)t) / RATE;
+                ph[t] += dt;
+                if (ph[t] >= 1) ph[t] -= 1;
+                v += saw(ph[t], dt) * (t ? 0.7f : 1.0f);
+            }
+            w.s[i] = soft_clip(svf_low(&lp, v * 0.5f + white(&seed) * noise)) * amp;
+            open *= k_open;
+            amp *= k_amp;
+            noise *= k_noise;
+        }
+        keep(ins, &w, root, 0, 0, k ? 120 : (int)root + 12);
+    }
+    ins->send_reverb = 0.3f;
+    ins->send_delay = 0.3f;
+}
+
 int synth_instrument(Instrument *ins, VoiceKind kind, Rng *r, float bpm) {
     switch (kind) {
     case VOICE_KICK: kick(ins, r, 0); break;
@@ -1297,6 +1393,9 @@ int synth_instrument(Instrument *ins, VoiceKind kind, Rng *r, float bpm) {
     case VOICE_FX_REVERSE_CRASH: reverse_crash(ins, r, bpm); break;
     case VOICE_FX_CRACKLE: crackle(ins, r); break;
     case VOICE_FX_WIND: wind(ins, r); break;
+    case VOICE_FLUTE: flute(ins, r, bpm); break;
+    case VOICE_BASS_SLAP: bass_slap(ins, r); break;
+    case VOICE_ORCH_HIT: orch_hit(ins, r); break;
     default: return -1;
     }
     return ins->sample_count > 0 ? 0 : -1;
