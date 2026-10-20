@@ -376,7 +376,8 @@ void galaxy_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-// A spiral galaxy turning slowly: a bright core, arms of stars winding out, and dark lanes of dust between them.
+// A spiral galaxy turning slowly: a bright core, arms of stars winding out with knots of new stars twinkling in them,
+// and dark lanes of dust drifting between. Inner stars orbit faster, so over a shot the arms visibly wind.
 void galaxy_draw(void *state, const Frame *f) {
     Galaxy *gx = state;
     Grid *g = f->grid;
@@ -388,10 +389,12 @@ void galaxy_draw(void *state, const Frame *f) {
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), radius = mhypot(x, y);
             if (radius > 1.25f) continue;
-            float a = matan2(y, x) - turn;
+            float a = matan2(y, x) - turn - f->local * gx->spin * 0.8f / (radius + 0.2f);
             float arm = 0.5f + 0.5f * mcos((float)gx->arms * (a - gx->wind * mlog2(radius + 0.05f)));
-            float dust = noise_fbm(x * 3 + gx->seed, y * 3);
+            float dust = noise_fbm(x * 3 + gx->seed + f->t * 0.02f, y * 3);
             float level = mexp(-radius * 5.0f) * 1.3f + arm * arm * arm * mexp(-radius * 1.1f) * (0.35f + 0.75f * dust);
+            float h = hash01((uint32_t)(row * 977 + col) ^ (uint32_t)gx->seed);
+            if (arm > 0.85f && radius > 0.2f && h < 0.05f) level += 0.4f * (0.5f + 0.5f * msin(f->t * (1.5f + 3 * h * 20) + h * 300));
             level = saturate(level - 0.06f);
             int i = (int)(level * 6.99f);
             if (i <= 0) continue;

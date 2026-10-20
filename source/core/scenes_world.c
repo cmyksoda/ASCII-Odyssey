@@ -666,8 +666,11 @@ static float dune_height(const Dunes *d, int layer, float x) {
            0.05f * (noise_fbm(x * 0.8f + s, 3) - 0.5f);
 }
 
-// Dunes under a moon: three ridges, the far ones paler, rippled sand on their flanks, and the wind lifting a trail of
-// grains off each crest.
+// A camel walking right, its legs in two strides.
+static const char *const CAMEL[2][3] = {{" .^.  o", "(___)/ ", " | |   "}, {" .^.  o", "(___)/ ", " / \\   "}};
+
+// Dunes under a moon: three ridges, the far ones paler, rippled sand creeping down their flanks, the wind lifting
+// trails of grains off each crest, and a caravan of camels plodding along the middle ridge.
 void dunes_draw(void *state, const Frame *f) {
     Dunes *d = state;
     Grid *g = f->grid;
@@ -686,15 +689,27 @@ void dunes_draw(void *state, const Frame *f) {
                     put_cell(g, col, row, slope > 0.006f ? '/' : slope < -0.006f ? '\\' : '_', rgbf_mix(shade, sand, 0.4f + 0.6f * lit));
                     continue;
                 }
-                int i = (int)(mfract(x * 3 + depth * 9 + d->seed) * 8);
+                int i = (int)(mfract(x * 3 + depth * 9 + d->seed - f->t * 0.08f) * 8);
                 int glyph = (row + col / 4) % 4 ? ' ' : ripple[i];
                 put_cell(g, col, row, glyph, frame_dim(f, rgbf_mix(shade, sand, lit), 0.5f + 0.3f * (1 - depth)));
             }
             // Grains streaming off the crest downwind.
-            if (hash01((uint32_t)col * 2654435761u + (uint32_t)layer) < 0.25f) {
-                float drift = mfract(f->t * d->wind + hash01((uint32_t)col)) * 0.3f;
-                put_cell_under(g, cell_col(g, x + drift), cell_row(g, h + 0.03f + drift * 0.2f), '.', frame_dim(f, sand, 0.6f));
+            if (hash01((uint32_t)col * 2654435761u + (uint32_t)layer) < 0.4f) {
+                float drift = mfract(f->t * d->wind * 2 + hash01((uint32_t)col)) * 0.3f;
+                for (int k = 0; k < 2; k++)
+                    put_cell_under(g, cell_col(g, x + drift - (float)k * 0.035f), cell_row(g, h + 0.03f + drift * 0.2f), k ? '.' : '\'',
+                                   frame_dim(f, sand, 0.6f - 0.25f * (float)k));
             }
+        }
+        if (layer != 1) continue;
+        float wrap = 2 * g->aspect + 0.6f;
+        for (int k = 0; k < 4; k++) {
+            float x = mfract((d->seed * 0.01f + f->t * 0.05f - (float)k * 0.25f + g->aspect + 0.3f) / wrap) * wrap - g->aspect - 0.3f;
+            int feet = cell_row(g, dune_height(d, 1, x)) - 1, stride = (int)mfloor(f->t * 1.6f + (float)k * 0.5f) & 1;
+            for (int r = 0; r < 3; r++)
+                for (int c = 0; CAMEL[stride][r][c]; c++)
+                    if (CAMEL[stride][r][c] != ' ')
+                        put_cell(g, cell_col(g, x) + c - 3, feet - 2 + r, CAMEL[stride][r][c], palette_ramp(f->palette, 0.9f));
         }
     }
     f->fx->glow = 0.45f;

@@ -435,12 +435,22 @@ void skyline_setup(void *state, Rng *r, const Frame *f) {
     s->salt = rng_u32(r);
 }
 
-// A city at night whose windows light up note by note, its rooftop beacons blinking on the kick.
+// A city at night whose windows light up note by note and its rooftop beacons blink on the kick. Between notes the
+// city keeps its own life: lights go on and off in their own time, traffic streams along the street, and now and
+// then a plane blinks across the sky.
 void skyline_draw(void *state, const Frame *f) {
     Skyline *s = state;
     Grid *g = f->grid;
+    // The street sits a few rows up, clear of the edge a television's overscan can crop.
+    int street = g->rows - 5;
     dust_stars(f, s->salt, 0.003f, 0.6f);
     moon_disc(f, g->aspect * 0.55f, 0.62f, 0.12f, palette_ramp(f->palette, 0.9f), s->salt, 0);
+    float flight = mfract(f->t / 26 + hash01(s->salt + 5));
+    if (flight < 0.5f) {
+        float x = -g->aspect + flight * 2 * 2.2f * g->aspect - 0.1f * g->aspect, y = 0.78f + 0.08f * hash01(s->salt + 6);
+        int blink = mfract(f->t * 1.1f) < 0.15f;
+        put_cell(g, cell_col(g, x), cell_row(g, y), blink ? '*' : '.', blink ? palette_accent(f->palette, 0) : palette_ramp(f->palette, 0.6f));
+    }
     float lit[24] = {0};
     for (int role = ROLE_BASS; role < ROLE_FX; role++) {
         const ScoreEvent *notes[24];
@@ -453,8 +463,8 @@ void skyline_draw(void *state, const Frame *f) {
     float kick = frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
     Rgbf wall = palette_ramp(f->palette, 0.28f), warm = palette_accent(f->palette, 1);
     for (int b = 0; b < s->count; b++) {
-        int top = g->rows - s->h[b];
-        for (int y = top; y < g->rows; y++)
+        int top = street - s->h[b];
+        for (int y = top; y < street; y++)
             for (int x = s->x[b]; x < s->x[b] + s->w[b]; x++) {
                 int edge = x == s->x[b] || x == s->x[b] + s->w[b] - 1;
                 if (y == top) {
@@ -462,8 +472,10 @@ void skyline_draw(void *state, const Frame *f) {
                 } else if (edge) {
                     put_cell(g, x, y, '|', wall);
                 } else if ((x - s->x[b]) % 2 == 1 && (y - top) % 2 == 0) {
-                    float h = hash01((uint32_t)(x * 131 + y * 977) ^ s->salt);
-                    float on = h < 0.18f ? 0.6f : h < 0.18f + lit[b] * 0.7f ? lit[b] : 0;
+                    // Each window rethinks whether it's lit about every forty seconds, all at their own moments.
+                    uint32_t id = (uint32_t)(x * 131 + y * 977) ^ s->salt;
+                    float h = hash01(id), mood = hash01(id ^ (uint32_t)mfloor(f->t / 40 + h * 40) * 2654435761u);
+                    float on = mood < 0.18f ? 0.6f : h < 0.18f + lit[b] * 0.7f ? lit[b] : 0;
                     put_cell(g, x, y, on > 0.3f ? '#' : '.', on > 0 ? rgbf_mix(wall, warm, saturate(on * 1.4f)) : frame_dim(f, wall, 0.7f));
                 } else {
                     put_cell(g, x, y, ' ', wall);
@@ -472,6 +484,24 @@ void skyline_draw(void *state, const Frame *f) {
         if (s->h[b] > g->rows * 2 / 5) {
             int blink = kick > 0.2f || mfract(f->t * 0.5f + (float)b * 0.37f) < 0.12f;
             put_cell(g, s->x[b] + s->w[b] / 2, top - 1, blink ? '*' : '.', palette_accent(f->palette, 0));
+        }
+    }
+    // The street: headlights leading and taillights trailing, one lane each way, then the far curb.
+    for (int col = 0; col < g->cols; col++) {
+        put_cell(g, col, street, '_', wall);
+        put_cell(g, col, street + 3, '-', frame_dim(f, wall, 0.6f));
+    }
+    Rgbf head = palette_ramp(f->palette, 1.0f), tail = palette_accent(f->palette, 0);
+    for (int lane = 0; lane < 2; lane++) {
+        int dir = lane ? -1 : 1;
+        float span = (float)g->cols + 24, speed = lane ? 13.0f : 9.0f;
+        for (int car = 0; car < 5; car++) {
+            uint32_t id = s->salt + (uint32_t)(lane * 16 + car + 1) * 2654435761u;
+            float along = mfract(hash01(id) + f->t * speed / span) * span - 12;
+            int front = (int)(dir > 0 ? along : (float)g->cols - along);
+            put_cell(g, front, street + 1 + lane, 'o', head);
+            for (int k = 1; k <= 3; k++)
+                put_cell(g, front - dir * k, street + 1 + lane, k == 3 ? '.' : '=', frame_dim(f, k == 3 ? tail : wall, k == 3 ? 1.0f : 1.6f));
         }
     }
     f->fx->glow = 0.5f;
