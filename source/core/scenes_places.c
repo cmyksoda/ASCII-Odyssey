@@ -290,8 +290,15 @@ static float glass_width(float y) {
     return 0.03f + 0.32f * msin(saturate(u) * PI_F * 0.5f) * (u < 0.9f ? 1.0f : 1 - (u - 0.9f) * 3);
 }
 
-// An hourglass timing the whole piece: the top bulb empties as the song plays, a thin stream runs through the neck,
-// and the pile below grows into a cone.
+static int sand_at(float x, float y, float top_level, float pile) {
+    float w = glass_width(y);
+    if (mabs(x) > w) return 0;
+    if (y > 0.02f) return y < 0.02f + top_level;
+    return y < -0.02f && -0.74f + pile * (1 - mabs(x) / (w + 0.001f)) > y;
+}
+
+// An hourglass timing the whole piece: the top bulb empties as the song plays, its surface sliding toward the neck;
+// grains fall through the lower bulb and spray off the pile, which grows into a cone with sand trickling down it.
 void hourglass_draw(void *state, const Frame *f) {
     Hourglass *h = state;
     Grid *g = f->grid;
@@ -299,7 +306,7 @@ void hourglass_draw(void *state, const Frame *f) {
     Rgbf wood = palette_accent(f->palette, 1), glass = palette_ramp(f->palette, 0.6f), sand = palette_ramp(f->palette, 0.9f);
     for (int k = 0; k < 30; k++) {
         uint32_t id = h->salt + (uint32_t)k * 2654435761u;
-        float x = (hash01(id) * 2 - 1) * g->aspect, y = mfract(hash01(id + 1) + f->t * 0.01f) * 2 - 1;
+        float x = (hash01(id) * 2 - 1) * g->aspect + 0.04f * msin(f->t * 0.4f + (float)k), y = mfract(hash01(id + 1) + f->t * 0.03f) * 2 - 1;
         put_cell(g, cell_col(g, x), cell_row(g, y), '.', frame_dim(f, glass, 0.4f));
     }
     // The sand: the top bulb holds what's left, filling from its floor (the neck) upward.
@@ -308,18 +315,30 @@ void hourglass_draw(void *state, const Frame *f) {
         float y = cell_y(g, row), w = glass_width(y);
         for (int col = cell_col(g, -w); col <= cell_col(g, w); col++) {
             float x = cell_x(g, col);
-            int full = 0;
-            if (y > 0.02f) full = y < 0.02f + top_level;
-            else if (y < -0.02f) full = -0.74f + pile * (1 - mabs(x) / (w + 0.001f)) > y;
-            if (full) put_cell(g, col, row, (row + col) % 4 ? ':' : '.', sand);
+            if (!sand_at(x, y, top_level, pile)) continue;
+            if (sand_at(x, y + 2.0f / (float)g->rows, top_level, pile)) {
+                put_cell(g, col, row, (row + col) % 4 ? ':' : '.', sand);
+                continue;
+            }
+            // The surface: grains slide toward the neck up top, and trickle down the pile's slopes below.
+            int grain = (int)mfloor(mabs(x) * 30 + (y > 0 ? 1.0f : -1.0f) * f->t * 2.5f) % 3;
+            put_cell(g, col, row, grain == 0 ? '.' : grain == 1 ? ':' : '\'', frame_dim(f, sand, grain ? 0.9f : 1.0f));
         }
         // The glass walls.
         put_cell(g, cell_col(g, -w) - 1, row, y > 0 ? '\\' : '/', glass);
         put_cell(g, cell_col(g, w) + 1, row, y > 0 ? '/' : '\\', glass);
     }
-    if (progress < 0.999f)
+    if (progress < 0.999f) {
         for (int row = cell_row(g, 0.0f); row <= cell_row(g, -0.74f + pile); row++)
-            put_cell(g, cell_col(g, 0), row, mfract(f->t * 6 + (float)row * 0.37f) < 0.5f ? '|' : ':', sand);
+            put_cell(g, cell_col(g, 0), row, mfract(f->t * 6 + (float)row * 0.37f) < 0.5f ? '|' : ':', frame_dim(f, sand, 0.7f));
+        // Loose grains falling faster as they go, kicking sideways where they land.
+        float fall = -0.02f - (-0.74f + pile);
+        for (int k = 0; k < 8; k++) {
+            float phase = mfract(f->t * 0.9f + (float)k / 8), side = hash01(h->salt + (uint32_t)k) - 0.5f;
+            float spray = phase > 0.85f ? (phase - 0.85f) * 2.2f : 0, x = side * 0.04f + side * spray;
+            put_cell(g, cell_col(g, x), cell_row(g, -0.02f - fall * phase * phase + spray * 0.3f), phase > 0.85f ? '\'' : '.', sand);
+        }
+    }
     // Plates top and bottom, and the posts.
     for (int s = 0; s < 2; s++) {
         int row = cell_row(g, s ? -0.8f : 0.8f);

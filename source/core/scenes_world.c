@@ -101,13 +101,11 @@ void turntable_draw(void *state, const Frame *f) {
 /* ---------- Cassette ---------- */
 
 typedef struct {
-    float tilt;
     uint32_t salt;
 } Cassette;
 
 void cassette_setup(void *state, Rng *r, const Frame *f) {
     Cassette *c = state;
-    c->tilt = rng_between(r, -0.04f, 0.04f);
     c->salt = rng_u32(r);
     (void)f;
 }
@@ -125,7 +123,7 @@ static void rounded_box(const Frame *f, float x0, float y0, float x1, float y1, 
 }
 
 // A cassette playing: the piece's name on its label, and through the window the reels turning while the tape
-// winds from the left spool onto the right as the song goes by.
+// winds from the left spool onto the right as the song goes by, running past the head along the bottom.
 void cassette_draw(void *state, const Frame *f) {
     Cassette *c = state;
     Grid *g = f->grid;
@@ -133,13 +131,13 @@ void cassette_draw(void *state, const Frame *f) {
     Rgbf shell = palette_ramp(f->palette, 0.7f), paper = palette_accent(f->palette, 1), ink = palette_ramp(f->palette, 0.25f);
     Rgbf tape = palette_ramp(f->palette, 0.35f), hub = palette_ramp(f->palette, 0.95f);
     // The tape packs go down first: resolving the canvas rewrites the whole grid.
-    float wy = -h * 0.25f, wh = h * 0.28f, ww = w * 0.62f, progress = saturate(f->t / mmax(f->score->length, 1));
+    float wy = -h * 0.25f, wh = h * 0.28f, ww = w * 0.62f, length = mmax(f->score->length, 1), progress = saturate(f->t / length);
     Canvas *cv = f->canvas;
     canvas_clear(cv);
     for (int side = 0; side < 2; side++)
         canvas_disc(cv, (side ? 1 : -1) * w * 0.48f, wy, 0.09f + 0.17f * (side ? progress : 1 - progress), 0.85f, tape);
     frame_resolve(f);
-    dust_stars(f, c->salt, 0.0f, 0.35f);
+    dust_stars(f, c->salt, 0.08f, 0.35f);
     rounded_box(f, -w, -h, w, h, 0.08f, shell);
     // The label: a band of paper with ruled lines and the title written on it.
     int top = cell_row(g, h * 0.86f), bottom = cell_row(g, h * 0.18f);
@@ -154,14 +152,34 @@ void cassette_draw(void *state, const Frame *f) {
     // The window and the two reels.
     rounded_box(f, -ww, wy - wh, ww, wy + wh, 0.06f, frame_dim(f, shell, 0.7f));
     for (int side = 0; side < 2; side++) {
-        float x = (side ? 1 : -1) * w * 0.48f, pack = 0.09f + 0.17f * (side ? progress : 1 - progress);
-        // Tape runs at a steady speed, so the emptier reel spins faster.
-        float spin = f->t * 0.9f / pack;
+        float x = (side ? 1 : -1) * w * 0.48f, start = side ? 0.09f : 0.26f, gain = side ? 0.17f : -0.17f;
+        float pack = start + gain * progress;
+        // Tape runs at a steady speed, so a reel turns faster the less it holds: the angle is the integral of
+        // speed / pack. Both turn anticlockwise, drawing the tape left to right past the head.
+        float spin = 0.9f * length / gain * mlog2(pack / start) * 0.6931472f;
+        for (int k = 0; k < 3; k++) {
+            float a = spin + (float)k * TAU_F / 3, at = 0.07f + (pack - 0.07f) * 0.6f;
+            put_cell(g, cell_col(g, x + mcos(a) * at), cell_row(g, wy + msin(a) * at), '.', frame_dim(f, tape, 1.8f));
+        }
         circle(f, x, wy, 0.07f, hub, 14);
         for (int k = 0; k < 6; k++) {
             float a = spin + (float)k * TAU_F / 6;
             line(f, x + mcos(a) * 0.025f, wy + msin(a) * 0.025f, x + mcos(a) * 0.065f, wy + msin(a) * 0.065f, hub);
         }
+    }
+    // The tape's run from the left pack down past the head and up onto the right one, marks on it travelling at the
+    // tape's speed.
+    StrokePoint run[4] = {{-w * 0.48f - (0.26f - 0.17f * progress), wy, tape}, {-w * 0.8f, -h * 0.7f, tape},
+                          {w * 0.8f, -h * 0.7f, tape}, {w * 0.48f + 0.09f + 0.17f * progress, wy, tape}};
+    stroke_draw(f->stroker, run, 4, 0);
+    float legs[3], total = 0;
+    for (int k = 0; k < 3; k++) total += legs[k] = mhypot(run[k + 1].x - run[k].x, run[k + 1].y - run[k].y);
+    for (int m = 0; m < 6; m++) {
+        float s = mfract((float)m / 6 + f->t * 0.9f / total) * total;
+        int k = 0;
+        while (k < 2 && s > legs[k]) s -= legs[k++];
+        float u = s / legs[k];
+        put_cell(g, cell_col(g, mixf(run[k].x, run[k + 1].x, u)), cell_row(g, mixf(run[k].y, run[k + 1].y, u)), 'o', frame_dim(f, tape, 1.8f));
     }
     // The head opening along the bottom, and a screw in each corner.
     for (int k = -2; k <= 2; k++) put_cell(g, cell_col(g, (float)k * w * 0.18f), cell_row(g, -h * 0.82f), k ? 'o' : '#', frame_dim(f, shell, 0.8f));
@@ -197,13 +215,15 @@ void cylinder_draw(void *state, const Frame *f) {
     Grid *g = f->grid;
     float span = g->aspect * 0.82f, center = 0.25f, radius = 0.42f;
     Rgbf brass = palette_accent(f->palette, 1), steel = palette_ramp(f->palette, 0.75f), pin = palette_ramp(f->palette, 1.0f);
-    // The drum: brushed metal, brightest across its middle where it faces us.
+    // The drum: brushed metal turning toward the comb at the pins' pace, brightest across its middle where it faces us.
     int r0 = cell_row(g, center + radius), r1 = cell_row(g, center - radius), c0 = cell_col(g, -span), c1 = cell_col(g, span);
+    float turned = f->t * PI_F / cy->window;
     for (int row = r0; row <= r1; row++) {
         float v = (cell_y(g, row) - center) / radius, face = msqrt(saturate(1 - v * v));
+        int band = mfract((matan2(face, -v) + turned) * 6 / PI_F) < 0.25f;
         for (int col = c0; col <= c1; col++) {
             int edge = col == c0 || col == c1;
-            put_cell(g, col, row, edge ? (col == c0 ? '(' : ')') : (row & 1) ? '-' : '~', frame_dim(f, brass, 0.2f + 0.45f * face));
+            put_cell(g, col, row, edge ? (col == c0 ? '(' : ')') : band ? '~' : '-', frame_dim(f, brass, 0.2f + 0.45f * face));
         }
     }
     static const Role sung[4] = {ROLE_LEAD, ROLE_BELL, ROLE_PLUCK, ROLE_ARP};
@@ -505,12 +525,17 @@ void speakers_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-// A stack of speaker cabinets: the woofers' cones push out on every kick and bass note and send a ring off them, and
-// the tweeters glint on the hats.
+// A stack of speaker cabinets playing the whole piece: the upper cones push out on the kick and the tune, the lower on
+// the bass and the pads, every note sends a ring of air off its cone, and the tweeters glint on the hats.
 void speakers_draw(void *state, const Frame *f) {
+    static const Role UPPER[4] = {ROLE_KICK, ROLE_LEAD, ROLE_BELL, ROLE_ARP}, LOWER[4] = {ROLE_BASS, ROLE_PAD, ROLE_PLUCK, ROLE_CHORD};
     Speakers *s = state;
     Grid *g = f->grid;
     float kick = frame_pulse(f, ROLE_KICK, 0.18f, 1.0f), bass = frame_pulse(f, ROLE_BASS, 0.25f, 0.7f), hat = frame_pulse(f, ROLE_HAT, 0.08f, 1.0f);
+    float tune = frame_pulse(f, ROLE_LEAD, 0.2f, 0.5f) + frame_pulse(f, ROLE_BELL, 0.25f, 0.5f) + frame_pulse(f, ROLE_ARP, 0.12f, 0.3f);
+    float swell = frame_pulse(f, ROLE_PAD, 0.8f, 0.35f) + frame_pulse(f, ROLE_PLUCK, 0.2f, 0.4f) + frame_pulse(f, ROLE_CHORD, 0.3f, 0.5f);
+    // Air keeps rolling off the cones between notes too, faster as the music gathers energy.
+    float air = frame_travel(f, 0.6f, 1.2f);
     Rgbf box = palette_ramp(f->palette, 0.4f), cone = palette_accent(f->palette, 0), cap = palette_ramp(f->palette, 0.95f);
     float cw = g->aspect * 1.7f / (float)s->columns, ch = 1.7f / (float)s->rows;
     for (int i = 0; i < s->columns; i++)
@@ -519,13 +544,18 @@ void speakers_draw(void *state, const Frame *f) {
             StrokePoint frame[4] = {{x0 + 0.02f, y1, box}, {x0 + cw - 0.02f, y1, box}, {x0 + cw - 0.02f, y1 - ch + 0.03f, box},
                                     {x0 + 0.02f, y1 - ch + 0.03f, box}};
             stroke_draw(f->stroker, frame, 4, 1);
-            // The lower cabinets carry the bass, the upper the kick.
-            float push = j ? bass : kick, r = mmin(cw, ch) * 0.34f;
+            float push = mmin(1, j ? bass + swell : kick + tune), r = mmin(cw, ch) * 0.34f;
             circle(f, cx, cy, r * 1.08f, frame_dim(f, box, 0.8f), 32);
             circle(f, cx, cy, r * (0.86f + 0.12f * push), frame_dim(f, cone, 0.6f + 0.6f * push), 32);
             circle(f, cx, cy, r * (0.45f + 0.1f * push), frame_dim(f, cone, 0.5f + 0.5f * push), 24);
             circle(f, cx, cy, r * 0.16f, cap, 12);
-            if (push > 0.15f) circle(f, cx, cy, r * (1.1f + 0.5f * (1 - push)), frame_dim(f, cone, push * 0.8f), 40);
+            float roll = mfract(air + (float)(i * 2 + j) * 0.37f);
+            circle(f, cx, cy, r * (1.12f + 0.35f * roll), frame_dim(f, cone, 0.4f * (1 - roll)), 40);
+            for (int k = 0; k < 4; k++) {
+                const ScoreEvent *e = score_last(f->score, j ? LOWER[k] : UPPER[k], f->t);
+                float age = e ? (f->t - e->time) / 0.5f : 1;
+                if (age < 1) circle(f, cx, cy, r * (1.12f + 0.35f * age), frame_dim(f, cone, (1 - age) * 0.8f * frame_bright(f)), 40);
+            }
             float tx = cx + cw * 0.3f, ty = y1 - ch * 0.14f;
             put_cell(g, cell_col(g, tx), cell_row(g, ty), hat > 0.2f ? '*' : 'o', frame_dim(f, cap, 0.5f + 0.5f * hat));
         }
@@ -739,7 +769,7 @@ void kelp_draw(void *state, const Frame *f) {
 /* ---------- Meteor shower ---------- */
 
 typedef struct {
-    float radiant_x, radiant_y, ridge;
+    float radiant_x, radiant_y, ridge, band_tilt, band_at;
     uint32_t salt;
 } Meteors;
 
@@ -748,41 +778,68 @@ void meteors_setup(void *state, Rng *r, const Frame *f) {
     m->radiant_x = rng_between(r, -0.8f, 0.8f) * f->grid->aspect;
     m->radiant_y = rng_between(r, 0.7f, 1.1f);
     m->ridge = rng_between(r, -0.55f, -0.4f);
+    m->band_tilt = rng_between(r, -0.9f, 0.9f);
+    m->band_at = rng_between(r, 0.1f, 0.45f);
     m->salt = rng_u32(r);
 }
 
-// A meteor shower over a ridge of pines: streaks fanning out from one point in the sky, each burning out on its way.
+// A meteor shower over a lake: streaks fanning out from one point in the sky, each burning out on its way, now and then
+// a slow fireball, and the Milky Way arching behind them as the sky turns, all held upside down in the water.
 void meteors_draw(void *state, const Frame *f) {
     Meteors *m = state;
     Grid *g = f->grid;
-    dust_stars(f, m->salt, 0.0f, 0.9f);
     Rgbf hot = palette_ramp(f->palette, 1.0f), trail = palette_accent(f->palette, 2), land = palette_ramp(f->palette, 0.25f);
-    for (int k = 0; k < 6; k++) {
-        float slot = mfloor(f->t / 0.7f) - (float)k, age = f->t - slot * 0.7f;
+    float turn = f->t * 0.004f, nx = -msin(m->band_tilt), ny = mcos(m->band_tilt);
+    for (int row = 0; row < cell_row(g, m->ridge); row++)
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col) - turn * 8, y = cell_y(g, row), d = x * nx + y * ny - m->band_at;
+            if (d * d > 0.06f) continue;
+            float clump = noise_value((x * ny - y * nx) * 4 + (float)(m->salt % 89), d * 6), dense = mexp(-d * d * 60) * clump;
+            uint32_t id = (uint32_t)(row * 977 + col) ^ m->salt;
+            if (hash01(id) < dense * 1.1f) put_cell(g, col, row, hash01(id + 1) < 0.35f ? ':' : '.', frame_dim(f, palette_ramp(f->palette, 0.6f + 0.4f * dense), 0.3f + 0.5f * dense));
+        }
+    dust_stars(f, m->salt, 0.03f, 0.9f);
+    for (int k = 0; k < 8; k++) {
+        float slot = mfloor(f->t / 0.45f) - (float)k, age = f->t - slot * 0.45f;
         uint32_t id = (uint32_t)slot * 2654435761u ^ m->salt;
-        if (hash01(id) < 0.35f) continue;
-        float life = 0.5f + 0.5f * hash01(id + 1);
+        if (hash01(id) < 0.4f) continue;
+        // About one in twelve is a fireball: brighter, slower, with a longer tail.
+        int fireball = hash01(id + 5) < 0.08f;
+        float life = fireball ? 2.2f : 0.5f + 0.5f * hash01(id + 1);
         if (age > life) continue;
         float a = matan2(-1, 0) + (hash01(id + 2) - 0.5f) * 2.2f, dx = mcos(a), dy = msin(a);
-        float start = 0.15f + 0.35f * hash01(id + 3), run = start + age * 1.6f;
+        float start = 0.15f + 0.35f * hash01(id + 3), run = start + age * (fireball ? 0.7f : 1.6f);
         float hx = m->radiant_x + dx * run * g->aspect * 0.8f, hy = m->radiant_y + dy * run;
         float fade = 1 - age / life;
-        for (int s = 0; s < 8; s++) {
+        for (int s = 0; s < (fireball ? 14 : 8); s++) {
             float back = (float)s * 0.035f;
-            put_cell(g, cell_col(g, hx - dx * back * g->aspect * 0.8f), cell_row(g, hy - dy * back), s ? (s < 3 ? '-' : '.') : '*',
-                     frame_dim(f, s ? trail : hot, fade * (1 - (float)s / 9)));
+            put_cell(g, cell_col(g, hx - dx * back * g->aspect * 0.8f), cell_row(g, hy - dy * back), s ? (s < 3 ? (fireball ? '=' : '-') : '.') : fireball ? '@' : '*',
+                     frame_dim(f, s ? trail : hot, fade * (1 - (float)s / (fireball ? 15 : 9)) * (fireball ? 1.3f : 1.0f)));
         }
     }
-    // The ridge and its pines, dark against the sky.
+    // A treeline along the shore, dark against the sky.
+    int shore = cell_row(g, m->ridge);
     for (int col = 0; col < g->cols; col++) {
-        float x = cell_x(g, col), h = m->ridge + 0.12f * noise_fbm(x * 0.7f + (float)(m->salt % 53), 1);
-        for (int row = cell_row(g, h); row < g->rows; row++) put_cell(g, col, row, row == cell_row(g, h) ? '_' : ' ', land);
         if (hash01((uint32_t)col * 7919u ^ m->salt) < 0.12f) {
-            int top = cell_row(g, h) - 2 - (int)(hash01((uint32_t)col * 31u) * 4);
-            for (int row = top; row < cell_row(g, h); row++) {
+            int top = shore - 3 - (int)(hash01((uint32_t)col * 31u) * 4);
+            for (int row = top; row < shore; row++) {
                 int w = (row - top) / 2;
                 for (int c = -w; c <= w; c++) put_cell(g, col + c, row, c < 0 ? '/' : c > 0 ? '\\' : '^', frame_dim(f, land, 1.3f));
             }
+        }
+    }
+    for (int row = shore + 1; row < g->rows; row++)
+        for (int col = 0; col < g->cols; col++) grid_at(g, col, row)->glyph = ' ';
+    // The lake holds everything above it upside down, dimmer, broken by ripples drifting across.
+    for (int col = 0; col < g->cols; col++) put_cell(g, col, shore, '-', frame_dim(f, land, 1.5f));
+    for (int row = shore + 1; row < g->rows; row++) {
+        int src = 2 * shore - row;
+        int wobble = (int)mfloor(1.6f * msin((float)row * 1.9f + f->t * 1.1f) + 0.5f);
+        for (int col = 0; src >= 0 && col < g->cols; col++) {
+            const Cell *c = grid_at(g, clampi(col + wobble, 0, g->cols - 1), src);
+            if (c->glyph == ' ') continue;
+            int glyph = c->glyph == '/' ? '\\' : c->glyph == '\\' ? '/' : c->glyph == '^' ? 'v' : c->glyph == '_' ? '-' : c->glyph;
+            put_cell(g, col, row, glyph, frame_dim(f, rgbf(c->fg), 0.4f));
         }
     }
     f->fx->glow = 0.55f;
