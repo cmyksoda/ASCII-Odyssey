@@ -29,12 +29,13 @@ typedef enum { MENU_NOTICE, MENU_TITLE, MENU_PAUSE, MENU_END } MenuKind;
 typedef enum { OVERLAY_NONE, OVERLAY_TRACKER, OVERLAY_INFO } Overlay;
 
 static const char *const NOTICE_ITEMS[] = {"SAIL AS IT IS", "SAIL CALMER"};
-static const char *const NOTICE_LINES[] = {"a gentle note before you sail", "", "some voyages flash a little on the beat.",
+static const char *const NOTICE_LINES[] = {"a gentle note before you sail", "",
+                                           "some voyages will feature flashing lights in time with the music.",
                                            "you can change this any time in settings."};
 static const char *const TITLE_ITEMS[] = {"START", "SETTINGS", "ABOUT", "EXIT"};
 static const char *const ABOUT_LINES[] = {"how a voyage is made",
                                           "",
-                                          "every voyage grows from a seed, a little name",
+                                          "every voyage grows from a seed, a name",
                                           "like violet lagoon. the seed is all it needs.",
                                           "",
                                           "it picks one of ten vibes, then a tempo, a key,",
@@ -43,8 +44,7 @@ static const char *const ABOUT_LINES[] = {"how a voyage is made",
                                           "tracker, with sounds built from scratch.",
                                           "",
                                           "the pictures follow along: each part of the song",
-                                          "gets its own scenes, colors and transitions,",
-                                          "and the drops hit hardest.",
+                                          "gets its own scenes, colors, and transitions.",
                                           "",
                                           "the same seed always sails the same voyage,",
                                           "so you can share the ones you love <3"};
@@ -470,10 +470,11 @@ static void about_frame(App *a, const Input *in) {
 
 // The first boot's note: either answer is saved, so it never comes back.
 static void notice_frame(App *a, const AppClock *clock, const Input *in, AppRequest *req) {
-    int lines = (int)(sizeof NOTICE_LINES / sizeof NOTICE_LINES[0]);
+    int lines = (int)(sizeof NOTICE_LINES / sizeof NOTICE_LINES[0]), widest = 0;
+    for (int i = 0; i < lines; i++) widest = (int)strlen(NOTICE_LINES[i]) > widest ? (int)strlen(NOTICE_LINES[i]) : widest;
     for (int i = 0; i < lines; i++) {
         int row = a->menu.top - lines - 2 + i;
-        clear_behind(a, &a->scene, a->ui.cols / 2 - 24, row, 48, 1);
+        clear_behind(a, &a->scene, a->ui.cols / 2 - widest / 2 - 2, row, widest + 4, 1);
         if (NOTICE_LINES[i][0]) text_center(a, &a->scene, row, NOTICE_LINES[i], i ? NOTE : ACCENT);
     }
     int chosen = menu_input(a, in);
