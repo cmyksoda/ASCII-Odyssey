@@ -328,7 +328,7 @@ int main(int argc, char **argv) {
             }
             if (stats.frames == 120) stats_report(&stats);
             double mark = tour->music_shots ? clock.music : wall - stalled;
-            if (shot < tour->shot_count && mark >= tour->shots[shot]) {
+            if (shots && shot < tour->shot_count && mark >= tour->shots[shot]) {
                 int w, h;
                 const void *xfb = video_xfb(&w, &h);
                 char name[32];
