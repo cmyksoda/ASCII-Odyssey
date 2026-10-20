@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """Zip the Homebrew Channel folder for an SD card: apps/APP/ with boot.dol, meta.xml and icon.png, the font
-licenses and credits in apps/APP/licenses/, and the app's own LICENSE at the top.
+licenses and credits in apps/APP/licenses/, and the app's own LICENSE beside them.
 
   package.py APP VERSION
 """
@@ -16,7 +16,7 @@ def main():
     root = os.path.join('dist', 'apps', app)
     out = os.path.join('dist', f'{app}-{version}.zip')
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
-        z.write('LICENSE', 'LICENSE')
+        z.write('LICENSE', f'apps/{app}/LICENSE')
         for name in ('boot.dol', 'meta.xml', 'icon.png'):
             z.write(os.path.join(root, name), f'apps/{app}/{name}')
         for path in sorted(glob.glob(os.path.join('licenses', '*.txt'))):
