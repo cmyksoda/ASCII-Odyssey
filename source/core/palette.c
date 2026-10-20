@@ -21,13 +21,15 @@ enum {
     EVERY = (1 << MOOD_COUNT) - 1
 };
 
+enum { RAINBOW = 2 };
+
 typedef struct {
     const char *name;
     Rgb bg, ramp[RAMP_STEPS], accent[3];
     int light;
     // The moods it suits best; any mood can still draw it now and then.
     unsigned moods;
-    // Multi-hued palettes keep their hues: turning them would only muddle them.
+    // Multi-hued palettes keep their hues: turning them would only muddle them. RAINBOW also paints by place.
     int fixed;
 } Curated;
 
@@ -56,8 +58,8 @@ static const Curated CURATED[] = {
      {H(0xffd38a), H(0x8ab4ff), H(0xffffff)}, 0, AMBIENT | DUB | JUNGLE, 0},
     {"violet storm", H(0x08051a), {H(0x1d1240), H(0x3a2177), H(0x6236b3), H(0x9a5fe6), H(0xc9a3ff), H(0xf1e6ff)},
      {H(0xffdf6a), H(0x6af0ff), H(0xff7ab8)}, 0, TRANCE | SYNTHWAVE | DUBSTEP | KEYGEN, 0},
-    {"rainbow", H(0x0c0816), {H(0x3b0f6b), H(0x2f4bff), H(0x00c2ff), H(0x2bdc6b), H(0xffd23f), H(0xff6b6b)},
-     {H(0xff3d81), H(0xffffff), H(0x00ffd0)}, 0, EVERY, 1},
+    {"rainbow", H(0x000000), {H(0x2a2a2a), H(0x505050), H(0x7c7c7c), H(0xa8a8a8), H(0xd6d6d6), H(0xffffff)},
+     {H(0xffffff), H(0xffffff), H(0xd6d6d6)}, 0, EVERY, RAINBOW},
     {"cmyk", H(0x09090c), {H(0x1c2530), H(0x006f7d), H(0x00b4e6), H(0xe6007e), H(0xffd400), H(0xfff6d8)},
      {H(0x00b4e6), H(0xe6007e), H(0xffd400)}, 0, EVERY, 1},
     {"vaporwave", H(0x1a0b2e), {H(0x3d1a5c), H(0x7a2c8f), H(0xc74ab0), H(0xff7ac6), H(0x8ef0ff), H(0xf2fbff)},
@@ -174,6 +176,30 @@ static void from_curated(const Curated *c, Palette *out) {
     memcpy(out->ramp, c->ramp, sizeof out->ramp);
     memcpy(out->accent, c->accent, sizeof out->accent);
     out->light = c->light;
+    out->rainbow = c->fixed == RAINBOW;
+}
+
+// Bright, full stops, with blue and violet lifted so they read on black as well as yellow does.
+static const Rgb SPECTRUM[] = {H(0xff3b4e), H(0xff8a1f), H(0xffe03a), H(0x4cf06a), H(0x2bd6ff), H(0x5070ff), H(0xb455ff)};
+
+Rgbf palette_rainbow_at(const Grid *g, int col, int row, float t) {
+    const int n = (int)(sizeof SPECTRUM / sizeof SPECTRUM[0]);
+    // Bands run corner to corner, so the whole spectrum is on screen at once, and drift a full turn every 20 s.
+    float u = mfract((float)col / (float)g->cols + 0.35f * (float)row / (float)g->rows + t * 0.05f) * (float)n;
+    int i = (int)u;
+    return rgbf_mix(rgbf(SPECTRUM[i % n]), rgbf(SPECTRUM[(i + 1) % n]), u - (float)i);
+}
+
+void palette_paint_rainbow(Grid *g, float t) {
+    for (int row = 0; row < g->rows; row++)
+        for (int col = 0; col < g->cols; col++) {
+            Cell *c = grid_at(g, col, row);
+            if (c->glyph == ' ') continue;
+            int v = c->fg.r > c->fg.g ? c->fg.r : c->fg.g;
+            v = v > c->fg.b ? v : c->fg.b;
+            // Lifted, so the dim steps a gentle scene lives in still read as color on black.
+            c->fg = rgb_from_f(rgbf_scale(palette_rainbow_at(g, col, row, t), msqrt((float)v / 255.0f)));
+        }
 }
 
 int palette_curated_count(void) {

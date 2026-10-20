@@ -227,6 +227,7 @@ static void title_card(Piece *p, float t) {
                 const char *front = FRONT[p->intro];
                 int glyph = settling ? front[roll % strlen(front)] : ch;
                 if (settling && p->intro != INTRO_DECODE) color = rgbf_mix(color, pearl, 0.6f);
+                if (p->palette->rainbow) color = palette_rainbow_at(g, col, row, t);
                 *cell = (Cell){(uint8_t)glyph, rgb_from_f(color), (uint8_t)nudge};
             }
     }

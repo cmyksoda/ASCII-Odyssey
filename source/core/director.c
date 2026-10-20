@@ -222,6 +222,7 @@ static void render_shot(const Direction *d, Shot *shot, Frame *f, Grid *into) {
     f->react = d->by_section ? f->section_react : scene_kinds[shot->kind].reactive ? 1.0f : 0.0f;
     grid_clear(into);
     scene_kinds[shot->kind].draw(shot->state, f);
+    if (f->palette->rainbow) palette_paint_rainbow(into, f->t);
     f->grid = keep;
     st->grid = stroke_grid;
 }
