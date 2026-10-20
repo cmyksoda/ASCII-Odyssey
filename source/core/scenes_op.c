@@ -411,17 +411,19 @@ void squares_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-// How far out a point lies on a nested triangle or hexagon, as its distance along the nearest face's normal, and the
-// direction that face runs, both in the polygon's own turned frame.
-static float polygon_reach(int sides, float px, float py, float *ex, float *ey) {
+// How far out a point lies on a nested triangle or hexagon, as its distance along the nearest face's normal, with the
+// direction that face runs and which face it is, all in the polygon's own turned frame.
+static float polygon_reach(int sides, float px, float py, float *ex, float *ey, int *face) {
     static const float TRI[3][2] = {{0, 1}, {-0.8660254f, -0.5f}, {0.8660254f, -0.5f}};
     static const float HEX[3][2] = {{0, 1}, {0.8660254f, 0.5f}, {0.8660254f, -0.5f}};
     const float(*normal)[2] = sides == 3 ? TRI : HEX;
     float best = -1e9f;
+    *ex = 1, *ey = 0, *face = 0;
     for (int k = 0; k < 3; k++) {
         float d = px * normal[k][0] + py * normal[k][1];
-        if (sides == 6) d = mabs(d);
-        if (d > best) best = d, *ex = -normal[k][1], *ey = normal[k][0];
+        int which = k;
+        if (sides == 6 && d < 0) d = -d, which = k + 3;
+        if (d > best) best = d, *ex = -normal[k][1], *ey = normal[k][0], *face = which;
     }
     return best;
 }
@@ -442,10 +444,11 @@ void squares_draw(void *state, const Frame *f) {
             float x = cell_x(g, col), depth = mhypot(x, y) * s->bands;
             float a = base + depth * twist, c = mcos(a), sn = msin(a);
             float px = x * c + y * sn, py = -x * sn + y * c, side, ex = 0, ey = 0;
+            int face;
             if (s->sides == 4)
                 side = mmax(mabs(px), mabs(py));
             else
-                side = polygon_reach(s->sides, px, py, &ex, &ey);
+                side = polygon_reach(s->sides, px, py, &ex, &ey, &face);
             float ring = side * s->bands * 1.2f - flow;
             int band = mfloor_i(ring);
             Rgbf ink = inks[((band % 3) + 3) % 3];
@@ -467,7 +470,7 @@ void squares_draw(void *state, const Frame *f) {
 
 typedef struct {
     float speed, twist, spin;
-    int tiles;
+    int tiles, sides;
 } BoxTunnel;
 
 void boxtunnel_setup(void *state, Rng *r, const Frame *f) {
@@ -476,11 +479,13 @@ void boxtunnel_setup(void *state, Rng *r, const Frame *f) {
     b->twist = rng_between(r, 0.1f, 0.3f) * (rng_chance(r, 50) ? 1 : -1);
     b->spin = rng_between(r, 0.1f, 0.25f) * (rng_chance(r, 50) ? 1 : -1);
     b->tiles = rng_range(r, 2, 4) * 2;
+    // Sometimes a hexagonal tunnel, or a triangular one.
+    b->sides = rng_chance(r, 35) ? (rng_chance(r, 50) ? 6 : 3) : 4;
     (void)f;
 }
 
-// Flying down a square tunnel lined with checkerboard: the walls rush past, the far end twists ahead of the near,
-// and every kick lunges deeper; far away the walls fade into a dark square.
+// Flying down a square tunnel (now and then a hexagonal or triangular one) lined with checkerboard: the walls rush
+// past, the far end twists ahead of the near, and every kick lunges deeper; far away the walls fade into the dark.
 void boxtunnel_draw(void *state, const Frame *f) {
     BoxTunnel *b = state;
     Grid *g = f->grid;
@@ -495,10 +500,21 @@ void boxtunnel_draw(void *state, const Frame *f) {
             float x = cell_x(g, col), r = mhypot(x, y);
             // The twist grows with depth, and depth grows as the radius shrinks, which turning doesn't change.
             float a = base + b->twist * 0.4f / (r + 0.08f), c = mcos(a), s = msin(a);
-            float px = x * c - y * s, py = x * s + y * c, m = mmax(mabs(px), mabs(py));
+            float px = x * c - y * s, py = x * s + y * c, m, along;
+            int wall;
+            if (b->sides == 4) {
+                m = mmax(mabs(px), mabs(py));
+                int side = mabs(px) > mabs(py);
+                wall = side ? (px > 0 ? 0 : 2) : (py > 0 ? 1 : 3);
+                along = (side ? py : px) / m * (float)b->tiles * 0.5f;
+            } else {
+                // A face of the polygon runs tan(180 / sides) of its inradius either side of its middle.
+                float ex, ey, half = b->sides == 6 ? 0.5773503f : 1.7320508f;
+                m = polygon_reach(b->sides, px, py, &ex, &ey, &wall);
+                along = (px * ex + py * ey) / m / half * (float)b->tiles * 0.5f;
+            }
             if (m < 0.06f) continue;
-            int side = mabs(px) > mabs(py), wall = side ? (px > 0 ? 0 : 2) : (py > 0 ? 1 : 3);
-            float along = (side ? py : px) / m * (float)b->tiles * 0.5f, deep = 0.4f / m * 2 + travel;
+            float deep = 0.4f / m * 2 + travel;
             int parity = (mfloor_i(along) + mfloor_i(deep) + wall) & 1;
             int edge = mfract(along) < 0.12f || mfract(deep) < 0.12f;
             float fog = smoothstep(0.06f, 0.5f, m) * contrast;
