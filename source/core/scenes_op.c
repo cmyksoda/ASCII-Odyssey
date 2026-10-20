@@ -2,8 +2,8 @@
 // Op art at full tilt: a checkerboard vortex zooming forever inward, a hypnotic spiral, a rubber checkerboard, a
 // kaleidoscope tiled across the whole screen, moire rings, flipping Truchet tiles, a twisting tower of squares, a
 // checkered box tunnel, a honeycomb, the cafe wall illusion, the Amiga's bouncing ball, a kaleidoscope of gems, a grid
-// of twisting tiles, Escher's circle limit, a Sierpinski carpet and a quasicrystal. Kicks drive their motion and chords
-// turn their colors.
+// of twisting tiles, Escher's circle limit, a Sierpinski carpet, a quasicrystal, a kaleidoscope tunnel, xor checkers
+// and tumbling blocks. Kicks drive their motion and chords turn their colors.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -982,4 +982,170 @@ void quasi_draw(void *state, const Frame *f) {
         }
     }
     f->fx->glow = 0.5f + 0.25f * kick;
+}
+
+/* ---------- Kaleidoscope tunnel ---------- */
+
+typedef struct {
+    int mirrors, style;
+    float depth, speed, spin, twist;
+} KaleidoTunnel;
+
+void ktunnel_setup(void *state, Rng *r, const Frame *f) {
+    KaleidoTunnel *k = state;
+    k->mirrors = rng_range(r, 3, 9);
+    // Walls of checks, of ribbons winding into stars, or of both.
+    k->style = rng_range(r, 0, 3);
+    k->depth = rng_between(r, 0.35f, 0.5f);
+    k->speed = rng_between(r, 0.8f, 1.4f);
+    k->spin = rng_between(r, 0.05f, 0.15f) * (rng_chance(r, 50) ? 1 : -1);
+    k->twist = rng_chance(r, 50) ? rng_between(r, 0.1f, 0.3f) * (rng_chance(r, 50) ? 1 : -1) : 0;
+    (void)f;
+}
+
+// Flying down a tunnel seen through a kaleidoscope: its walls are folded between mirrors into a ring of wedges, so
+// the checks and ribbons racing past meet themselves in stars and diamonds. The far end glows, and kicks lunge on.
+void ktunnel_draw(void *state, const Frame *f) {
+    KaleidoTunnel *k = state;
+    Grid *g = f->grid;
+    static const char ramp[] = " .:-=+*#@";
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float travel = (frame_travel(f, k->speed * 0.5f, k->speed) + frame_surge(f, ROLE_KICK, 0.2f, 0.8f)) * pace;
+    float turn = f->local * k->spin * pace, wedge = TAU_F / (float)k->mirrors;
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), r = mhypot(x, y) + 0.001f, depth = k->depth / r + travel;
+            // Folded between two mirrors: across each wedge and back, so every wedge mirrors its neighbours.
+            float s = (matan2(y, x) + turn + depth * k->twist) / wedge;
+            s -= 2 * mfloor(s * 0.5f);
+            if (s > 1) s = 2 - s;
+            int check = (mfloor_i(s * 3) + mfloor_i(depth * 2)) & 1;
+            float ribbon = mfract(depth * 1.5f + s * 1.2f), band = ribbon < 0.18f ? 1 - ribbon / 0.18f : 0;
+            float fog = smoothstep(0.03f, 0.6f, r), level;
+            Rgbf ink;
+            if (k->style != 0 && band > 0)
+                level = 0.6f + 0.4f * band, ink = inks[2];
+            else if (k->style != 1)
+                level = check ? 0.75f : 0.3f, ink = inks[check];
+            else
+                level = 0.2f + 0.15f * (mfract(depth * 2) < 0.15f), ink = inks[1];
+            level *= fog * (0.85f + 0.3f * kick);
+            int i = (int)(saturate(level) * 8.99f);
+            if (i > 0) put_cell(g, col, row, ramp[i], frame_dim(f, ink, (0.3f + 0.8f * level) * contrast));
+        }
+    }
+    // The light at the far end of the tunnel.
+    float glow = 0.6f + 0.4f * kick;
+    put_cell(g, cell_col(g, 0), cell_row(g, 0), '@', frame_dim(f, palette_ramp(f->palette, 1.0f), glow * contrast));
+    f->fx->glow = 0.55f + 0.3f * kick;
+}
+
+/* ---------- XOR checkers ---------- */
+
+typedef struct {
+    float size[2], spin[2], orbit[2], phase[2];
+} XorCheckers;
+
+void xor_setup(void *state, Rng *r, const Frame *f) {
+    XorCheckers *x = state;
+    for (int k = 0; k < 2; k++) {
+        x->size[k] = rng_between(r, 0.28f, 0.45f);
+        x->spin[k] = rng_between(r, 0.1f, 0.25f) * (k ? -1 : 1);
+        x->orbit[k] = rng_between(r, 0.15f, 0.4f);
+        x->phase[k] = rng_between(r, 0, TAU_F);
+    }
+    (void)f;
+}
+
+// Two checkerboards turning opposite ways over each other, each round its own wandering middle, a square lit wherever
+// exactly one of them is light: the demoscene's xor pattern, endlessly breaking into new mosaics. Kicks zoom both.
+void xor_draw(void *state, const Frame *f) {
+    XorCheckers *x = state;
+    Grid *g = f->grid;
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.2f, 1.0f);
+    float t = f->local * pace, zoom = 1 + 0.12f * kick;
+    float cs[2], sn[2], ox[2], oy[2], inv[2];
+    for (int k = 0; k < 2; k++) {
+        float a = t * x->spin[k] * TAU_F * 0.25f + x->phase[k];
+        cs[k] = mcos(a), sn[k] = msin(a), inv[k] = 1 / (x->size[k] * zoom);
+        ox[k] = x->orbit[k] * g->aspect * msin(t * 0.21f + x->phase[k]), oy[k] = x->orbit[k] * msin(t * 0.17f + x->phase[k] * 1.7f);
+    }
+    for (int row = 0; row < g->rows; row++) {
+        float y0 = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x0 = cell_x(g, col);
+            int lit[2];
+            float edge = 1;
+            for (int k = 0; k < 2; k++) {
+                float dx = x0 - ox[k], dy = y0 - oy[k], u = (dx * cs[k] - dy * sn[k]) * inv[k], v = (dx * sn[k] + dy * cs[k]) * inv[k];
+                lit[k] = (mfloor_i(u) + mfloor_i(v)) & 1;
+                float fu = mfract(u), fv = mfract(v);
+                edge = mmin(edge, mmin(mmin(fu, 1 - fu), mmin(fv, 1 - fv)) / inv[k]);
+            }
+            if (!(lit[0] ^ lit[1])) continue;
+            int rim = edge < 0.35f * 2 * g->aspect / (float)g->cols;
+            put_cell(g, col, row, rim ? '+' : '#', frame_dim(f, inks[lit[1]], (rim ? 1.0f : 0.8f + 0.25f * kick) * contrast));
+        }
+    }
+    f->fx->glow = 0.5f + 0.25f * kick;
+}
+
+/* ---------- Tumbling blocks ---------- */
+
+typedef struct {
+    float size, speed, wave;
+} Blocks;
+
+void blocks_setup(void *state, Rng *r, const Frame *f) {
+    Blocks *b = state;
+    b->size = rng_between(r, 0.2f, 0.28f);
+    b->speed = rng_between(r, 0.3f, 0.5f) * (rng_chance(r, 50) ? 1 : -1);
+    b->wave = rng_between(r, 1.5f, 3.5f);
+    (void)f;
+}
+
+// The tumbling blocks quilt: a honeycomb read as a stack of cubes, each a light top and two shaded sides. The light
+// circles round, and when it falls from below every cube seems to turn inside out; the turn sweeps outward from the
+// middle in a wave, and each kick swings the light up to a third of the way round.
+void blocks_draw(void *state, const Frame *f) {
+    Blocks *b = state;
+    Grid *g = f->grid;
+    static const char ramp[] = " .:-=+*#@";
+    Rgbf inks[3];
+    chord_inks(f, inks);
+    float pace = frame_pace(f), contrast = frame_contrast(f), kick = frame_pulse(f, ROLE_KICK, 0.25f, 1.0f);
+    // A kick's surge is its velocity times the time constant, so 4 / 3 makes a full-velocity kick a third of a turn.
+    float swing = (f->local * b->speed + frame_surge(f, ROLE_KICK, 0.25f, 4.0f / 3.0f) * (b->speed > 0 ? 1 : -1)) * pace;
+    float s = b->size;
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), fq = (0.57735f * x - 0.33333f * y) / s, fr = 0.66667f * y / s, fs = -fq - fr;
+            float q = mfloor(fq + 0.5f), r = mfloor(fr + 0.5f), t = mfloor(fs + 0.5f);
+            float eq = mabs(q - fq), er = mabs(r - fr), et = mabs(t - fs);
+            if (eq > er && eq > et)
+                q = -r - t;
+            else if (er > et)
+                r = -q - t;
+            float hx = s * 1.7320508f * (q + r * 0.5f), hy = s * 1.5f * r, dx = x - hx, dy = y - hy;
+            // Which face: the top between the corners at 30 and 150 degrees, then the left side, then the right.
+            int face = dy >= 0.57735f * mabs(dx) ? 0 : dx < 0 ? 1 : 2;
+            // Thin dark seams along the cube's edges keep the blocks apart: round its six sides, and from its middle out to
+            // the corners at 30, 150 and 270 degrees where its faces meet.
+            float side = mmax(mabs(dx), mmax(mabs(0.5f * dx + 0.866f * dy), mabs(-0.5f * dx + 0.866f * dy))) / (0.866f * s);
+            float seam = mmin(0.866f * dx + 0.5f * dy > 0 ? mabs(0.866f * dy - 0.5f * dx) : 1,
+                              mmin(-0.866f * dx + 0.5f * dy > 0 ? mabs(0.866f * dy + 0.5f * dx) : 1, dy < 0 ? mabs(dx) : 1)) / s;
+            if (side > 0.93f || seam < 0.05f) continue;
+            float light = swing - mhypot(hx, hy) * b->wave * 0.15f, lit = 0.5f + 0.5f * mcos(TAU_F * light - (float)face * 2.0944f);
+            float level = (0.2f + 0.8f * lit) * (0.9f + 0.2f * kick);
+            int i = (int)(saturate(level) * 8.99f);
+            if (i > 0) put_cell(g, col, row, ramp[i], frame_dim(f, inks[face], (0.35f + 0.7f * level) * contrast));
+        }
+    }
+    f->fx->glow = 0.5f + 0.2f * kick;
 }

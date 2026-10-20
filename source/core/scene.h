@@ -177,6 +177,9 @@ SCENE(lights)
 SCENE(limit)
 SCENE(carpet)
 SCENE(quasi)
+SCENE(ktunnel)
+SCENE(xor)
+SCENE(blocks)
 #undef SCENE
 
 #endif
