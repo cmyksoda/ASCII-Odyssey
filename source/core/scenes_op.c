@@ -323,7 +323,7 @@ void moire_draw(void *state, const Frame *f) {
 #define TRUCHET_KICKS 64
 
 typedef struct {
-    int size;
+    int size, maze;
     float wave;
     uint32_t salt;
 } Truchet;
@@ -340,12 +340,14 @@ void truchet_setup(void *state, Rng *r, const Frame *f) {
     tr->size = sizes[rng_range(r, 0, 3)];
     tr->wave = rng_between(r, 1.2f, 2.0f);
     tr->salt = rng_u32(r);
+    // Sometimes a single diagonal in every tile instead, the maze an old home computer drew from one line of BASIC.
+    tr->maze = rng_chance(r, 35);
     (void)f;
 }
 
-// Truchet tiles: every square holds two quarter-circle ribbons, and together they wind into endless paths. Each kick
-// sends a wave of flips rippling out from the middle that rewires them (a slow wave of its own keeps them changing
-// between beats), and bands of color run outward along the ribbons.
+// Truchet tiles: every square holds two quarter-circle ribbons, or now and then one diagonal, and together they wind
+// into endless paths. Each kick sends a wave of flips rippling out from the middle that rewires them (a slow wave of
+// its own keeps them changing between beats), and bands of color run outward along the ribbons.
 void truchet_draw(void *state, const Frame *f) {
     Truchet *tr = state;
     Grid *g = f->grid;
@@ -369,6 +371,13 @@ void truchet_draw(void *state, const Frame *f) {
                     if (col >= g->cols || row >= g->rows) continue;
                     // Within the tile, u runs right and v runs up; the arcs are centered on two opposite corners.
                     float u = ((float)c + 0.5f) / (float)tr->size, v = 1 - ((float)r + 0.5f) / (float)tall;
+                    if (tr->maze) {
+                        float off = mabs(turned ? u + v - 1 : u - v) * 0.7071f;
+                        if (off > 0.12f) continue;
+                        float band = mfract(mhypot(cell_x(g, col), cell_y(g, row)) * 1.5f - flow);
+                        put_cell(g, col, row, turned ? '\\' : '/', frame_dim(f, inks[(int)(band * 3) % 3], (off < 0.06f ? 1.0f : 0.6f) * contrast));
+                        continue;
+                    }
                     float ax = turned ? 1.0f : 0.0f, du1 = u - ax, dv1 = v, du2 = u - (1 - ax), dv2 = v - 1;
                     float d1 = mhypot(du1, dv1), d2 = mhypot(du2, dv2);
                     float off1 = mabs(d1 - 0.5f), off2 = mabs(d2 - 0.5f);
@@ -389,6 +398,7 @@ void truchet_draw(void *state, const Frame *f) {
 
 typedef struct {
     float bands, twist, spin, speed;
+    int sides;
 } Squares;
 
 void squares_setup(void *state, Rng *r, const Frame *f) {
@@ -397,11 +407,27 @@ void squares_setup(void *state, Rng *r, const Frame *f) {
     s->twist = rng_between(r, 0.08f, 0.18f) * (rng_chance(r, 50) ? 1 : -1);
     s->spin = rng_between(r, 0.15f, 0.35f) * (rng_chance(r, 50) ? 1 : -1);
     s->speed = rng_between(r, 0.4f, 0.8f);
+    s->sides = rng_chance(r, 40) ? (rng_chance(r, 50) ? 3 : 6) : 4;
     (void)f;
 }
 
-// Nested squares, each turned a little further than the one outside it, twisting together into a vortex: kicks wind
-// the twist tighter before it eases back, and the bands of color stream outward.
+// How far out a point lies on a nested triangle or hexagon, as its distance along the nearest face's normal, and the
+// direction that face runs, both in the polygon's own turned frame.
+static float polygon_reach(int sides, float px, float py, float *ex, float *ey) {
+    static const float TRI[3][2] = {{0, 1}, {-0.8660254f, -0.5f}, {0.8660254f, -0.5f}};
+    static const float HEX[3][2] = {{0, 1}, {0.8660254f, 0.5f}, {0.8660254f, -0.5f}};
+    const float(*normal)[2] = sides == 3 ? TRI : HEX;
+    float best = -1e9f;
+    for (int k = 0; k < 3; k++) {
+        float d = px * normal[k][0] + py * normal[k][1];
+        if (sides == 6) d = mabs(d);
+        if (d > best) best = d, *ex = -normal[k][1], *ey = normal[k][0];
+    }
+    return best;
+}
+
+// Nested squares (now and then triangles or hexagons), each turned a little further than the one outside it, twisting
+// together into a vortex: kicks wind the twist tighter before it eases back, and the bands of color stream outward.
 void squares_draw(void *state, const Frame *f) {
     Squares *s = state;
     Grid *g = f->grid;
@@ -415,14 +441,20 @@ void squares_draw(void *state, const Frame *f) {
         for (int col = 0; col < g->cols; col++) {
             float x = cell_x(g, col), depth = mhypot(x, y) * s->bands;
             float a = base + depth * twist, c = mcos(a), sn = msin(a);
-            float px = x * c + y * sn, py = -x * sn + y * c, side = mmax(mabs(px), mabs(py));
+            float px = x * c + y * sn, py = -x * sn + y * c, side, ex = 0, ey = 0;
+            if (s->sides == 4)
+                side = mmax(mabs(px), mabs(py));
+            else
+                side = polygon_reach(s->sides, px, py, &ex, &ey);
             float ring = side * s->bands * 1.2f - flow;
             int band = mfloor_i(ring);
             Rgbf ink = inks[((band % 3) + 3) % 3];
             if (mfract(ring) < 0.24f) {
-                // The square's edge, drawn along its true direction on screen.
-                int upright = mabs(px) > mabs(py);
-                put_cell(g, col, row, upright ? slope_glyph(-sn, c) : slope_glyph(c, sn), frame_dim(f, ink, (1.0f + 0.3f * kick) * contrast));
+                // The edge, drawn along its true direction on screen.
+                int upright = mabs(px) > mabs(py), glyph = s->sides != 4 ? slope_glyph(ex * c - ey * sn, ex * sn + ey * c)
+                                                         : upright      ? slope_glyph(-sn, c)
+                                                                        : slope_glyph(c, sn);
+                put_cell(g, col, row, glyph, frame_dim(f, ink, (1.0f + 0.3f * kick) * contrast));
             } else if (band & 1) {
                 put_cell(g, col, row, '#', frame_dim(f, ink, 0.5f * contrast));
             }
@@ -1062,6 +1094,7 @@ void ktunnel_draw(void *state, const Frame *f) {
 
 typedef struct {
     float size[2], spin[2], orbit[2], phase[2];
+    int rings;
 } XorCheckers;
 
 void xor_setup(void *state, Rng *r, const Frame *f) {
@@ -1072,11 +1105,14 @@ void xor_setup(void *state, Rng *r, const Frame *f) {
         x->orbit[k] = rng_between(r, 0.15f, 0.4f);
         x->phase[k] = rng_between(r, 0, TAU_F);
     }
+    // Sometimes the second board is a target of rings flowing round its middle instead.
+    x->rings = rng_chance(r, 35);
     (void)f;
 }
 
 // Two checkerboards turning opposite ways over each other, each round its own wandering middle, a square lit wherever
-// exactly one of them is light: the demoscene's xor pattern, endlessly breaking into new mosaics. Kicks zoom both.
+// exactly one of them is light: the demoscene's xor pattern, endlessly breaking into new mosaics. Now and then one
+// board is a target of rings instead. Kicks zoom both.
 void xor_draw(void *state, const Frame *f) {
     XorCheckers *x = state;
     Grid *g = f->grid;
@@ -1097,7 +1133,14 @@ void xor_draw(void *state, const Frame *f) {
             int lit[2];
             float edge = 1;
             for (int k = 0; k < 2; k++) {
-                float dx = x0 - ox[k], dy = y0 - oy[k], u = (dx * cs[k] - dy * sn[k]) * inv[k], v = (dx * sn[k] + dy * cs[k]) * inv[k];
+                float dx = x0 - ox[k], dy = y0 - oy[k];
+                if (k && x->rings) {
+                    float ring = mhypot(dx, dy) * inv[k] + t * x->spin[k] * 4, fr = mfract(ring);
+                    lit[k] = mfloor_i(ring) & 1;
+                    edge = mmin(edge, mmin(fr, 1 - fr) / inv[k]);
+                    continue;
+                }
+                float u = (dx * cs[k] - dy * sn[k]) * inv[k], v = (dx * sn[k] + dy * cs[k]) * inv[k];
                 lit[k] = (mfloor_i(u) + mfloor_i(v)) & 1;
                 float fu = mfract(u), fv = mfract(v);
                 edge = mmin(edge, mmin(mmin(fu, 1 - fu), mmin(fv, 1 - fv)) / inv[k]);
