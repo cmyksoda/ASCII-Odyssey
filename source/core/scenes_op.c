@@ -549,6 +549,7 @@ static void hex_cell(float x, float y, float s, float *cx, float *cy, float *qx,
 typedef struct {
     float size, drift;
     uint32_t salt;
+    int filled;
 } Honeycomb;
 
 void honeycomb_setup(void *state, Rng *r, const Frame *f) {
@@ -556,11 +557,14 @@ void honeycomb_setup(void *state, Rng *r, const Frame *f) {
     h->size = rng_between(r, 0.11f, 0.17f);
     h->drift = rng_between(r, -0.05f, 0.05f);
     h->salt = rng_u32(r);
+    // Sometimes every cell filled in three colors, no two neighbors alike, the colors turning as each kick passes.
+    h->filled = rng_chance(r, 40);
     (void)f;
 }
 
 // A honeycomb of hexagons drawn edge by edge: each kick sends a ring of light rippling out across the cells from the
-// middle, and between kicks a slow tide of color washes over them.
+// middle, and between kicks a slow tide of color washes over them. When it's filled in three colors, each kick's ring
+// turns every cell to the next color as it passes.
 void honeycomb_draw(void *state, const Frame *f) {
     Honeycomb *h = state;
     Grid *g = f->grid;
@@ -569,6 +573,12 @@ void honeycomb_draw(void *state, const Frame *f) {
     float contrast = frame_contrast(f), t = f->local * frame_pace(f), s = h->size;
     const ScoreEvent *kicks[HONEY_KICKS];
     int n = f->react > 0 ? recent_notes(f->score, ROLE_KICK, f->t, 1.6f, kicks, HONEY_KICKS) : 0;
+    // A kick's ring crosses the whole screen within 1.6 seconds, so the shot's kicks older than that are counted once for
+    // every cell, and only the newer ones cell by cell.
+    float settle = mmax(f->t - f->local, f->t - 1.6f);
+    int beating = f->react > 0 && !f->calm && !f->still, settled = beating ? score_count(f->score, ROLE_KICK, f->t - f->local, settle) : 0;
+    Rgbf fill[3], rim[3];
+    for (int k = 0; k < 3; k++) fill[k] = frame_dim(f, inks[k], 0.75f * contrast), rim[k] = frame_dim(f, inks[k], 0.5f * contrast);
     // The three directions an edge of a pointy-topped hexagon faces, and the glyph that draws each edge.
     static const float NX[3] = {1.0f, 0.5f, -0.5f}, NY[3] = {0.0f, 0.8660254f, 0.8660254f};
     static const char EDGE[3] = {'|', '\\', '/'};
@@ -590,6 +600,18 @@ void honeycomb_draw(void *state, const Frame *f) {
                 float front = (f->t - kicks[k]->time) * 1.4f - dist;
                 wave = mmax(wave, mexp(-front * front * 40) * kicks[k]->velocity * frame_bright(f));
             }
+            if (h->filled) {
+                // The kicks whose ring has reached this cell since the shot began, or a slow clock when calmer.
+                float reached = f->t - dist / 1.4f;
+                int turns = beating ? settled : mfloor_i((t - dist * 0.7f) / 2.5f);
+                for (int k = 0; beating && k < n; k++) turns += kicks[k]->time <= reached && kicks[k]->time > settle;
+                int color = (((int)(rx - rz) + turns) % 3 + 3) % 3;
+                if (depth > 0.86f)
+                    put_cell(g, col, row, EDGE[facing], rim[color]);
+                else
+                    put_cell(g, col, row, '#', wave > 0.01f ? frame_dim(f, inks[color], (0.75f + 0.4f * wave) * contrast) : fill[color]);
+                continue;
+            }
             float tide = 0.5f + 0.5f * msin(dist * 3 - t * 1.2f + hash01((uint32_t)(rx * 31 + rz * 977) ^ h->salt) * 2);
             Rgbf ink = inks[(int)(tide * 2.99f)];
             if (depth > 0.86f)
@@ -604,7 +626,7 @@ void honeycomb_draw(void *state, const Frame *f) {
 /* ---------- Cafe wall ---------- */
 
 typedef struct {
-    int tile, course;
+    int tile, course, upright;
     float sway, phase;
 } CafeWall;
 
@@ -614,11 +636,13 @@ void cafewall_setup(void *state, Rng *r, const Frame *f) {
     w->course = rng_range(r, 3, 5);
     w->sway = rng_between(r, 0.6f, 1.2f);
     w->phase = rng_between(r, 0.4f, 0.9f);
+    // Sometimes the courses run up the screen instead, so the columns seem to lean.
+    w->upright = rng_chance(r, 40);
     (void)f;
 }
 
 // The cafe wall illusion: courses of light and dark tiles with gray mortar between, each course shifted against the
-// next, so perfectly level rows seem to slope. The courses slide to and fro in a wave, so the slopes seem to breathe
+// next, so perfectly level rows (or upright columns) seem to slope. The courses slide to and fro in a wave, so the slopes seem to breathe
 // and flip; each kick nudges them along.
 void cafewall_draw(void *state, const Frame *f) {
     CafeWall *w = state;
@@ -627,6 +651,23 @@ void cafewall_draw(void *state, const Frame *f) {
     chord_inks(f, inks);
     float contrast = frame_contrast(f), t = f->local * frame_pace(f), nudge = frame_surge(f, ROLE_KICK, 0.2f, 0.5f) * frame_pace(f);
     Rgbf mortar = palette_ramp(f->palette, 0.45f);
+    if (w->upright) {
+        // Two columns to a row's height keep the tiles square, and a single column of mortar is as thick as a row's.
+        int across = 2 * w->course, wide = across + 1;
+        float tall = (float)w->tile * 0.5f;
+        for (int col = 0; col < g->cols; col++) {
+            int k = col / wide;
+            if (col % wide == across) {
+                for (int row = 0; row < g->rows; row++) put_cell(g, col, row, '|', frame_dim(f, mortar, contrast));
+                continue;
+            }
+            float shift = ((float)(k & 1) * 0.5f + w->sway * 0.5f * msin(t * 0.9f + (float)k * w->phase) + nudge * 0.25f) * tall;
+            for (int row = 0; row < g->rows; row++)
+                if (mfloor_i(((float)row + shift) / tall) & 1) put_cell(g, col, row, '#', frame_dim(f, inks[k % 3 == 2 ? 1 : 0], 0.95f * contrast));
+        }
+        f->fx->glow = 0.45f;
+        return;
+    }
     int band = w->course + 1;
     for (int row = 0; row < g->rows; row++) {
         int k = row / band;
