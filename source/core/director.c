@@ -3,6 +3,7 @@
 
 #include "mathx.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 // Counted from the list itself, so a missing name stops the build.
@@ -280,8 +281,36 @@ static float reveal_key(Entrance how, int direction, int col, int row, const Gri
     }
 }
 
-// The new shot as drawn, before the transition writes over its grid; the finest grid holds 5120 cells.
-static Cell incoming[128 * 40];
+// The new shot as drawn, before the transition writes over its grid, and every cell's reveal key: both grown to fit
+// the largest grid seen, so no screen shape ever drops a transition to a plain dissolve.
+static Cell *incoming;
+static float *key_cache;
+static int incoming_cells, key_cache_cells;
+
+// The buffer, grown if need be to hold that many cells; NULL if memory ran out, the old buffer left as it was.
+static void *make_room(void *buffer, int *capacity, int cells, size_t size) {
+    if (cells <= *capacity) return buffer;
+    void *grown = realloc(buffer, size * (size_t)cells);
+    if (grown) *capacity = cells;
+    return grown;
+}
+
+// Every cell's reveal key depends only on the kind of entrance, its direction and the grid, so a transition works them
+// out on its first frame and reuses them on the rest. NULL if there was no memory for them.
+static const float *reveal_keys(Entrance how, int direction, const Grid *g) {
+    static Entrance cached = ENTRANCES;
+    static int cached_direction, cached_cols, cached_rows;
+    static float cached_aspect;
+    float *grown = make_room(key_cache, &key_cache_cells, g->cols * g->rows, sizeof *key_cache);
+    if (!grown) return NULL;
+    key_cache = grown;
+    if (how != cached || direction != cached_direction || g->cols != cached_cols || g->rows != cached_rows || g->aspect != cached_aspect) {
+        for (int row = 0; row < g->rows; row++)
+            for (int col = 0; col < g->cols; col++) key_cache[row * g->cols + col] = reveal_key(how, direction, col, row, g);
+        cached = how, cached_direction = direction, cached_cols = g->cols, cached_rows = g->rows, cached_aspect = g->aspect;
+    }
+    return key_cache;
+}
 
 static const Cell *cell_or_blank(const Cell *cells, const Grid *g, int col, int row) {
     static const Cell blank = {' ', {0, 0, 0}, 0};
@@ -292,7 +321,9 @@ static const Cell *cell_or_blank(const Cell *cells, const Grid *g, int col, int 
 // a zoom on the way out, and the old picture breaking into tiles that fall away. Returns 0 for any other kind.
 static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, float p) {
     int cols = to->cols, rows = to->rows, n = cols * rows;
-    if (n > (int)(sizeof incoming / sizeof incoming[0])) return 0;
+    Cell *grown = make_room(incoming, &incoming_cells, n, sizeof *incoming);
+    if (!grown) return 0;
+    incoming = grown;
     switch (how) {
     case ENTER_PUSH:
     case ENTER_DOORS:
@@ -309,6 +340,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
     default: return 0;
     }
     memcpy(incoming, to->cells, sizeof(Cell) * (size_t)n);
+    const float *order = reveal_keys(how, direction, to);
     static const Cell blank = {' ', {0, 0, 0}, 0};
     const Cell *before = from->cells;
     const Cell *in = incoming;
@@ -345,7 +377,7 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
             case ENTER_SWIRL:
             case ENTER_ZOOM: {
                 // The old picture twists like water down a drain, or rushes toward us, as the new one shows through.
-                float key = reveal_key(how, direction, col, row, to);
+                float key = order ? order[row * cols + col] : reveal_key(how, direction, col, row, to);
                 if (key <= p) {
                     *dst = in[row * cols + col];
                     break;
@@ -481,9 +513,10 @@ static void blend(Grid *from, Grid *to, Entrance how, int direction, float progr
         return;
     }
     int edged = how != ENTER_DISSOLVE && how != ENTER_DECODE && how != ENTER_CHECKER;
+    const float *order = reveal_keys(how, direction, to);
     for (int row = 0; row < to->rows; row++)
         for (int col = 0; col < to->cols; col++) {
-            float key = reveal_key(how, direction, col, row, to);
+            float key = order ? order[row * to->cols + col] : reveal_key(how, direction, col, row, to);
             Cell *dst = grid_at(to, col, row);
             if (key > progress) {
                 *dst = *grid_at(from, col, row);
