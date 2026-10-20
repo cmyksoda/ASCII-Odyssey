@@ -75,11 +75,24 @@ static int choose_scene(Rng *r, Mood mood, const Section *sec, const int *uses, 
     return previous >= 0 ? previous : 0;
 }
 
-static Entrance pick_entrance(Rng *r, const Entrance *list, int count, Entrance previous) {
-    Entrance e;
-    do e = list[rng_range(r, 0, count)];
-    while (e == previous && count > 1);
-    return e;
+// Each time a piece uses a kind of transition it weighs less there, so the piece wanders through many; the kind just
+// used never comes straight back. When every kind has been worn out, any but the last will do.
+static Entrance pick_from(Rng *r, const Entrance *list, int count, const int *taste, const int used[ENTRANCES], Entrance previous) {
+    int weights[ENTRANCES], total = 0;
+    for (int i = 0; i < count; i++) {
+        // Scaled up first, so whole-number weights keep the ratios of the penalty.
+        weights[i] = list[i] == previous ? 0 : taste[i] * 60 / (1 + 2 * used[list[i]]);
+        total += weights[i];
+    }
+    if (!total)
+        for (int i = 0; i < count; i++) weights[i] = list[i] != previous;
+    return list[rng_weighted(r, weights, count)];
+}
+
+static Entrance pick_burst(Rng *r, const int used[ENTRANCES], Entrance previous) {
+    int count = (int)(sizeof BURST / sizeof BURST[0]), taste[sizeof BURST / sizeof BURST[0]];
+    for (int i = 0; i < count; i++) taste[i] = 1;
+    return pick_from(r, BURST, count, taste, used, previous);
 }
 
 // Each mood has its own taste in transitions: keygen's are digital, ambient and the music box melt softly, dubstep
@@ -117,10 +130,10 @@ static const int FAMILY_TASTE[MOOD_COUNT][FAMILIES] = {
     [MOOD_LOFI] = {4, 2, 2, 1, 2},     [MOOD_TRANCE] = {2, 1, 4, 3, 1},  [MOOD_JUNGLE] = {1, 3, 2, 4, 0},
     [MOOD_MUSICBOX] = {5, 1, 2, 1, 3}, [MOOD_DUB] = {4, 1, 2, 2, 1},     [MOOD_DUBSTEP] = {1, 3, 2, 4, 0}};
 
-static Entrance pick_soft_entrance(Rng *r, Mood mood, Entrance previous) {
-    int count = (int)(sizeof SOFT / sizeof SOFT[0]), weights[sizeof SOFT / sizeof SOFT[0]];
-    for (int i = 0; i < count; i++) weights[i] = SOFT[i] == previous ? 0 : FAMILY_TASTE[mood][family_of(SOFT[i])];
-    return SOFT[rng_weighted(r, weights, count)];
+static Entrance pick_soft_entrance(Rng *r, Mood mood, const int used[ENTRANCES], Entrance previous) {
+    int count = (int)(sizeof SOFT / sizeof SOFT[0]), taste[sizeof SOFT / sizeof SOFT[0]];
+    for (int i = 0; i < count; i++) taste[i] = FAMILY_TASTE[mood][family_of(SOFT[i])];
+    return pick_from(r, SOFT, count, taste, used, previous);
 }
 
 // Calm parts paint with the base palette, builds and breaks with their own, and drops take turns between two more.
@@ -143,6 +156,7 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
     int uses[MAX_SCENE_KINDS] = {0}, rolled[MAX_SCENE_KINDS] = {0}, previous = -1, drop_shots = 0;
     for (int k = 0; k < scene_kind_count; k++) rolled[k] = rng_chance(r, 35);
     Entrance last = ENTER_CUT;
+    int used[ENTRANCES] = {0};
     float bar = (float)info->bar_seconds;
     for (int s = 0; s < info->section_count && d->count < MAX_SHOTS; s++) {
         const Section *sec = &info->sections[s];
@@ -155,13 +169,14 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
             shot->palette = palette_for(sec->kind, sec->kind == SECTION_DROP ? drop_shots++ : 0);
             shot->direction = rng_range(r, 0, 4);
             if (sec->kind == SECTION_DROP && p == 0 && edm(mood)) {
-                shot->entrance = pick_entrance(r, BURST, (int)(sizeof BURST / sizeof BURST[0]), last);
+                shot->entrance = pick_burst(r, used, last);
                 shot->fade = clampf(score->beat * 0.5f, 0.18f, 0.35f);
             } else {
-                shot->entrance = pick_soft_entrance(r, mood, last);
+                shot->entrance = pick_soft_entrance(r, mood, used, last);
                 shot->fade = clampf(score->beat * (sec->energy < 0.5f ? 2.0f : 1.0f), 0.45f, 1.1f);
             }
             last = shot->entrance;
+            used[last]++;
             // The change lands with the music: the transition is already more than half done on the bar line.
             if (d->count) {
                 shot->start -= shot->fade * 0.6f;
