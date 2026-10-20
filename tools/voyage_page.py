@@ -16,7 +16,7 @@ import subprocess
 import sys
 
 SHELF = os.path.expanduser('~/Documents/Artifacts')
-MOOD_ORDER = ['synthwave', 'keygen', 'ambient', 'lo-fi', 'trance', 'jungle', 'dubstep', 'music box', 'dub']
+MOOD_ORDER = ['synthwave', 'keygen', 'ambient', 'lo-fi', 'trance', 'dubstep', 'music box', 'dub']
 
 
 def figlet(text, font):
