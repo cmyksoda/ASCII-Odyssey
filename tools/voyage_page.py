@@ -52,7 +52,8 @@ def card(p, page):
         if start >= total:
             continue
         what = 'answers the music' if s['reactive'] else 'moves on its own'
-        blocks.append(f'<span class="seg {section_at(p, start)}{"" if s["reactive"] else " still"}" '
+        # A shot's entrance starts a little before its bar line, so its middle says which section it belongs to.
+        blocks.append(f'<span class="seg {section_at(p, (start + end) / 2)}{"" if s["reactive"] else " still"}" '
                       f'style="left:{start / total * 100:.3f}%;width:{(end - start) / total * 100:.3f}%" '
                       f'title="{html.escape(s["scene"])}, {what}"></span>')
     title = html.escape(p['title'])
