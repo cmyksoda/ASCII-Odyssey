@@ -169,6 +169,9 @@ SCENE(cafewall)
 SCENE(boing)
 SCENE(gems)
 SCENE(tiletwist)
+SCENE(bubbles)
+SCENE(globe)
+SCENE(dandelion)
 #undef SCENE
 
 #endif
