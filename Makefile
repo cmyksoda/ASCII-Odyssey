@@ -8,11 +8,11 @@ endif
 .DEFAULT_GOAL := all
 
 APP := asciiodyssey
-VERSION := 0.2.2
+VERSION := 1.0.0
 CC := $(DEVKITPPC)/bin/powerpc-eabi-gcc
 # fp-contract off keeps every float op IEEE-rounded, so seeds match the PC tool exactly.
 COMMON_CFLAGS := -O2 -std=gnu11 -Wall -Wextra -Werror -ffp-contract=off -fno-strict-aliasing -MMD -MP
-CFLAGS := -g $(COMMON_CFLAGS) $(MACHDEP) -I$(LIBOGC_INC) -Ibuild -DAPP_VERSION='"$(VERSION)"'
+CFLAGS := -g $(COMMON_CFLAGS) $(MACHDEP) -I$(LIBOGC_INC) -Ibuild
 LIBS := -lfat -lwiikeyboard -lwiiuse -lbte -lasnd -logc -lm
 
 CORE := $(wildcard source/core/*.c)
@@ -43,7 +43,8 @@ build/wii/gen/%.o: build/gen/%.c
 build/wii/$(APP).elf: $(WII_OBJECTS)
 	$(CC) $^ $(MACHDEP) -L$(LIBOGC_LIB) $(LIBS) -Wl,-Map,build/wii/$(APP).map -o $@
 
-dist/apps/$(APP)/boot.dol: build/wii/$(APP).elf hbc/meta.xml hbc/icon.png
+# The Makefile holds VERSION, which meta.xml carries.
+dist/apps/$(APP)/boot.dol: build/wii/$(APP).elf hbc/meta.xml hbc/icon.png Makefile
 	@mkdir -p $(@D)
 	$(DEVKITPRO)/tools/bin/elf2dol $< $@
 	sed 's/@VERSION@/$(VERSION)/' hbc/meta.xml > dist/apps/$(APP)/meta.xml
