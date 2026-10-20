@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Op art at full tilt: a checkerboard vortex zooming forever inward, a hypnotic spiral, a rubber checkerboard, a
-// kaleidoscope tiled across the whole screen, moire rings, flipping Truchet tiles, a twisting tower of squares, a
-// checkered box tunnel, a honeycomb, the cafe wall illusion, the Amiga's bouncing ball, a kaleidoscope of gems, a grid
-// of twisting tiles, Escher's circle limit, a Sierpinski carpet, a quasicrystal, a kaleidoscope tunnel, xor checkers
-// and tumbling blocks. Kicks drive their motion and chords turn their colors.
+// Op art at full tilt, from a checkerboard vortex and the Amiga's bouncing ball to Escher's circle limit and a
+// quasicrystal. Kicks drive their motion and chords turn their colors.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -216,8 +213,8 @@ void mirror_setup(void *state, Rng *r, const Frame *f) {
     (void)f;
 }
 
-// A kaleidoscope's whole field of view: one triangle of drifting lights, a sweeping bar and ripples, reflected again and
-// again until it tiles the screen with stars and diamonds, the lattice slowly turning and gliding. Kicks pulse its
+// A kaleidoscope's whole field of view: one triangle of drifting lights, a sweeping bar and ripples, reflected again
+// and again until it tiles the screen with stars and diamonds, the lattice slowly turning and gliding. Kicks pulse its
 // scale.
 void mirror_draw(void *state, const Frame *f) {
     Mirror *m = state;
@@ -581,8 +578,8 @@ void honeycomb_draw(void *state, const Frame *f) {
     float contrast = frame_contrast(f), t = f->local * frame_pace(f), s = h->size;
     const ScoreEvent *kicks[HONEY_KICKS];
     int n = f->react > 0 ? recent_notes(f->score, ROLE_KICK, f->t, 1.6f, kicks, HONEY_KICKS) : 0;
-    // A kick's ring crosses the whole screen within 1.6 seconds, so the shot's kicks older than that are counted once for
-    // every cell, and only the newer ones cell by cell.
+    // A kick's ring crosses the whole screen within 1.6 seconds, so the shot's kicks older than that are counted once
+    // for every cell, and only the newer ones cell by cell.
     float settle = mmax(f->t - f->local, f->t - 1.6f);
     int beating = f->react > 0 && !f->calm && !f->still,
         settled = beating ? score_count(f->score, ROLE_KICK, f->t - f->local, settle) : 0;
@@ -654,8 +651,8 @@ void cafewall_setup(void *state, Rng *r, const Frame *f) {
 }
 
 // The cafe wall illusion: courses of light and dark tiles with gray mortar between, each course shifted against the
-// next, so perfectly level rows (or upright columns) seem to slope. The courses slide to and fro in a wave, so the slopes seem to breathe
-// and flip; each kick nudges them along.
+// next, so perfectly level rows (or upright columns) seem to slope. The courses slide to and fro in a wave, so the
+// slopes seem to breathe and flip; each kick nudges them along.
 void cafewall_draw(void *state, const Frame *f) {
     CafeWall *w = state;
     Grid *g = f->grid;
@@ -818,7 +815,8 @@ void gems_draw(void *state, const Frame *f) {
         for (int col = 0; col < g->cols; col++) {
             float x0 = cell_x(g, col), x = x0 * ca - y0 * sa, y = x0 * sa + y0 * ca, hx, hy, qx, qz;
             hex_cell(x, y, s, &hx, &hy, &qx, &qz);
-            // Fold into one twelfth of the hexagon by its mirrors: across both axes, then the lines at 60 and 30 degrees.
+            // Fold into one twelfth of the hexagon by its mirrors: across both axes, then the lines at 60 and 30
+            // degrees.
             float u = mabs(x - hx) / s, v = mabs(y - hy) / s, r = mhypot(u, v), d = v * 0.5f - u * 0.8660254f;
             if (d > 0) u += 2 * d * 0.8660254f, v -= 2 * d * 0.5f;
             d = v * 0.8660254f - u * 0.5f;
@@ -970,7 +968,8 @@ void limit_draw(void *state, const Frame *f) {
             float nx = x + a, mx = 1 + a * x, my = a * y, m2 = mx * mx + my * my;
             x = (nx * mx + y * my) / m2, y = (y * mx - nx * my) / m2, gain *= (1 - a * a) / m2;
 
-            // Reflected home into the one triangle, counting the mirrors crossed on the way and the polygon walls among them.
+            // Reflected home into the one triangle, counting the mirrors crossed on the way and the polygon walls among
+            // them.
             int flips = 0, walls = 0, k;
             for (k = 0; k < 40; k++) {
                 int moved = 0;
@@ -1294,8 +1293,8 @@ void blocks_draw(void *state, const Frame *f) {
             float hx = s * 1.7320508f * (q + r * 0.5f), hy = s * 1.5f * r, dx = x - hx, dy = y - hy;
             // Which face: the top between the corners at 30 and 150 degrees, then the left side, then the right.
             int face = dy >= 0.57735f * mabs(dx) ? 0 : dx < 0 ? 1 : 2;
-            // Thin dark seams along the cube's edges keep the blocks apart: round its six sides, and from its middle out to
-            // the corners at 30, 150 and 270 degrees where its faces meet.
+            // Thin dark seams along the cube's edges keep the blocks apart: round its six sides, and from its middle
+            // out to the corners at 30, 150 and 270 degrees where its faces meet.
             float side =
                 mmax(mabs(dx), mmax(mabs(0.5f * dx + 0.866f * dy), mabs(-0.5f * dx + 0.866f * dy))) / (0.866f * s);
             float seam =

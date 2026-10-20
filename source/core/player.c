@@ -47,7 +47,7 @@ double player_seconds(const Player *p) {
     return (double)p->frame / AUDIO_RATE;
 }
 
-// The global row being played: order * 64 + row.
+// The global row being played, counted from the start of the song.
 static int player_row(const Player *p) {
     return p->order * p->song->pattern_rows + p->row;
 }

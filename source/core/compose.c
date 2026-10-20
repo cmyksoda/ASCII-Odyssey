@@ -613,10 +613,9 @@ static void plan_form(Composer *c, LengthPref length) {
     int count = spec->forms[variant].count;
     static const float targets[3] = {65, 110, 170};
     float bar_seconds = (float)c->beats_per_bar * 60.0f / (float)c->info->bpm, budget = targets[length] / bar_seconds;
-    // Each way of fitting the form is tried: whole parts leaving, highest rank first, with drops at their scaled
-    // length or set to eight or sixteen bars. The plan nearest the length wins; running long, losing parts, drops
-    // taking under two fifths of the piece and above all a single drop each cost extra, though a short piece may
-    // settle for one.
+    // Every way of fitting the form is tried: parts left out by rank, drops at their scaled length or 8 or 16 bars. The
+    // nearest plan wins, paying extra for running long, lost parts, drops under two fifths of the piece, and most of
+    // all a single drop, which a short piece minds less.
     static const int drop_sizes[3] = {0, 8, 16};
     int top = 0, best_rank = 0, best_drop = 0, keep[MAX_SECTIONS];
     for (int i = 0; i < count; i++)
@@ -856,12 +855,12 @@ static void make_instruments(Composer *c) {
         keys->vibrato_rate = 0.9f;
     }
     if (c->mood == MOOD_DUB && c->slot[SL_RIM]) s->instruments[c->slot[SL_RIM] - 1].send_delay = 0.35f;
-    // The drops' sub sits under everything at full weight, pumping only half as deep as the rest; dubstep's drops stand
-    // on it hardest of all.
     // The SNES played its samples back soft at the top, so every sound in a 16-bit piece is filtered like one.
     if (c->mood == MOOD_16BIT)
         for (int i = 0; i < s->instrument_count; i++)
             if (!s->instruments[i].cutoff) s->instruments[i].cutoff = 0.84f;
+    // The drops' sub sits under everything at full weight, pumping only half as deep as the rest; dubstep's drops stand
+    // on it hardest of all.
     if (c->slot[SL_SUB]) {
         Instrument *sub = &s->instruments[c->slot[SL_SUB] - 1];
         sub->volume = c->mood == MOOD_DUBSTEP ? 1.6f : 1.0f;
@@ -1518,7 +1517,8 @@ static void keys_lofi(Composer *c, int bar) {
     for (int row = 0; row < c->rows_per_bar; row++) {
         if (comp[row] != 'x') continue;
         for (int v = 0; v < 4; v++) {
-            // Rolled from the bottom up a tick apart, like a hand rather than a block; the delay must land inside the row.
+            // Rolled from the bottom up a tick apart, like a hand rather than a block; the delay must land inside the
+            // row.
             int delay = v + swing_ticks(c, row);
             if (delay > c->song->speed - 1) delay = c->song->speed - 1;
             put(c, bar, row, CH_PAD + v, c->keys_voicing[bar][v], SL_KEYS, (row ? 30 : 36) - v * 2,

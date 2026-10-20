@@ -19,9 +19,9 @@ typedef struct {
     Scale scale;
 } Key;
 
-// A chord built on a scale degree (0-based) by stacking the scale's own thirds.
 typedef enum { EXT_TRIAD, EXT_SEVENTH, EXT_NINTH, EXT_SUS2, EXT_SUS4, EXT_ADD9 } Extension;
 
+// A chord built on a scale degree (0-based) by stacking the scale's own thirds.
 typedef struct {
     int degree;
     Extension ext;

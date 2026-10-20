@@ -264,7 +264,6 @@ void keyboard_draw(const Keyboard *k, Grid *ui, double now) {
     float t = (float)(now - k->opened), pulse = 0.5f + 0.5f * msin(t * 4.2f);
     Rgb accent = rgb_mix(ACCENT, LIT, pulse * 0.35f);
     preview(k, ui, &l);
-    // The field: what's typed so far, a blinking cursor, and how much room is left.
     char line[48];
     int field = KEYS_W - 8;
     grid_text(ui, l.left, l.field_row, "seed", HINT);
@@ -293,7 +292,6 @@ void keyboard_draw(const Keyboard *k, Grid *ui, double now) {
         box(ui, x, l.actions_row, w, EDGE);
         grid_text(ui, x + 2, l.actions_row + 1, ACTIONS[i], i == ACTION_DONE ? GOLD : LABEL);
     }
-    // The selected key lights its own keycap.
     if (k->row < 4) {
         int x = l.left + k->col * KEY_W, y = l.keys_row + k->row * 2;
         box(ui, x, y, KEY_W + 1, accent);

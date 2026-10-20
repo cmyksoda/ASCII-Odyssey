@@ -55,7 +55,8 @@ void fire_draw(void *state, const Frame *f) {
         for (int row = g->rows - 1; row >= 0; row--) {
             float h = (cell_y(g, row) + 1) * 0.5f, rel = h / reach;
             if (rel > 1.5f) break;
-            // Two octaves of noise rising through the flame cut it into tongues: tall in the middle, licking at the top.
+            // Two octaves of noise rising through the flame cut it into tongues: tall in the middle, licking at the
+            // top.
             float n = 0.65f * noise_fbm(x * p->scale * 2.2f + p->seed, h * p->scale - rise * 1.5f) +
                       0.35f * noise_fbm(x * p->scale * 5.0f + p->seed * 2, h * p->scale * 2.2f - rise * 2.6f);
             float heat = saturate((n - 0.2f) * 2.2f - rel * 1.05f + 0.25f);

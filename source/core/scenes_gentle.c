@@ -147,7 +147,8 @@ void globe_draw(void *state, const Frame *f) {
                                rgbf_mix(frame_dim(f, glass, 0.6f), snow, sheen)};
     }
     stroke_draw(f->stroker, rim, 40, 1);
-    // The drift inside, deep snow under it filling the bottom of the glass, the cottage with its lit window, and the pine.
+    // The drift inside, deep snow under it filling the bottom of the glass, the cottage with its lit window, and the
+    // pine.
     for (int col = cell_col(g, cx - radius * 0.9f); col <= cell_col(g, cx + radius * 0.9f); col++) {
         float x = cell_x(g, col), top = bank + 0.02f * msin(x * 9),
               depth = msqrt(mmax(0.0f, radius * radius - (x - cx) * (x - cx)));
@@ -157,7 +158,8 @@ void globe_draw(void *state, const Frame *f) {
     }
     int house_col = cell_col(g, cx - 0.14f), house_row = cell_row(g, bank + 0.12f);
     sprite(g, house_col, house_row, cottage, 4, frame_dim(f, wood, 1.1f));
-    // The sprite sits centered on (house_col, house_row): its lit window is row 2, column 4, and the chimney row 0, column 4.
+    // The sprite sits centered on (house_col, house_row): its lit window is row 2, column 4, and the chimney row 0,
+    // column 4.
     put_cell(g, house_col + 1, house_row, '#',
              frame_dim(f, glow, 0.85f + 0.15f * msin(f->t * 7.3f) * msin(f->t * 3.1f)));
     // Smoke from the chimney, curling up and fading, whatever the snow is doing.
@@ -235,7 +237,7 @@ void dandelion_draw(void *state, const Frame *f) {
     float pace = frame_pace(f);
     dust_stars(f, d->salt, 0.003f, 0.6f);
     moon_disc(f, g->aspect * 0.55f, 0.62f, 0.13f, palette_ramp(f->palette, 0.95f), d->salt, 1);
-    // The meadow: blades swaying, taller toward the front.
+    // The meadow: blades of uneven heights, swaying.
     for (int col = 0; col < g->cols; col += 2) {
         float x = cell_x(g, col), h = 0.08f + 0.12f * hash01((uint32_t)col * 7919u ^ d->salt),
               sway = 0.03f * msin(f->t * 0.8f + x * 3);

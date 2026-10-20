@@ -857,7 +857,7 @@ static void constellation_draw(void *state, const Frame *f) {
     float start = f->t - f->local;
     static const Role sung[5] = {ROLE_LEAD, ROLE_BELL, ROLE_PLUCK, ROLE_ARP, ROLE_CHORD};
     for (int v = 0; v < 5; v++) notes += score_count(f->score, sung[v], start, f->t);
-    // Every line is drawn by two thirds of the way through the shot; notes hurry it along.
+    // The lines draw in across the shot, all of them near its end, and notes hurry them along.
     float drawn = f->local / (f->length * 0.66f) * (float)c->edges * 0.7f + (float)notes * 0.25f * f->react;
     Rgbf line = frame_dim(f, palette_ramp(f->palette, 0.75f), 0.65f), glint = palette_ramp(f->palette, 1.0f);
     for (int e = 0; e < c->edges; e++) {
@@ -1014,8 +1014,7 @@ static void rain_setup(void *state, Rng *r, const Frame *f) {
     w->salt = rng_u32(r);
 }
 
-// An out-of-focus light: brightest in the middle and fading to nothing at its rim, with no edge for the matcher to trace.
-// The finest grid has 5-pixel cells.
+// The finest grid's cells are 5 pixels wide and 12 tall.
 #define CORNERS_MAX ((FB_W / 5 + 1) * (FB_H / 12 + 1))
 
 void canvas_from_corners(const Frame *f, CornerFn fn, const void *ctx) {
@@ -1078,6 +1077,8 @@ void moon_disc(const Frame *f, float x, float y, float radius, Rgbf color, uint3
     stroke_draw(f->stroker, rim, 48, 1);
 }
 
+// An out-of-focus light: brightest in the middle and fading to nothing at its rim, with no edge for the matcher to
+// trace.
 void bokeh(Canvas *c, float x, float y, float radius, float level, Rgbf color) {
     int i0 = (int)((x - radius + c->aspect) / c->sx), i1 = (int)((x + radius + c->aspect) / c->sx) + 1;
     int j0 = (int)((1 - (y + radius)) / c->sy), j1 = (int)((1 - (y - radius)) / c->sy) + 1;

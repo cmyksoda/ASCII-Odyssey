@@ -48,10 +48,6 @@ static int single_mood(const SceneKind *s) {
     return moods == 1;
 }
 
-// The scene for one shot. Its intensity must suit the music's energy: only scenes within a narrow window of it are
-// considered, and the window widens only when nothing fits. Within the window the mood's own scenes come first, then
-// those it shows now and then, then stand-ins from other moods. Drops take scenes that answer the music, two of the
-// Wii's heaviest scenes never meet in a transition, and a scene comes back only when nothing else is left.
 // How hard a piece drives, as a share of its sections' energy, for choosing how intense its scenes may be. Synthwave
 // cruises: its drops are its loudest moments, but at its tempo they want scenes a notch calmer than a trance drop's.
 static float scene_drive(const SongInfo *info) {
@@ -59,6 +55,9 @@ static float scene_drive(const SongInfo *info) {
     return clampf(0.72f + (float)(info->bpm - 95) * 0.0057f, 0.72f, 0.85f);
 }
 
+// The scene for one shot, as intense as the music and from the mood's own scenes first. Drops take scenes that answer
+// the music, two of the Wii's heaviest scenes never meet in a transition, and a scene comes back only when nothing
+// else is left.
 static int choose_scene(Rng *r, Mood mood, const Section *sec, float target, const int *uses, const int *rolled,
                         int previous) {
     static const struct {
@@ -572,7 +571,8 @@ static int move_pictures(Grid *from, Grid *to, Entrance how, int direction, floa
             }
 
             case ENTER_FLIP: {
-                // Like an old television changing channel: the old picture squashes to a line, the new one springs open.
+                // Like an old television changing channel: the old picture squashes to a line, the new one springs
+                // open.
                 float height = mabs(2 * p - 1), rel = ((float)row + 0.5f - cy) / (height * cy + 0.001f);
                 if (mabs(rel) > 1)
                     *dst = height < 0.06f && row == rows / 2 ? (Cell){'-', {235, 235, 235}, 0} : blank;

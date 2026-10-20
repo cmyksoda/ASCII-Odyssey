@@ -40,7 +40,7 @@ static void harmony(Pattern *p) {
         int r = bar * 16, root = ROOTS[bar];
         for (int s = 0; s < 16; s += 2) put(p, r + s, 4, N(root - 24 + (s % 8 == 6 ? 12 : 0)), I_BASS, 0, 0, 0);
         for (int k = 0; k < 3; k++) put(p, r, 5 + k, N(CHORDS[bar][k]), I_PAD, 0, 0, 0);
-        // A chip arpeggio running through the chord, two octaves up.
+        // A chip arpeggio running through the chord, an octave above the pad.
         for (int s = 0; s < 16; s += 4) put(p, r + s, 11, N(CHORDS[bar][0] + 12), I_ARP, 34, FX_ARPEGGIO, 0x37);
     }
 }

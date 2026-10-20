@@ -87,8 +87,8 @@ typedef struct {
 
 const FigletFont *figlet_font(FigletId id);
 const char *figlet_name(FigletId id);
-// Lays text out like the figlet command with no width limit. out holds height rows of stride max_w; returns the width
-// used, or -1 if it didn't fit.
+// Lays text out on one line, as the figlet command does, without wrapping. out holds height rows of stride max_w;
+// returns the width used, or -1 if it didn't fit.
 int figlet_render(const FigletFont *f, const char *text, char *out, int max_w);
 // Lays text out over up to FIGLET_LINES lines a row apart into max_h rows of out: words fill each line while it stays
 // within max_w, and with split set, a word too wide for a line of its own is broken across lines. Returns 0, or -1.

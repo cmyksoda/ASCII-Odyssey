@@ -170,7 +170,7 @@ static void kick(Instrument *ins, Rng *r, int soft) {
         }
         float attack = t < 0.0015f ? t / 0.0015f : 1;
         float out = mtanh((v + click) * (soft ? 1.1f : f->drive)) * attack;
-        // The dusty one loses its top and its fine detail, like a sample played off a twelve-bit machine.
+        // The dusty one loses its top and its fine detail, like a sample played off a ten-bit machine.
         if (f->dust) {
             dull += 0.25f * (out - dull);
             out = (float)((int)(dull * 512.0f)) / 512.0f;
@@ -702,7 +702,8 @@ static void keys_organ(Instrument *ins, Rng *r, float bpm) {
     ins->vibrato_rate = 6.0f;
 }
 
-// Chord stabs that speak at once and die away on their own: bright supersaw for trance, dark and filtered for dub echoes.
+// Chord stabs that speak at once and die away on their own: bright supersaw for trance, dark and filtered for dub
+// echoes.
 static void stab(Instrument *ins, Rng *r, float bpm, int dub) {
     base(ins, dub ? "dub stab" : "saw stab", ROLE_CHORD, dub ? 0.42f : 0.3f);
     if (dub) {
