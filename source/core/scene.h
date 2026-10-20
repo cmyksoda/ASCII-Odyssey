@@ -172,6 +172,8 @@ SCENE(tiletwist)
 SCENE(bubbles)
 SCENE(globe)
 SCENE(dandelion)
+SCENE(ballerina)
+SCENE(lights)
 #undef SCENE
 
 #endif

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Gentle scenes for the soft moods: soap bubbles rising with the melody, a snow globe shaken on the bar line, and a
-// dandelion clock whose seeds let go one note at a time.
+// Gentle scenes for the soft moods: soap bubbles rising with the melody, a snow globe shaken on the bar line, a
+// dandelion clock whose seeds let go one note at a time, a music box's dancer, and strings of fairy lights.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -260,4 +260,148 @@ void dandelion_draw(void *state, const Frame *f) {
         put_cell(g, cell_col(g, x), cell_row(g, y) + 1, '|', frame_dim(f, down, 0.5f - age / SEED_FLIGHT * 0.3f));
     }
     f->fx->glow = 0.5f;
+}
+
+/* ---------- Ballerina ---------- */
+
+typedef struct {
+    float tilt, spin;
+    uint32_t salt;
+} Ballerina;
+
+void ballerina_setup(void *state, Rng *r, const Frame *f) {
+    Ballerina *b = state;
+    b->tilt = rng_between(r, 0.25f, 0.35f);
+    b->spin = rng_chance(r, 50) ? 1.0f : -1.0f;
+    b->salt = rng_u32(r);
+    (void)f;
+}
+
+// A point of the dancer, given in her own frame (x right, y up, z toward us), turned about her standing leg.
+static void dancer_point(float c, float s, float x, float y, float z, float base_x, float base_y, float *ox, float *oy, float *depth) {
+    *ox = base_x + x * c + z * s;
+    *oy = base_y + y;
+    *depth = z * c - x * s;
+}
+
+// A limb with some thickness, as a row of overlapping discs on the canvas.
+static void limb(Canvas *cv, float x0, float y0, float x1, float y1, float r, Rgbf color) {
+    int steps = 1 + (int)(mhypot(x1 - x0, y1 - y0) / (r * 0.9f));
+    for (int k = 0; k <= steps; k++) {
+        float u = (float)k / (float)steps;
+        canvas_disc(cv, mixf(x0, x1, u), mixf(y0, y1, u), r, 0.95f, color);
+    }
+}
+
+// The dancer of an opened music box, turning a pirouette every bar on a little mirror: arms rounded above her head, a
+// tutu standing out at her waist, one foot drawn up to her knee. Glints wink in the mirror at her feet.
+void ballerina_draw(void *state, const Frame *f) {
+    Ballerina *b = state;
+    Grid *g = f->grid;
+    float bar = f->score->beat * (float)f->score->info->beats_per_bar, turn = b->spin * TAU_F * f->t / bar * frame_pace(f);
+    float c = mcos(turn), s = msin(turn), bx = 0, by = -0.6f, k = 1.9f;
+    Rgbf wood = palette_accent(f->palette, 1), velvet = palette_accent(f->palette, 0), body = palette_ramp(f->palette, 1.0f);
+    Rgbf silver = palette_ramp(f->palette, 0.75f), skirt = palette_accent(f->palette, 2);
+    // Joints in her own frame (x right, y up, z toward us), turned about her standing leg as she spins.
+    static const float J[][3] = {
+        {0, 0, 0},       {0, 0.22f, 0},     {0.12f, 0.17f, 0.05f}, {0.01f, 0.13f, 0.01f}, {0, 0.26f, 0},
+        {0, 0.4f, 0},    {-0.07f, 0.38f, 0}, {0.07f, 0.38f, 0},    {-0.12f, 0.47f, 0.03f}, {0.12f, 0.47f, 0.03f},
+        {-0.02f, 0.55f, 0.04f}, {0.02f, 0.55f, 0.04f}};
+    static const int LIMBS[][2] = {{0, 1}, {1, 2}, {2, 3}, {1, 4}, {4, 5}, {5, 6}, {5, 7}, {6, 8}, {8, 10}, {7, 9}, {9, 11}};
+    float px[12], py[12], depth[12];
+    for (int i = 0; i < 12; i++) dancer_point(c, s, J[i][0] * k, J[i][1] * k, J[i][2] * k, bx, by, &px[i], &py[i], &depth[i]);
+    Canvas *cv = f->canvas;
+    canvas_clear(cv);
+    // The tutu first, a disc of tulle seen from a little above, so her body stands in front of it.
+    for (int ring = 0; ring < 3; ring++)
+        for (int i = 0; i < 14; i++) {
+            float a = (float)i / 14 * TAU_F + turn, reach = (0.04f + 0.055f * (float)ring) * k;
+            canvas_disc(cv, bx + mcos(a) * reach, by + 0.27f * k + msin(a) * reach * b->tilt, 0.036f * k, 0.8f - 0.1f * (float)ring, skirt);
+        }
+    for (int i = 0; i < (int)(sizeof LIMBS / sizeof LIMBS[0]); i++) {
+        int p = LIMBS[i][0], q = LIMBS[i][1], torso = (p == 4 || q == 5);
+        float shade = 0.75f + 0.25f * saturate(0.5f + (depth[p] + depth[q]) * 2);
+        limb(cv, px[p], py[p], px[q], py[q], (torso ? 0.028f : 0.014f) * k, frame_dim(f, body, shade));
+    }
+    canvas_disc(cv, bx + 0, by + 0.49f * k, 0.033f * k, 0.95f, body);
+    frame_resolve(f);
+    dust_stars(f, b->salt, 0.0f, 0.3f);
+    // The box's front with its keyhole, and the mirror she turns on.
+    for (int row = cell_row(g, -0.7f); row <= cell_row(g, -0.98f); row++)
+        for (int col = cell_col(g, -0.95f); col <= cell_col(g, 0.95f); col++)
+            put_cell(g, col, row, row == cell_row(g, -0.7f) ? '=' : (col + row) % 4 ? ':' : '.', frame_dim(f, row == cell_row(g, -0.7f) ? wood : velvet, 0.55f));
+    put_cell(g, cell_col(g, 0), cell_row(g, -0.86f), 'o', wood);
+    StrokePoint mirror[24];
+    for (int i = 0; i < 24; i++) {
+        float a = (float)i / 24 * TAU_F;
+        mirror[i] = (StrokePoint){bx + mcos(a) * 0.34f, by + msin(a) * 0.34f * b->tilt, silver};
+    }
+    stroke_draw(f->stroker, mirror, 24, 1);
+    for (int i = 0; i < 3; i++) {
+        float a = turn * 0.5f + (float)i * 2.1f, wink = 0.5f + 0.5f * msin(f->t * 2.3f + (float)i * 1.7f);
+        if (wink > 0.6f) put_cell(g, cell_col(g, bx + mcos(a) * 0.24f), cell_row(g, by + msin(a) * 0.07f), '*', frame_dim(f, body, wink));
+    }
+    f->fx->glow = 0.5f;
+}
+
+/* ---------- Fairy lights ---------- */
+
+#define STRINGS 4
+#define BULBS 22
+
+typedef struct {
+    float sag[STRINGS], height[STRINGS];
+    uint32_t salt;
+} FairyLights;
+
+void lights_setup(void *state, Rng *r, const Frame *f) {
+    FairyLights *l = state;
+    for (int k = 0; k < STRINGS; k++) {
+        l->height[k] = 0.75f - 0.42f * (float)k + rng_between(r, -0.06f, 0.06f);
+        l->sag[k] = rng_between(r, 0.12f, 0.22f);
+    }
+    l->salt = rng_u32(r);
+    (void)f;
+}
+
+// Strings of fairy lights sagging across a dark room, more strung farther back. The bulbs twinkle on their own, and
+// every note of the tune sends a glow running along one of the strings.
+void lights_draw(void *state, const Frame *f) {
+    FairyLights *l = state;
+    Grid *g = f->grid;
+    dust_stars(f, l->salt, 0.002f, 0.35f);
+    // A dimmer, farther layer of strings behind the near ones, for depth.
+    for (int s = 0; s < 3; s++)
+        for (int i = 0; i < 30; i++) {
+            float u = ((float)i + 0.5f) / 30, x = (u * 2 - 1) * (g->aspect + 0.05f), y = 0.55f - 0.5f * (float)s - 0.1f * 4 * u * (1 - u) + 0.15f;
+            float tw = 0.5f + 0.5f * msin(f->t * 0.9f + (float)(i * 7 + s * 3));
+            put_cell_under(g, cell_col(g, x), cell_row(g, y), '.', frame_dim(f, palette_accent(f->palette, i + s), 0.25f + 0.2f * tw));
+        }
+    const ScoreEvent *notes[16];
+    int n = 0;
+    for (int k = 0; k < 4 && f->react > 0 && n < 12; k++) n += recent_notes(f->score, TUNE[k], f->t, 1.6f, notes + n, 16 - n < 4 ? 16 - n : 4);
+    Rgbf wire = palette_ramp(f->palette, 0.3f);
+    for (int s = 0; s < STRINGS; s++) {
+        StrokePoint pts[24];
+        for (int i = 0; i < 24; i++) {
+            float u = (float)i / 23, x = (u * 2 - 1) * (g->aspect + 0.05f);
+            pts[i] = (StrokePoint){x, l->height[s] - l->sag[s] * 4 * u * (1 - u), frame_dim(f, wire, 0.7f)};
+        }
+        stroke_draw(f->stroker, pts, 24, 0);
+        for (int i = 0; i < BULBS; i++) {
+            float u = ((float)i + 0.5f) / BULBS, x = (u * 2 - 1) * (g->aspect + 0.05f), y = l->height[s] - l->sag[s] * 4 * u * (1 - u);
+            uint32_t id = l->salt ^ (uint32_t)(s * 131 + i) * 2654435761u;
+            float level = 0.45f + 0.35f * (0.5f + 0.5f * msin(f->t * (0.7f + hash01(id) * 1.6f) + hash01(id + 1) * TAU_F));
+            for (int k = 0; k < n; k++) {
+                // A note's glow sets off from a place its pitch picks on the string its time picks, and runs both ways.
+                uint32_t nid = (uint32_t)(notes[k]->time * 1000.0f);
+                if ((int)(nid % STRINGS) != s) continue;
+                float from = (float)(notes[k]->note % 24) / 24, run = (f->t - notes[k]->time) * 0.9f, d = mabs(u - from) - run;
+                level += mexp(-d * d * 400) * frame_bright(f) * 0.8f;
+            }
+            Rgbf color = rgbf_mix(palette_accent(f->palette, i % 3), palette_ramp(f->palette, 1.0f), 0.2f);
+            put_cell(g, cell_col(g, x), cell_row(g, y) + 1, level > 0.9f ? '@' : 'o', frame_dim(f, color, level));
+        }
+    }
+    f->fx->glow = 0.6f;
 }
