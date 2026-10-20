@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Gentle scenes for the soft moods: soap bubbles rising with the melody, a snow globe shaken on the bar line, a
-// dandelion clock whose seeds let go one note at a time, a music box's dancer, and strings of fairy lights.
+// dandelion clock whose seeds let go one note at a time, a music box's dancer, strings of fairy lights, and a mandala
+// the tune draws for itself.
 #include "mathx.h"
 #include "noise.h"
 #include "scene.h"
@@ -9,6 +10,10 @@
 
 static float cell_x(const Grid *g, int col) {
     return ((float)col + 0.5f) / (float)g->cols * 2 * g->aspect - g->aspect;
+}
+
+static float cell_y(const Grid *g, int row) {
+    return 1 - ((float)row + 0.5f) / (float)g->rows * 2;
 }
 
 static void line(const Frame *f, float x0, float y0, float x1, float y1, Rgbf color) {
@@ -404,4 +409,112 @@ void lights_draw(void *state, const Frame *f) {
         }
     }
     f->fx->glow = 0.6f;
+}
+
+/* ---------- Mandala ---------- */
+
+#define PETAL_NOTES 6
+#define PETAL_LIFE 2.4f
+
+typedef struct {
+    int folds;
+    float spin, every;
+    uint32_t salt;
+} Mandala;
+
+void mandala_setup(void *state, Rng *r, const Frame *f) {
+    Mandala *m = state;
+    // Few enough mirrors that a busy tune's petals still read as a figure rather than a solid disc.
+    static const int folds[4] = {5, 6, 7, 8};
+    m->folds = folds[rng_range(r, 0, 4)];
+    m->spin = rng_between(r, 0.01f, 0.025f) * (rng_chance(r, 50) ? 1 : -1);
+    m->every = rng_between(r, 0.35f, 0.6f);
+    m->salt = rng_u32(r);
+    (void)f;
+}
+
+#define PETALS 9
+
+typedef struct {
+    float at, angle, size, level;
+    Rgbf color;
+} Petal;
+
+// A petal for the mandala at `age` seconds old: set out by its pitch `high` (0 low, 1 high) at its own angle in the
+// wedge, opening quickly and then drifting outward as it fades.
+static Petal petal(const Frame *f, float age, float high, float angle, float level, float attack, Rgbf color) {
+    float grow = smoothstep(0.0f, attack, age), fade = saturate(1 - (age / PETAL_LIFE) * (age / PETAL_LIFE));
+    return (Petal){0.2f + 0.6f * high + age * 0.05f * frame_pace(f), angle, (0.035f + 0.035f * (1 - high)) * grow, level * fade, color};
+}
+
+// A mandala the tune draws for itself: every note of the melody opens a petal, set farther out the higher it is and
+// repeated in each of the mirrors' wedges, then drifts outward and fades, so a phrase blooms into a figure and melts
+// away. Kicks swell its heart and chords turn its colors; between tunes, petals open on a slow clock of their own.
+void mandala_draw(void *state, const Frame *f) {
+    Mandala *m = state;
+    Grid *g = f->grid;
+    static const char ramp[] = " .:-=+*#@";
+    float turn = f->local * m->spin * TAU_F * frame_pace(f), wedge = TAU_F / (float)m->folds, contrast = frame_contrast(f);
+    float kick = frame_pulse(f, ROLE_KICK, 0.25f, 1.0f), attack = f->calm || f->still ? 0.3f : 0.08f;
+    const ChordMark *chord = score_chord(f->score, f->t);
+    int shift = chord ? chord->chord.root_pc : 0;
+    const ScoreEvent *notes[4 * PETAL_NOTES];
+    int n = 0, count = 0;
+    for (int k = 0; k < 4 && f->react > 0; k++) n += recent_notes(f->score, TUNE[k], f->t, PETAL_LIFE, notes + n, PETAL_NOTES);
+    // The newest notes win when a busy tune has more than the mandala can hold.
+    for (int i = 1; i < n; i++)
+        for (int j = i; j > 0 && notes[j]->time > notes[j - 1]->time; j--) {
+            const ScoreEvent *swap = notes[j];
+            notes[j] = notes[j - 1], notes[j - 1] = swap;
+        }
+    Petal petals[PETALS];
+    for (int i = 0; i < n && count < PETALS; i++) {
+        float high = saturate(((float)notes[i]->note - 48) / 40.0f);
+        float angle = wedge * 0.5f * hash01((uint32_t)notes[i]->note * 2654435761u ^ m->salt);
+        float level = (0.6f + 0.4f * frame_bright(f)) * (0.55f + 0.45f * notes[i]->velocity);
+        petals[count++] = petal(f, f->t - notes[i]->time, high, angle, level, attack, palette_accent(f->palette, notes[i]->note + shift));
+    }
+    // Between tunes, or in a shot that doesn't follow the music, petals keep opening on a clock of their own.
+    if (n < 3) {
+        int last = mfloor_i(f->t / m->every);
+        for (int k = 0; k <= (int)(PETAL_LIFE / m->every) && count < PETALS; k++) {
+            uint32_t id = m->salt + (uint32_t)(last - k) * 2654435761u;
+            petals[count++] = petal(f, f->t - (float)(last - k) * m->every, hash01(id), wedge * 0.5f * hash01(id + 1), 0.6f, attack,
+                                    palette_accent(f->palette, (int)(hash01(id + 2) * 3) + shift));
+        }
+    }
+    Rgbf bone = palette_ramp(f->palette, 0.5f), heart = palette_ramp(f->palette, 1.0f);
+    // No petal grows wider than a third of its half-wedge, or near the middle the mirrors would fuse petals into rings.
+    float core = 0.05f + 0.05f * kick, widest = 0.35f * wedge * 0.5f;
+    for (int row = 0; row < g->rows; row++) {
+        float y = cell_y(g, row);
+        for (int col = 0; col < g->cols; col++) {
+            float x = cell_x(g, col), r = mhypot(x, y);
+            if (r < core) {
+                put_cell(g, col, row, '@', frame_dim(f, heart, (0.8f + 0.2f * kick) * contrast));
+                continue;
+            }
+            // Folded into half a wedge by the mirrors, as a kaleidoscope folds its view.
+            float a = matan2(y, x) - turn;
+            a -= mfloor(a / wedge) * wedge;
+            if (a > wedge * 0.5f) a = wedge - a;
+            float best = 0;
+            Rgbf ink = bone;
+            for (int k = 0; k < count; k++) {
+                const Petal *p = &petals[k];
+                if (p->size <= 0.001f || mabs(r - p->at) > p->size * 1.8f) continue;
+                float dr = (r - p->at) / (p->size * 1.8f), dt = (a - p->angle) / mmin(p->size / r, widest), d = dr * dr + dt * dt;
+                // Full inside and soft only at the rim, so each petal keeps a clear shape.
+                float lit = d < 1 ? saturate((1 - d) * 2.5f) * p->level : 0;
+                if (lit > best) best = lit, ink = p->color;
+            }
+            int i = (int)(saturate(best * 1.2f) * 8.99f);
+            if (i > 0)
+                put_cell(g, col, row, ramp[i], frame_dim(f, ink, (0.45f + 0.7f * best) * contrast));
+            else if (r > 0.12f && r < 0.95f && r * mmin(a, wedge * 0.5f - a) < 0.012f)
+                // The mandala's bones: faint dots along its mirrors, between the petals.
+                put_cell(g, col, row, '.', frame_dim(f, bone, 0.45f * contrast));
+        }
+    }
+    f->fx->glow = 0.6f + 0.2f * kick;
 }

@@ -1321,6 +1321,7 @@ const SceneKind scene_kinds[] = {
     {"kaleido tunnel", W(3, 0, 1, 0, 3, 0, 0, 1, 3), 0.9f, 1, 0, ktunnel_setup, ktunnel_draw},
     {"xor checkers", W(3, 0, 1, 0, 2, 0, 0, 1, 3), 0.85f, 1, 0, xor_setup, xor_draw},
     {"tumbling blocks", W(2, 1, 1, 1, 2, 0, 1, 2, 2), 0.65f, 1, 0, blocks_setup, blocks_draw},
+    {"mandala", W(0, 3, 1, 2, 1, 0, 3, 2, 0), 0.45f, 1, 0, mandala_setup, mandala_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
 _Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS, "the scene table outgrew MAX_SCENE_KINDS");

@@ -180,6 +180,7 @@ SCENE(quasi)
 SCENE(ktunnel)
 SCENE(xor)
 SCENE(blocks)
+SCENE(mandala)
 #undef SCENE
 
 #endif
