@@ -42,7 +42,7 @@ static const Curated CURATED[] = {
      {H(0x9ad1ff), H(0xffffff), H(0xc5b3ff)}, 0, AMBIENT | TRANCE | MUSICBOX | DUB, 0},
     {"ember", H(0x0d0503), {H(0x2c0d07), H(0x63190b), H(0xa33212), H(0xe2621c), H(0xffa443), H(0xffe39a)},
      {H(0xfff1d6), H(0xff5a3c), H(0xffcd6b)}, 0, SYNTHWAVE | JUNGLE | DUBSTEP, 0},
-    {"aurora", H(0x030812), {H(0x0a2233), H(0x0f4a4a), H(0x1f8a6a), H(0x4ccf8a), H(0xa6f0a0), H(0xe8ffe0)},
+    {"northern lights", H(0x030812), {H(0x0a2233), H(0x0f4a4a), H(0x1f8a6a), H(0x4ccf8a), H(0xa6f0a0), H(0xe8ffe0)},
      {H(0xc38cff), H(0x6fe3ff), H(0xffffff)}, 0, AMBIENT | TRANCE | MUSICBOX, 0},
     {"sakura", H(0x120810), {H(0x3a1430), H(0x6e2850), H(0xb44a7a), H(0xf07fa5), H(0xffbfd2), H(0xfff0f4)},
      {H(0xffe3a0), H(0x9ad8ff), H(0xffffff)}, 0, AMBIENT | LOFI | MUSICBOX, 0},
@@ -50,7 +50,7 @@ static const Curated CURATED[] = {
      {H(0xb8c76f), H(0xe09a6c), H(0x70a4b2)}, 0, KEYGEN, 1},
     {"dusk tape", H(0x14100e), {H(0x2b221c), H(0x4f3b2e), H(0x7c5b44), H(0xb8865c), H(0xe2b88a), H(0xfbe6c8)},
      {H(0xf2a48c), H(0x9cc4b8), H(0xffd68a)}, 0, LOFI | DUB, 0},
-    {"snow", H(0xe9eef5), {H(0xcfd8e6), H(0x9fb0cc), H(0x6c82a8), H(0x445b85), H(0x24375e), H(0x0f1b36)},
+    {"porcelain", H(0xe9eef5), {H(0xcfd8e6), H(0x9fb0cc), H(0x6c82a8), H(0x445b85), H(0x24375e), H(0x0f1b36)},
      {H(0xd23f5d), H(0x2f7fd1), H(0xe0a42a)}, 1, AMBIENT | MUSICBOX, 0},
     {"deep sea", H(0x01060c), {H(0x062031), H(0x0a3b54), H(0x0f6a84), H(0x22a2b0), H(0x6fd8d0), H(0xd4fff6)},
      {H(0xffd38a), H(0x8ab4ff), H(0xffffff)}, 0, AMBIENT | DUB | JUNGLE, 0},
@@ -140,6 +140,19 @@ static const Curated CURATED[] = {
      {H(0xff7a1a), H(0xffc04a), H(0xff3d2e)}, 0, DUBSTEP | KEYGEN | DUB | TRANCE, 1},
     {"twilight", H(0x0a0b1e), {H(0x1c1d45), H(0x34306e), H(0x5a3f8f), H(0x9356a6), H(0xd287b5), H(0xffd3d8)},
      {H(0xffe9a8), H(0x9fe3ff), H(0xffffff)}, 0, AMBIENT | MUSICBOX | LOFI | DUB, 0},
+    // An old home computer's colors in the order of their brightness, as its manual listed them.
+    {"home micro", H(0x000000), {H(0x00006e), H(0x0000d7), H(0xd700d7), H(0x00d700), H(0x00d7d7), H(0xffff8a)},
+     {H(0xffffff), H(0xff57ff), H(0x57ffff)}, 0, KEYGEN | JUNGLE | DUBSTEP, 1},
+    {"risograph", H(0xf4efe3), {H(0xe6ddd0), H(0xc8cfe3), H(0x8ea5d8), H(0x5a74c8), H(0x6a40a6), H(0x2a2160)},
+     {H(0xff48b0), H(0xffcc00), H(0x00a7a0)}, 1, LOFI | MUSICBOX | AMBIENT, 1},
+    {"goldfish", H(0x03111a), {H(0x072033), H(0x0c3a57), H(0x14587e), H(0xe8642a), H(0xff9446), H(0xfff4e8)},
+     {H(0xffffff), H(0xf2543d), H(0x7fd6ff)}, 0, AMBIENT | LOFI | DUB | MUSICBOX, 1},
+    {"jade", H(0x03100c), {H(0x0a2a1f), H(0x0f4636), H(0x176b52), H(0x2a9c78), H(0x77d0a8), H(0xe6f8ec)},
+     {H(0xffc94a), H(0xfff3d6), H(0xff8fa3)}, 0, AMBIENT | DUB | LOFI | TRANCE, 0},
+    {"amber terminal", H(0x0a0600), {H(0x2b1600), H(0x573000), H(0x8a4f00), H(0xc77a00), H(0xffab2e), H(0xffe3ad)},
+     {H(0xffc457), H(0xfff2d9), H(0xff8a1c)}, 0, KEYGEN | JUNGLE | DUB | DUBSTEP, 0},
+    {"seafoam", H(0xe6f5ef), {H(0xcde8df), H(0x9ccfc0), H(0x5fae9c), H(0x2f8578), H(0x1b5a5a), H(0x0d2e38)},
+     {H(0xff6f59), H(0xf2b134), H(0xe85d9a)}, 1, AMBIENT | LOFI | MUSICBOX | DUB, 0},
 };
 #define CURATED_COUNT ((int)(sizeof CURATED / sizeof CURATED[0]))
 
