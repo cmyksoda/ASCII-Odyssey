@@ -305,9 +305,9 @@ static double time_frame(Piece *p, double t, double *worst) {
 // What each scene costs to draw on this machine, held and in transition, scaled to the Wii by rain's known cost there,
 // so a scene that would crowd the Wii's frame shows up before it ever reaches the console.
 static void bench(Piece *p, double rain_on_wii) {
-    double cost[64] = {0}, worst[64] = {0};
+    double cost[MAX_SCENE_KINDS] = {0}, worst[MAX_SCENE_KINDS] = {0};
     int rain = -1;
-    for (int k = 0; k < scene_kind_count && k < 64; k++) {
+    for (int k = 0; k < scene_kind_count; k++) {
         if (!scene_in_use(&scene_kinds[k])) continue;
         if (!strcmp(scene_kinds[k].name, "rain")) rain = k;
         piece_force_scene(p, scene_kinds[k].name);
@@ -331,17 +331,14 @@ static void bench(Piece *p, double rain_on_wii) {
     double scale = rain >= 0 && cost[rain] > 0 ? rain_on_wii / cost[rain] : 0;
     int a = -1, b = -1;
     printf("scene            pc ms  worst   wii ms (est.)\n");
-    for (int k = 0; k < scene_kind_count && k < 64; k++) {
+    for (int k = 0; k < scene_kind_count; k++) {
         if (!scene_in_use(&scene_kinds[k])) continue;
         printf("%-14s %7.3f %6.3f   %5.1f\n", scene_kinds[k].name, cost[k], worst[k], cost[k] * scale);
-        if (a < 0 || cost[k] > cost[a]) {
-            b = a;
-            a = k;
-        } else if (b < 0 || cost[k] > cost[b]) {
-            b = k;
-        }
+        // The dearest pair the director allows: the dearest heavy scene and the dearest of the rest.
+        if (scene_kinds[k].heavy && (a < 0 || cost[k] > cost[a])) a = k;
+        if (!scene_kinds[k].heavy && (b < 0 || cost[k] > cost[b])) b = k;
     }
-    // The dearest transition: the two dearest scenes taking turns, timed only while one blends into the other.
+    // The dearest transition, timed only while one blends into the other: the quickest of three passes.
     piece_force_scene(p, scene_kinds[a].name);
     Rng r;
     rng_init(&r, 7, "bench");
@@ -351,22 +348,26 @@ static void bench(Piece *p, double rain_on_wii) {
         p->direction.shots[i].kind = b;
         scene_kinds[b].setup(p->direction.shots[i].state, &r, &proto);
     }
-    double blend = 0, blend_worst = 0;
-    int frames = 0;
-    for (int i = 1; i < p->direction.count; i++) {
-        const Shot *s = &p->direction.shots[i];
-        for (int f = 0; f < 8 && s->fade > 0; f++) {
-            blend += time_frame(p, s->start + s->fade * (f + 0.5) / 8, &blend_worst);
-            frames++;
+    double blend = 1e9, blend_worst = 0;
+    for (int pass = 0; pass < 3; pass++) {
+        double sum = 0;
+        int frames = 0;
+        for (int i = 1; i < p->direction.count; i++) {
+            const Shot *s = &p->direction.shots[i];
+            for (int f = 0; f < 8 && s->fade > 0; f++) {
+                sum += time_frame(p, s->start + s->fade * (f + 0.5) / 8, &blend_worst);
+                frames++;
+            }
         }
+        if (frames && sum / frames < blend) blend = sum / frames;
     }
-    blend /= frames ? frames : 1;
     printf("%s into %s, blending: %.3f ms, worst %.3f   %5.1f\n", scene_kinds[a].name, scene_kinds[b].name, blend, blend_worst,
            blend * scale);
 }
 
 static int piece_main(int argc, char **argv) {
-    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL, *scene = NULL, *palette = NULL;
+    const char *seed = "lunar ribbon", *sheet = NULL, *video = NULL, *info_path = NULL, *scene = NULL, *palette = NULL,
+               *entrance = NULL;
     Mood mood = MOOD_ANY;
     LengthPref length = LENGTH_MEDIUM;
     int wide = 0, fps = 30, scale = 2, count = 0, benchmark = 0, calm = 0, still = 0;
@@ -386,6 +387,8 @@ static int piece_main(int argc, char **argv) {
             scene = argv[++i];
         else if (!strcmp(argv[i], "--palette") && i + 1 < argc)
             palette = argv[++i];
+        else if (!strcmp(argv[i], "--entrance") && i + 1 < argc)
+            entrance = argv[++i];
         else if (!strcmp(argv[i], "--times") && i + 1 < argc)
             count = parse_times(argv[++i], times, 64);
         else if (!strcmp(argv[i], "--fps") && i + 1 < argc)
@@ -418,6 +421,13 @@ static int piece_main(int argc, char **argv) {
         fprintf(stderr, "no palette called %s\n", palette);
         return 1;
     }
+    // Every shot enters the named way, slowed to a second, for looking at one kind of transition.
+    for (int e = 0; entrance && e < ENTRANCES; e++)
+        if (!strcmp(entrance_names[e], entrance))
+            for (int i = 1; i < p.direction.count; i++) {
+                p.direction.shots[i].entrance = (Entrance)e;
+                p.direction.shots[i].fade = 1.0f;
+            }
     if (info_path) piece_info(&p, info_path);
     const SongInfo *info = &p.comp.info;
     printf("\"%s\": %s, %s %s, %d bpm, %.0f s, palette %s, grid %dx%d\n", info->title, mood_names[info->mood],

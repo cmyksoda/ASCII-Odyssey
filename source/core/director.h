@@ -19,6 +19,13 @@ typedef enum {
     ENTER_MELT,
     ENTER_DECODE,
     ENTER_FADE,
+    ENTER_PUSH,
+    ENTER_DOORS,
+    ENTER_SHATTER,
+    ENTER_TYPEWRITER,
+    ENTER_SWIRL,
+    ENTER_ZOOM,
+    ENTER_INTERLACE,
     ENTRANCES
 } Entrance;
 

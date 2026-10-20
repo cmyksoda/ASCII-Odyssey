@@ -87,7 +87,7 @@ static const Tour TOURS[] = {
     // Start on the first press, then the tracker view, then the info view.
     {"overlays", 20.0, {1.6, 9.0, 15.0}, 3, 0, "1.0:confirm,6.0:one,12.0:two"},
     // Every scene in turn over a real piece, two and a half music seconds each, with its own timings and a shot.
-    {"scenes", 160.0, {0}, 0, 1, "1.0:confirm"},
+    {"scenes", 200.0, {0}, 0, 1, "1.0:confirm"},
 };
 
 #define SCENE_SECONDS 2.5
