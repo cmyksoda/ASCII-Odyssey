@@ -370,7 +370,7 @@ static const MoodSpec MOODS[MOOD_COUNT] = {
                                  [SL_REVERSE] = V(VOICE_FX_REVERSE_CRASH)},
                       .mix = {.reverb_size = 0.75f, .reverb_damping = 0.45f, .reverb_mix = 0.8f, .delay_beats = 0.75f,
                               .delay_feedback = 0.4f, .delay_mix = 0.45f, .duck_depth = 0.5f, .duck_release = 0.14f,
-                              .drive = 0.28f, .pre_gain = 0.85f, .master_gain = 0.75f},
+                              .drive = 0.28f, .pre_gain = 0.85f, .master_gain = 0.708f},
                       .lift_chance = 20},
 };
 
@@ -654,10 +654,11 @@ static void make_instruments(Composer *c) {
         keys->vibrato_rate = 0.9f;
     }
     if (c->mood == MOOD_DUB && c->slot[SL_RIM]) s->instruments[c->slot[SL_RIM] - 1].send_delay = 0.35f;
-    // The drops' sub sits under everything at full weight, pumping only half as deep as the rest.
+    // The drops' sub sits under everything at full weight, pumping only half as deep as the rest; dubstep's drops stand
+    // on it hardest of all.
     if (c->slot[SL_SUB]) {
         Instrument *sub = &s->instruments[c->slot[SL_SUB] - 1];
-        sub->volume = 1.0f;
+        sub->volume = c->mood == MOOD_DUBSTEP ? 1.6f : 1.0f;
         sub->ducked = 2;
         sub->send_reverb = sub->send_delay = 0;
     }

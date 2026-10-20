@@ -875,16 +875,17 @@ static void bass_square(Instrument *ins, Rng *r, float bpm) {
 // Wobble bass: detuned saws and a square, driven into a growl, for a resonant filter the song's beat opens and shuts.
 static void bass_wobble(Instrument *ins, Rng *r, float bpm) {
     base(ins, "wobble bass", ROLE_BASS, 0.5f);
-    saw_stack(ins, r, 3, rng_between(r, 8, 18), 1.0f, 9000, 25, rng_between(r, 0.2f, 0.5f));
+    // Darker than the other saws, so the wobble growls in the low mids instead of buzzing over the sub.
+    saw_stack(ins, r, 3, rng_between(r, 8, 18), 1.0f, 5200, 25, rng_between(r, 0.2f, 0.5f));
     float drive = rng_between(r, 1.8f, 3.2f);
     for (int k = 0; k < ins->sample_count; k++) {
         Sample *s = &ins->samples[k];
         for (int i = 0; i < s->length; i++) s->frames[i] = mtanh(s->frames[i] * drive) * 0.92f;
     }
     envelope(&ins->volume_env, bpm, 0.004f, 0.1f, 0.95f, 0.06f);
-    ins->cutoff = rng_between(r, 0.26f, 0.36f);
-    ins->resonance = rng_between(r, 1.4f, 2.4f);
-    ins->wobble_depth = rng_between(r, 0.38f, 0.5f);
+    ins->cutoff = rng_between(r, 0.22f, 0.31f);
+    ins->resonance = rng_between(r, 1.2f, 2.0f);
+    ins->wobble_depth = rng_between(r, 0.32f, 0.44f);
     ins->wobble_shape = rng_range(r, 0, 3);
     ins->ducked = 2;
 }
