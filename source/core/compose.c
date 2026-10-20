@@ -662,8 +662,8 @@ static void make_instruments(Composer *c) {
         sub->ducked = 2;
         sub->send_reverb = sub->send_delay = 0;
     }
-    // Dubstep's snare is darkened above about 7 kHz, so its noise doesn't hiss over drops the growl should own.
-    if (c->mood == MOOD_DUBSTEP && c->slot[SL_SNARE]) s->instruments[c->slot[SL_SNARE] - 1].cutoff = 0.85f;
+    // Dubstep's snare is darkened above about 4.6 kHz, so its noise doesn't hiss over drops the growl should own.
+    if (c->mood == MOOD_DUBSTEP && c->slot[SL_SNARE]) s->instruments[c->slot[SL_SNARE] - 1].cutoff = 0.75f;
 }
 
 /* ---------- Drums ---------- */
