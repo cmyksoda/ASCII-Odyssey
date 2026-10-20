@@ -443,12 +443,13 @@ void piano_draw(void *state, const Frame *f) {
     if (whites > 35) whites = 35;
     left = (g->cols - whites * 3) / 2;
     float height = (float)(keys_top - roll_top);
-    // Bar lines slide down with the music.
+    // Beat lines slide down with the music, solid at each bar.
     float beat = f->score->beat;
+    int per_bar = f->score->info->beats_per_bar;
     for (int b = 0; b < 12; b++) {
         float t_line = mfloor(f->t / beat) * beat + (float)b * beat, y = (float)keys_top - (t_line - f->t) / p->window * height;
         if (y < (float)roll_top || y >= (float)keys_top) continue;
-        int bar = ((int)mfloor(t_line / beat + 0.5f)) % 4 == 0;
+        int bar = ((int)mfloor(t_line / beat + 0.5f)) % per_bar == 0;
         for (int col = left; col < left + whites * 3; col += bar ? 1 : 2)
             put_cell(g, col, (int)y, bar ? '-' : '.', palette_ramp(f->palette, bar ? 0.35f : 0.25f));
     }
