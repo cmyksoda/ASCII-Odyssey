@@ -23,7 +23,7 @@ typedef struct {
     const Palette *palette;
     const FigletFont *art_font;
     char art[FIGLET_MAX_HEIGHT * PIECE_ART_W];
-    int art_w, art_h;
+    int art_w, art_h, intro;
     // The backup reactivity plan, per section, for when the direction is set to follow it instead of each scene's own
     // nature: all the way through, at the big moments, swelling, or in pockets.
     float react[MAX_SECTIONS];

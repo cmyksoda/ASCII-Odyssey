@@ -9,6 +9,8 @@
 // falls back to the plainer, narrower ones.
 #define TITLE_CHOICES 5
 
+enum { INTRO_DECODE, INTRO_TYPED, INTRO_RAIN, INTRO_SWEEP, INTRO_BLOOM, INTROS };
+
 static const FigletId TITLE_FACES[MOOD_COUNT][TITLE_CHOICES] = {
     [MOOD_KEYGEN] = {FIGLET_BLOCK, FIGLET_BIG, FIGLET_BANNER, FIGLET_DIGITAL, FIGLET_PIXEL},
     [MOOD_AMBIENT] = {FIGLET_SCRIPT, FIGLET_LEAN, FIGLET_SLANT, FIGLET_SMSCRIPT, FIGLET_SMSLANT},
@@ -108,6 +110,8 @@ int piece_create(Piece *p, const char *seed, Mood mood, LengthPref length, const
     direction_plan(&p->direction, &p->score, &r, &proto, family);
     plan_reactivity(p, &r);
     layout_title(p, &r);
+    // Taken from the title itself rather than the stream, so choosing it changes nothing else about the piece.
+    p->intro = (int)(hash_u32((uint32_t)seed_hash(p->comp.info.title) ^ 0x1e7eu) % INTROS);
     return 0;
 }
 
@@ -151,7 +155,20 @@ double piece_length(const Piece *p) {
     return p->score.length;
 }
 
-// The piece's name, decoded out of noise over the intro, held, then dissolved: the only words a piece shows.
+// When each cell of the title arrives, from 0 to 1, in each way a title can come in: decoded out of noise, typed
+// left to right, rained down column by column, swept in on a bright diagonal, or blooming from the middle.
+static float intro_order(int intro, int x, int y, int w, int h, uint32_t cell) {
+    float across = ((float)x + 2) / (float)(w + 4), down = ((float)y + 1) / (float)(h + 2);
+    switch (intro) {
+    case INTRO_TYPED: return across * 0.97f + down * 0.02f;
+    case INTRO_RAIN: return hash01((uint32_t)(x + 2) * 2654435761u) * 0.55f + down * 0.4f;
+    case INTRO_SWEEP: return (across * (float)(w + 4) + down * (float)(h + 2) * 2) / (float)(w + 4 + (h + 2) * 2);
+    case INTRO_BLOOM: return mabs(across - 0.5f) * 1.6f + mabs(down - 0.5f) * 0.3f + hash01(cell) * 0.05f;
+    default: return hash01(cell);
+    }
+}
+
+// The piece's name, brought in over the intro, held, then taken away the same way: the only words a piece shows.
 static void title_card(Piece *p, float t) {
     const float in = 0.8f, hold = 5.5f, out = 7.0f;
     if (!p->art_font || t < in || t > out) return;
@@ -165,7 +182,7 @@ static void title_card(Piece *p, float t) {
             if (col < 0 || row < 0 || col >= g->cols || row >= g->rows) continue;
             int inside = y >= 0 && y < p->art_h && x >= 0 && x < p->art_w;
             char ch = inside ? p->art[y * PIECE_ART_W + x] : ' ';
-            float h = hash01((uint32_t)(row * 977 + col * 131));
+            float h = intro_order(p->intro, x, y, p->art_w, p->art_h, (uint32_t)(row * 977 + col * 131));
             if (h > reveal || h < vanish) continue;
             Cell *cell = grid_at(g, col, row);
             if (ch == ' ') {
@@ -175,7 +192,13 @@ static void title_card(Piece *p, float t) {
             Rgbf color = rgbf_mix(pearl, gold, (float)y / (float)(p->art_h > 1 ? p->art_h - 1 : 1));
             int settling = h > reveal - 0.1f;
             uint32_t roll = hash_u32((uint32_t)(row * 31 + col) ^ (uint32_t)(t * 20));
-            *cell = (Cell){(uint8_t)(settling ? "*+:.=#"[roll % 6] : ch), rgb_from_f(color), (uint8_t)nudge};
+            // The front of the arrival: noise for a decode, a cursor for typing, falling drops for rain, a bright edge
+            // for a sweep, and sparks for a bloom.
+            static const char *const FRONT[INTROS] = {"*+:.=#", "_", ":|", "/", "*+"};
+            const char *front = FRONT[p->intro];
+            int glyph = settling ? front[roll % strlen(front)] : ch;
+            if (settling && p->intro != INTRO_DECODE) color = rgbf_mix(color, pearl, 0.6f);
+            *cell = (Cell){(uint8_t)glyph, rgb_from_f(color), (uint8_t)nudge};
         }
 }
 
