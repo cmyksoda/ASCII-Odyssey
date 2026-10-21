@@ -40,7 +40,7 @@ The last seed is kept in `last_seed.txt`, next to the app.
 | Volume down / up | − or D-pad down / D-pad up | L / R | L / R |
 | Home | HOME | HOME | Z |
 
-During a voyage, Choose or Pause opens the pause menu, Back or Home returns to the title, and the volume buttons turn the music up or down. The Wii Remote's D-pad changes the volume only while the music plays, since in a menu it moves the choice. On the title, Home leaves for the Homebrew Channel.
+During a voyage, Choose or Pause opens the pause menu, Back or Home returns to the title, and the volume buttons turn the music up or down.
 
 ## Settings
 
