@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # One hands-free run on a real console: wiiload the DOL with a beacon argument, collect its logs and shots,
 # and succeed only when the app said goodbye on its way back to the Homebrew Channel.
-# Run it through ~/Documents/Dev/wii-hw/hw.sh so beads take turns on the consoles.
+# When several jobs share a console, run each through a wrapper that gives them turns, since one run owns it.
 #   hw_run.sh <console-ip> <dol> <tour> <out-dir> [extra wiiload arguments...]
 set -u
 ip=$1 dol=$2 tour=$3 out=$4
