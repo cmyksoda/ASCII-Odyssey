@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Arcade and terminal scenes: pong played on the beat, a marching alien fleet, a maze typed out on an old computer, a
 // spectrum bent into a halo, pulsar lines carrying the music's history into the distance, and a piano roll.
 #include "mathx.h"

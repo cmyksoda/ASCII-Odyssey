@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Small worlds: a turntable, a cassette, a music box's comb, a mobile, clockwork, a jungle canopy, a highway at
 // night, a sound system, a storm, desert dunes, a kelp forest, a meteor shower, a reel-to-reel deck and a carousel.
 #include "mathx.h"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Embed files as C byte arrays, each followed by a NUL so text files can be read as strings.
 
   embed.py OUT.c name=path [name=path ...]

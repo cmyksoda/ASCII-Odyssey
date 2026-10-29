@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Zip the Homebrew Channel folder for an SD card: apps/APP/ with boot.dol, meta.xml and icon.png, the font
 licenses and credits in apps/APP/licenses/, and the app's own LICENSE beside them.
 

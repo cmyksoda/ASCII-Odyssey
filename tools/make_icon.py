@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Draw the Homebrew Channel icon (128x48): the title in the app's Terminus over a little patch of night sky, the
 name in the rainbow palette's bands with a soft glow, and a ringed planet in the corner.
 

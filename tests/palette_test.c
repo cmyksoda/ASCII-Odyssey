@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The rainbow palette puts every hue on screen at once, on black, even in a scene of only two brightnesses, where a
 // ramp by brightness would show two colors.
 #include "check.h"

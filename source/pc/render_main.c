@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // odyssey-render: the Wii app's core, run on the PC to look at frames and (later) render whole pieces.
 #include "../core/app.h"
 #include "../core/compose.h"

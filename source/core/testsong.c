@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // A fixed little song for checking the engine and the Wii's audio path by ear and by measurement.
 #include "testsong.h"
 

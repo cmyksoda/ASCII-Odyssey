@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Measuring audio instead of arguing with ears: WAV out, BS.1770 loudness, clip and jump counts, spectrograms.
 #include "audio_tools.h"
 

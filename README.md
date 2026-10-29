@@ -80,7 +80,7 @@ make package    # the release zip, in dist/
 
 ## License
 
-ASCII Odyssey is free software under the [GNU General Public License, version 3](LICENSE). The fonts keep their own licenses: Terminus is under the SIL Open Font License 1.1, FIGlet and its standard fonts are under FIGlet's BSD-style license, and each contributed font belongs to its authors. All the texts are in [`licenses/`](licenses/).
+ASCII Odyssey is free software under the [GNU General Public License, version 3 or later](LICENSE). The fonts keep their own licenses: Terminus is under the SIL Open Font License 1.1, FIGlet and its standard fonts are under FIGlet's BSD-style license, and each contributed font belongs to its authors. All the texts are in [`licenses/`](licenses/).
 
 ---
 

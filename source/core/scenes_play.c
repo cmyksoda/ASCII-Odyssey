@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Games and gadgets: a platformer, a race into the horizon, tetris, snake, an adventure's overworld, asteroids,
 // breakout, a sound chip's scopes, a lighthouse, and a drum machine.
 #include "mathx.h"

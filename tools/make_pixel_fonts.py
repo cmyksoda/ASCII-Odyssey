@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Writes ASCII Odyssey's own FIGlet faces from one hand-drawn 5x7 alphabet: pixel (dots as #), dots (as o, like a
 sign of bulbs), wire (traced as strokes), scanline (in rows of # and =) and neon (# in a halo of dots). Only what
 titles use is drawn, A-Z, 0-9, space and ' - . !, and lowercase borrows the capitals."""
@@ -107,7 +107,7 @@ def glyph_rows(ch, draw, height, layout):
 
 
 def face(draw, height, layout, note):
-    comments = [note, 'Made for ASCII Odyssey; GPL-3.0-only like the rest of it.']
+    comments = [note, 'Made for ASCII Odyssey; GPL-3.0-or-later like the rest of it.']
     width = max(len(r) for ch in GLYPHS for r in glyph_rows(ch, draw, height, layout))
     baseline = height - 1 if height > HEIGHT else height
     lines = [f'flf2a$ {height} {baseline} {width + 2} {layout} {len(comments)}'] + comments

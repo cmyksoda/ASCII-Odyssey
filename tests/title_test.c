@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Once a title has arrived, every letter of it shows while it's held, whichever way it came in and whatever face it's
 // in.
 #include "check.h"

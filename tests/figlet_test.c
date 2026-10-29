@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Every title face loads, draws only glyphs the font atlas has, lays out like the figlet command, and wraps a long
 // title inside the rows it's given.
 #include "check.h"

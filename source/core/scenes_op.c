@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Op art at full tilt, from a checkerboard vortex and the Amiga's bouncing ball to Escher's circle limit and a
 // quasicrystal. Kicks drive their motion and chords turn their colors.
 #include "mathx.h"

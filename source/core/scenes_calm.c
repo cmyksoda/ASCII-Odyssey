@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Still scenes: they move only with time, never with the music, so a voyage has places to breathe.
 #include "mathx.h"
 #include "noise.h"

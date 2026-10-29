@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Receive a hardware test run from the Wii: logs, timings and framebuffer shots.
 
   beacon.py --port 47110 --out DIR [--timeout 240]

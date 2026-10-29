@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Quiet places to rest the eyes: a koi pond, a night train's window, a campfire, an hourglass, birds flying home, a
 // ringed planet, a rainy street and palms at dusk. None of them answer the music.
 #include "mathx.h"

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Scenes that answer the music all the way through: every kick, snare and note shapes what they draw.
 #include "mathx.h"
 #include "noise.h"

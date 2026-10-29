@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 # One hands-free run on a real console: wiiload the DOL with a beacon argument, collect its logs and shots,
 # and succeed only when the app said goodbye on its way back to the Homebrew Channel.
 # When several jobs share a console, run each through a wrapper that gives them turns, since one run owns it.

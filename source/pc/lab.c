@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Test patterns for tuning the ASCII matcher: lines at every angle, rings, discs and a shaded sphere.
 #include "lab.h"
 

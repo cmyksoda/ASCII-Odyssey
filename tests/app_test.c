@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // The app's first screens answer the first press the way a player expects.
 #include "check.h"
 #include "core/app.h"

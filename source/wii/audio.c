@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // One ASND stereo voice fed by its own thread, after PaperAirplaneChase/dev/AUDIO.md: buffers of two whole
 // DSP mix cycles, never reused while the DSP may read them, refusals kept and retried, a dead voice restarted.
 #include "audio.h"

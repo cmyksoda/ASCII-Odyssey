@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Settings survive a trip through settings.txt, and a damaged file falls back to defaults.
 #include "check.h"
 #include "core/settings.h"

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Gentle scenes for the soft moods: soap bubbles rising with the melody, a snow globe shaken on the bar line, a
 // dandelion clock whose seeds let go one note at a time, a music box's dancer, strings of fairy lights, and a mandala
 // the tune draws for itself.

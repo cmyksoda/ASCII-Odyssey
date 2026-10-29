@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "font.h"
 
 const FontFace *font_face(int design_w, int cell_h, int wide) {

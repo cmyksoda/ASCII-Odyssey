@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: GPL-3.0-only
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Bake the ASCII glyph atlases and 2x4 shape vectors for every cell size into one C file.
 
   gen_font.py OUT.c [--preview DIR] [--font outline:BOLD.otf[,HEAVY.otf] | --font bdf:FILE.bdf[,FILE.bdf...]]
