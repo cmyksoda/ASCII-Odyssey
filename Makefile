@@ -15,10 +15,31 @@ COMMON_CFLAGS := -O2 -std=gnu11 -Wall -Wextra -Werror -ffp-contract=off -fno-str
 CFLAGS := -g $(COMMON_CFLAGS) $(MACHDEP) -I$(LIBOGC_INC) -Ibuild
 LIBS := -lfat -lwiikeyboard -lwiiuse -lbte -lasnd -logc -lm
 
+# Extra controllers, folded onto the Wii Remote / GameCube pad calls the program already makes (see source/wii/libwiiinput/extrainput.h):
+# USB mouse, pen tablets, uDraw GameTablet and the GameCube adapter for Wii U always; DualShock 3, Wii U Pro Controller
+# and Wii U GamePad once scripts/build_controller_portlibs.sh has built their libraries into ./portlibs/ppc
+EXTRA_PORTLIBS := $(CURDIR)/portlibs/ppc
+CFLAGS += -DHAVE_TABLET -DHAVE_GCADAPTER -Isource/wii/libwiiinput -include extrainput_compat.h
+EXTRA_LDFLAGS := -Wl,--wrap=classic_ctrl_handshake,--wrap=parse_event,--wrap=USB_GetDeviceList
+ifneq ($(wildcard $(EXTRA_PORTLIBS)/lib/libsicksaxis.a),)
+CFLAGS += -DHAVE_SICKSAXIS
+LIBS := -lsicksaxis $(LIBS)
+endif
+ifneq ($(wildcard $(EXTRA_PORTLIBS)/lib/libwupc.a),)
+CFLAGS += -DHAVE_WUPC
+LIBS := -lwupc $(LIBS)
+EXTRA_LDFLAGS += -Wl,-wrap,wiiuse_accept
+endif
+ifneq ($(wildcard $(EXTRA_PORTLIBS)/lib/libwiidrc.a),)
+CFLAGS += -DHAVE_WIIDRC
+LIBS := -lwiidrc $(LIBS)
+endif
+CFLAGS += -I$(EXTRA_PORTLIBS)/include
+
 CORE := $(wildcard source/core/*.c)
 GENERATED := build/gen/font_faces.c build/gen/figlet_fonts.c
 FLF := $(wildcard vendor/figlet/*.flf vendor/figlet-contributed/*.flf assets/figlet/*.flf)
-WII_OBJECTS := $(patsubst source/%.c,build/wii/%.o,$(CORE) $(wildcard source/wii/*.c)) \
+WII_OBJECTS := $(patsubst source/%.c,build/wii/%.o,$(CORE) $(wildcard source/wii/*.c) $(wildcard source/wii/libwiiinput/*.c)) \
 	build/wii/gen/font_faces.o build/wii/gen/figlet_fonts.o
 
 .PHONY: all pc test render clean package
@@ -41,7 +62,7 @@ build/wii/gen/%.o: build/gen/%.c
 	$(CC) $(CFLAGS) -Isource/core -c $< -o $@
 
 build/wii/$(APP).elf: $(WII_OBJECTS)
-	$(CC) $^ $(MACHDEP) -L$(LIBOGC_LIB) $(LIBS) -Wl,-Map,build/wii/$(APP).map -o $@
+	$(CC) $^ $(MACHDEP) -L$(LIBOGC_LIB) -L$(EXTRA_PORTLIBS)/lib $(EXTRA_LDFLAGS) $(LIBS) -Wl,-Map,build/wii/$(APP).map -o $@
 
 # The Makefile holds VERSION, which meta.xml carries.
 dist/apps/$(APP)/boot.dol: build/wii/$(APP).elf hbc/meta.xml hbc/icon.png Makefile
