@@ -297,8 +297,13 @@ static int chart_row(const Chart *c, const Grid *g, int col) {
 // What stands on the island of each kind of section, in SectionKind's order: a lighthouse to set out from, palms, a
 // peak, a volcano, an atoll, and a house to come home to.
 static const char *const ISLANDS[SECTION_KINDS][3] = {
-    {"  (*)  ", " _|=|_ ", "(_____)"}, {"  \\|/  ", " __|__ ", "(_____)"}, {"   /\\  ", " _/  \\_", "(_____)"},
-    {"  ':'  ", " _/^\\_ ", "(_____)"}, {"       ", " .-~-. ", "(_~~~_)"},   {"   _   ", " _/#\\_ ", "(_____)"}};
+    {"  (*)  ", " _|=|_ ", "(_____)"},
+    {"  \\|/  ", " __|__ ", "(_____)"},
+    {"   /\\  ", " _/  \\_", "(_____)"},
+    {"  ':'  ", " _/^\\_ ", "(_____)"},
+    {"       ", " .-~-. ", "(_~~~_)"},
+    {"   _   ", " _/#\\_ ", "(_____)"},
+};
 
 // The whole song as a sea chart: an island for each of its parts, set along the course in the order they play, and a
 // ship that is always exactly as far across the chart as the song is through.
