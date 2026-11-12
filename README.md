@@ -11,7 +11,7 @@ ASCII Odyssey is a Wii app that makes you a brand new voyage every time you pres
 ## Features
 
 - **Ten genres:** 8-bit, 16-bit, ambient, dub, dubstep, keygen, lo-fi, music box, synthwave, and trance.
-- **A hundred scenes**, from tunnels and plasma to a game of Tetris, a city at night, and Escher's Circle Limit, with forty kinds of transition between them.
+- **More than a hundred scenes**, from tunnels and plasma to a game of Tetris, a city at night, and Escher's Circle Limit, with forty kinds of transition between them.
 - **Sixty color palettes**, and **fifty FIGlet fonts** for each voyage's title.
 - **Every song is written note by note** and played by the app's own tracker, with every instrument synthesized on the Wii.
 - **The same seed always makes the same voyage**, so you can share the ones you love.
@@ -21,7 +21,7 @@ ASCII Odyssey is a Wii app that makes you a brand new voyage every time you pres
 
 ## Seeds
 
-Every voyage comes from a seed, a short name like *violet lagoon*. The seed picks the genre, the tempo, the key, the instruments, the shape of the song, and every picture, so the same seed always makes the same voyage.
+Every voyage comes from a seed, a short name like *violet lagoon*. The seed picks the genre, the tempo, the key, the instruments, the shape of the song, and every picture, so the same seed always makes the same voyage. A scene added after 1.0 can take one shot of an older voyage; its song and its other shots stay as they were.
 
 Each Start rolls a new seed unless Settings says otherwise: it can sail the last seed again, or a custom seed of your choosing, up to 24 characters. Choosing a genre in Settings gives a seed a different voyage in that genre, so every seed has eleven: its own, and one for each genre.
 

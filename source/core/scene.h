@@ -50,6 +50,10 @@ typedef struct {
 
 // Room for every kind of scene in per-kind tables; the scene table is checked against it when it compiles.
 #define MAX_SCENE_KINDS 128
+// The first kinds in the table are 1.0's, and their rows never move. Every kind after them is a late scene, cast by
+// the director with dice of its own, so a voyage from an older release keeps every shot a late scene doesn't take.
+// No late scene is heavy, since one may land beside any other.
+#define SCENE_KINDS_AT_1_0 101
 
 extern const SceneKind scene_kinds[];
 extern const int scene_kind_count;
@@ -191,6 +195,10 @@ SCENE(breakout)
 SCENE(scope)
 SCENE(lighthouse)
 SCENE(drums)
+SCENE(beads)
+SCENE(crowd)
+SCENE(chart)
+SCENE(life)
 #undef SCENE
 
 #endif

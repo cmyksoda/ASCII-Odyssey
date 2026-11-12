@@ -67,7 +67,7 @@ static int choose_scene(Rng *r, Mood mood, const Section *sec, float target, con
     for (int pass = 0; pass < 4; pass++) {
         int best = -1;
         float best_cost = 1e9f;
-        for (int k = 0; k < scene_kind_count; k++) {
+        for (int k = 0; k < SCENE_KINDS_AT_1_0; k++) {
             const SceneKind *s = &scene_kinds[k];
             int weight = s->weights[mood];
             float off = mabs(s->intensity - target);
@@ -86,6 +86,29 @@ static int choose_scene(Rng *r, Mood mood, const Section *sec, float target, con
         if (best >= 0) return best;
     }
     return previous >= 0 ? previous : 0;
+}
+
+// A late scene's dice for one shot: a hash of the voyage, the scene's name and the shot, so it draws from no stream.
+static uint32_t late_dice(const SongInfo *info, int kind, int shot) {
+    uint64_t h = seed_hash(info->title) ^ seed_hash(scene_kinds[kind].name);
+    return hash_u32((uint32_t)(h ^ (h >> 32)) + (uint32_t)info->mood * 0x9e3779b9u + (uint32_t)shot * 2654435761u);
+}
+
+// The chance a late scene takes a shot that suits it, times the square of the mood's liking. A mood's own late
+// scenes turn up in about a third of its voyages, and six voyages in ten keep every shot they had in 1.0.
+#define LATE_ODDS 0.0065f
+
+// Scenes that joined after 1.0 are cast here, each by dice of its own and at most once a voyage. A voyage from an
+// older release keeps every shot they don't take, and adding another late scene never recasts these.
+static int late_scene(const SongInfo *info, const Section *sec, float target, int shot, const int *uses) {
+    for (int k = SCENE_KINDS_AT_1_0; k < scene_kind_count; k++) {
+        const SceneKind *s = &scene_kinds[k];
+        if (uses[k] || mabs(s->intensity - target) > 0.25f) continue;
+        if (sec->kind == SECTION_DROP && !s->reactive) continue;
+        int liking = s->weights[info->mood];
+        if (hash01(late_dice(info, k, shot)) < (float)(liking * liking) * LATE_ODDS) return k;
+    }
+    return -1;
 }
 
 // Each time a piece uses a kind of transition it weighs less there, so the piece wanders through many; the kind just
@@ -179,7 +202,7 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
     for (int i = 0; i < PALETTE_FAMILY; i++) d->palettes[i] = palettes[i];
     // Scenes a mood shows only now and then each join a piece by chance, so two pieces of a mood differ.
     int uses[MAX_SCENE_KINDS] = {0}, rolled[MAX_SCENE_KINDS] = {0}, previous = -1, drop_shots = 0;
-    for (int k = 0; k < scene_kind_count; k++) rolled[k] = rng_chance(r, 35);
+    for (int k = 0; k < SCENE_KINDS_AT_1_0; k++) rolled[k] = rng_chance(r, 35);
     Entrance last = ENTER_CUT;
     int used[ENTRANCES] = {0};
     float bar = (float)info->bar_seconds, drive = scene_drive(info);
@@ -191,7 +214,8 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
             shot->start = (float)sec->start + (float)(p * sec->bars / pieces) * bar;
             shot->end = (float)sec->start + (float)((p + 1) * sec->bars / pieces) * bar;
             shot->target = sec->energy * drive;
-            shot->kind = choose_scene(r, mood, sec, shot->target, uses, rolled, previous);
+            int planned = choose_scene(r, mood, sec, shot->target, uses, rolled, previous);
+            shot->kind = planned;
             shot->palette = palette_for(sec->kind, sec->kind == SECTION_DROP ? drop_shots++ : 0);
             shot->direction = rng_range(r, 0, 4);
             if (sec->kind == SECTION_DROP && p == 0 && edm(mood)) {
@@ -212,9 +236,16 @@ void direction_plan(Direction *d, const Score *score, Rng *r, const Frame *proto
             look.palette = palettes[shot->palette];
             Rng shot_rng;
             rng_init(&shot_rng, rng_next(r), "shot");
+            int late = late_scene(info, sec, shot->target, d->count, uses);
+            if (late >= 0) {
+                shot->kind = late;
+                uses[late]++;
+                rng_init(&shot_rng, late_dice(info, late, d->count), "late shot");
+            }
             scene_kinds[shot->kind].setup(shot->state, &shot_rng, &look);
-            uses[shot->kind]++;
-            previous = shot->kind;
+            // The stream goes on as if the planned scene had played, so the shots after a late one stay as they were.
+            uses[planned]++;
+            previous = planned;
             d->count++;
         }
     }

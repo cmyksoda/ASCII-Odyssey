@@ -927,7 +927,16 @@ static void constellation_draw(void *state, const Frame *f) {
 typedef struct {
     int bars, font;
     float bar_speed, scroll_speed, wave;
+    int greet;
 } Cracktro;
+
+// Who the small scroller greets, as a cracktro would: what the app is built with, whose pictures and tools its
+// scenes borrow, and whoever is watching.
+static const char *const GREETS[] = {"DEVKITPRO",   "LIBOGC AND LIBFAT",    "FIGLET AND EVERYONE WHO DREW IT A FONT",
+                                     "TERMINUS",    "FASTTRACKER 2",        "M.C. ESCHER",
+                                     "JOHN CONWAY", "THE HOMEBREW CHANNEL", "EVERYONE STILL PLAYING THEIR WII",
+                                     "YOU"};
+#define GREET_COUNT ((int)(sizeof GREETS / sizeof GREETS[0]))
 
 static void cracktro_setup(void *state, Rng *r, const Frame *f) {
     Cracktro *k = state;
@@ -936,6 +945,8 @@ static void cracktro_setup(void *state, Rng *r, const Frame *f) {
     k->bar_speed = rng_between(r, 0.8f, 1.6f);
     k->scroll_speed = rng_between(r, 10, 16);
     k->wave = rng_between(r, 0.12f, 0.25f);
+    // Drawn last, so the looks a cracktro had before it greeted anyone stay as they were.
+    k->greet = rng_range(r, 0, GREET_COUNT);
     (void)f;
 }
 
@@ -962,6 +973,16 @@ static void cracktro_draw(void *state, const Frame *f) {
                 put_cell(g, col, row, d == 0 ? '=' : '-', frame_dim(f, color, shade * (0.55f + 0.3f * kick)));
         }
     }
+    // The greets crawl in from the right along the bottom, starting from a different name in each cracktro.
+    static char greets[512];
+    int length = snprintf(greets, sizeof greets, "GREETS FLY OUT TO  ");
+    for (int i = 0; i < GREET_COUNT; i++)
+        length += snprintf(greets + length, sizeof greets - (size_t)length, "%s  *  ",
+                           GREETS[(k->greet + i) % GREET_COUNT]);
+    int crawl = (int)(f->local * (k->scroll_speed + 4)) - g->cols;
+    for (int col = crawl < 0 ? -crawl : 0; col < g->cols; col++)
+        if (greets[(col + crawl) % length] != ' ')
+            put_cell(g, col, g->rows - 2, greets[(col + crawl) % length], palette_ramp(f->palette, 0.85f));
     const FigletFont *font = figlet_font((FigletId)k->font);
     if (!font) return;
     static char art[FIGLET_MAX_HEIGHT * 512];
@@ -1364,10 +1385,16 @@ const SceneKind scene_kinds[] = {
     {"channel scope", W(2, 0, 0, 0, 1, 3, 0, 0, 1, 1), 0.6f, 1, 0, scope_setup, scope_draw},
     {"lighthouse", W(0, 3, 0, 1, 0, 0, 1, 2, 0, 1), 0.3f, 0, 0, lighthouse_setup, lighthouse_draw},
     {"drum machine", W(1, 0, 1, 2, 1, 1, 0, 2, 2, 0), 0.55f, 1, 0, drums_setup, drums_draw},
+    // Late scenes, newest last: where two want the same shot, the one listed first keeps it.
+    {"beads", W(1, 2, 1, 2, 1, 1, 3, 2, 0, 2), 0.45f, 1, 0, beads_setup, beads_draw},
+    {"crowd", W(1, 0, 2, 0, 3, 1, 0, 2, 3, 1), 0.8f, 1, 0, crowd_setup, crowd_draw},
+    {"sea chart", W(1, 2, 1, 2, 0, 2, 2, 2, 0, 3), 0.3f, 0, 0, chart_setup, chart_draw},
+    {"life", W(3, 1, 1, 1, 1, 2, 0, 1, 1, 0), 0.6f, 1, 0, life_setup, life_draw},
 };
 const int scene_kind_count = (int)(sizeof scene_kinds / sizeof scene_kinds[0]);
 _Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] <= MAX_SCENE_KINDS,
                "the scene table outgrew MAX_SCENE_KINDS");
+_Static_assert(sizeof scene_kinds / sizeof scene_kinds[0] >= SCENE_KINDS_AT_1_0, "a scene from 1.0 is missing");
 
 int scene_in_use(const SceneKind *k) {
     for (int m = 0; m < MOOD_COUNT; m++)
