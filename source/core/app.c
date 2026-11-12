@@ -28,26 +28,31 @@ typedef enum { MENU_NOTICE, MENU_TITLE, MENU_PAUSE, MENU_END } MenuKind;
 
 typedef enum { OVERLAY_NONE, OVERLAY_TRACKER, OVERLAY_INFO } Overlay;
 
-static const char *const NOTICE_ITEMS[] = {"SAIL AS IT IS", "SAIL CALMER"};
-static const char *const NOTICE_LINES[] = {"a gentle note before you sail", "",
+static const char *const NOTICE_ITEMS[] = {"SAIL AS IT IS", "LESS FLASHING AND MOTION"};
+static const char *const NOTICE_LINES[] = {"a quick note before you sail", "",
                                            "some voyages will feature flashing lights in time with the music.",
                                            "you can change this any time in settings."};
 static const char *const TITLE_ITEMS[] = {"START", "SETTINGS", "ABOUT", "EXIT"};
 static const char *const ABOUT_LINES[] = {"how a voyage is made",
                                           "",
-                                          "every voyage grows from a seed, a name",
-                                          "like violet lagoon. the seed is all it needs.",
+                                          "each time you press start, the app rolls a",
+                                          "seed, a name like violet lagoon, and builds",
+                                          "the whole voyage out of that name.",
                                           "",
-                                          "it picks one of ten genres, then a tempo, a key,",
-                                          "its instruments and the shape of the song.",
-                                          "every note is written fresh and played by a tiny",
-                                          "tracker, with sounds built from scratch.",
+                                          "the name picks one of ten genres, a tempo, a",
+                                          "key, and the instruments. the app writes the",
+                                          "song note by note and plays it on its own",
+                                          "tracker. every sound is synthesized on the wii.",
                                           "",
-                                          "the pictures follow along: each part of the song",
+                                          "the pictures are cut to the song, and each part",
                                           "gets its own scenes, colors, and transitions.",
                                           "",
-                                          "the same seed always sails the same voyage,",
-                                          "so you can share the ones you love <3"};
+                                          "the same seed always makes the same voyage,",
+                                          "so type one in settings to sail it again, or",
+                                          "share the ones you love <3",
+                                          "",
+                                          "while it plays, 1 or x shows the tracker",
+                                          "and 2 or y shows the song's details."};
 static const char *const PAUSE_ITEMS[] = {"RESUME", "RESTART", "NEW VOYAGE", "TITLE"};
 static const char *const END_ITEMS[] = {"PLAY AGAIN", "NEW VOYAGE", "TITLE"};
 
@@ -593,7 +598,7 @@ static void title_frame(App *a, const AppClock *clock, const Input *in, Screen *
     if (a->state == STATE_COMPOSING) {
         static const char spin[] = "-\\|/";
         char line[64];
-        snprintf(line, sizeof line, "weaving %s %c", a->seed, spin[(int)(clock->wall * 8) & 3]);
+        snprintf(line, sizeof line, "composing %s %c", a->seed, spin[(int)(clock->wall * 8) & 3]);
         text_center(a, &a->scene, a->ui.rows / 2 + 3, line, NOTE);
         return;
     }
@@ -728,7 +733,7 @@ static void info_overlay(App *a, Piece *p, double t) {
     const char *scene = shot ? scene_kinds[shot->kind].name : "";
     const char *palette = shot ? p->direction.palettes[shot->palette]->name : p->palette->name;
     const char *reacts = p->direction.by_section            ? shapes[p->react_shape]
-                         : shot && scene_kinds[shot->kind].reactive ? "answers the music"
+                         : shot && scene_kinds[shot->kind].reactive ? "reacts to the music"
                                                                      : "moves on its own";
     char lines[5][64];
     snprintf(lines[0], sizeof lines[0], "%s", info->title);

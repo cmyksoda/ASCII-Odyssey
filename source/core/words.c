@@ -5,33 +5,44 @@
 
 #include <stdio.h>
 
-// Short, soft words: a random seed doubles as the piece's title, so every pair should sound like one.
+// Short words for things you can picture: a random seed doubles as the piece's title, so each pair should read as one.
 static const char *const ADJECTIVES[] = {
-    "amber",   "ashen",   "autumn",  "azure",   "bright",  "broken",  "calm",    "candle",  "cedar",   "cinder",
-    "clear",   "cloud",   "cobalt",  "copper",  "coral",   "crimson", "crystal", "dawn",    "deep",    "distant",
-    "dream",   "drifting", "dusk",   "dusty",   "echo",    "ember",   "evening", "faded",   "feather", "fern",
-    "fallen",  "first",   "floating", "foggy",  "frost",   "gentle",  "ghost",   "gilded",  "glass",   "gold",
-    "hidden",  "hollow",  "honey",   "indigo",  "iron",    "ivory",   "jade",    "kindred", "last",    "lavender",
-    "lilac",   "linen",   "little",  "lonely",  "lost",    "lunar",   "marble",  "meadow",  "midnight", "misty",
-    "moonlit", "morning", "moss",    "mossy",   "neon",    "night",   "northern", "ocean",  "old",     "opal",
-    "paper",   "pastel",  "pearl",   "pine",    "polar",   "quiet",   "rain",    "rainy",   "rose",    "rusty",
-    "sable",   "saffron", "salt",    "scarlet", "secret",  "shining", "silent",  "silk",    "silver",  "sleepy",
-    "slow",    "snowy",   "soft",    "solar",   "spring",  "starlit", "still",   "storm",   "summer",  "sunken",
-    "tidal",   "twilight", "velvet", "violet",  "wandering", "warm",  "wild",    "willow",  "winter",  "woven",
+    "amber",   "analog",  "arcade",  "arctic",  "autumn",  "backyard", "bright", "broken",  "bubblegum", "calm",
+    "candle",  "cedar",   "cherry",  "chrome",  "clear",   "cloud",   "cobalt",  "cocoa",   "concrete", "copper",
+    "coral",   "crimson", "crooked", "crystal", "cyan",    "deep",    "desert",  "digital", "disco",   "distant",
+    "dizzy",   "double",  "downtown", "dusk",   "dusty",   "electric", "evening", "faded",  "fern",    "first",
+    "floating", "floppy", "foggy",   "frost",   "frozen",  "fuzzy",   "ghost",   "giant",   "glass",   "gold",
+    "hidden",  "holiday", "honey",   "indigo",  "iron",    "ivory",   "jade",    "laser",   "last",    "late",
+    "lavender", "lemon",  "lilac",   "little",  "lonely",  "lost",    "lucky",   "lunar",   "magenta", "magnetic",
+    "mango",   "marble",  "meadow",  "melon",   "midnight", "mint",   "morning", "mossy",   "neon",    "night",
+    "northern", "ocean",  "old",     "opal",    "orbital", "paper",   "pastel",  "peach",   "pearl",   "pine",
+    "pixel",   "plastic", "plum",    "pocket",  "polar",   "prairie", "quiet",   "rainy",   "remote",  "rocket",
+    "rooftop", "rose",    "rusty",   "saffron", "salt",    "sandy",   "satellite", "scarlet", "secret", "shy",
+    "silent",  "silver",  "sleepy",  "slow",    "snowy",   "soft",    "solar",   "spare",   "spring",  "static",
+    "stereo",  "storm",   "subway",  "sugar",   "summer",  "sunday",  "sunken",  "sunny",   "teal",    "thunder",
+    "tidal",   "tiny",    "tropical", "turbo",  "upstairs", "vanilla", "vector", "violet",  "warm",    "weekend",
+    "wild",    "willow",  "winter",  "wobbly",  "yellow",
 };
 
 static const char *const NOUNS[] = {
-    "anchor",  "arrow",   "atlas",   "aurora",  "beacon",  "bell",    "bird",    "bloom",   "bridge",  "candle",
-    "canyon",  "cat",     "cloud",   "comet",   "compass", "coral",   "crown",   "current", "dawn",    "delta",
-    "drift",   "dune",    "echo",    "ember",   "feather", "fern",    "field",   "fjord",   "flame",   "flower",
-    "forest",  "fountain", "garden", "glacier", "grove",   "harbor",  "haven",   "heron",   "hill",    "horizon",
-    "island",  "kite",    "lagoon",  "lake",    "lantern", "leaf",    "light",   "lily",    "meadow",  "meridian",
-    "mirror",  "moon",    "moth",    "mountain", "nebula", "nest",    "ocean",   "orbit",   "orchard", "owl",
-    "path",    "pearl",   "petal",   "pier",    "planet",  "pond",    "prism",   "quartz",  "rain",    "reef",
-    "ribbon",  "river",   "road",    "rose",    "sail",    "shell",   "shore",   "signal",  "sky",     "snow",
-    "song",    "sparrow", "spiral",  "spring",  "star",    "stone",   "storm",   "stream",  "summit",  "swan",
-    "thread",  "tide",    "tower",   "trail",   "tree",    "valley",  "veil",    "voyage",  "wave",    "whale",
-    "willow",  "wind",    "wing",    "wish",    "wolf",    "wren",
+    "airport", "anchor",  "antenna", "aquarium", "arcade", "arpeggio", "arrow",  "atlas",   "aurora",  "bakery",
+    "balloon", "beach",   "bead",    "beetle",  "bell",    "bicycle", "bird",    "bridge",  "button",  "campfire",
+    "canal",   "candle",  "canyon",  "carnival", "carousel", "cassette", "cat",  "channel", "chorus",  "cloud",
+    "comet",   "compass", "cookie",  "coral",   "cove",    "crab",    "crayon",  "crown",   "dawn",    "delta",
+    "diner",   "dolphin", "donut",   "dune",    "eclipse", "elevator", "encore", "feather", "fern",    "ferry",
+    "field",   "fjord",   "flame",   "flower",  "forest",  "fountain", "fox",    "frog",    "galaxy",  "garden",
+    "gecko",   "glacier", "goose",   "grove",   "harbor",  "heron",   "highway", "hill",    "horizon", "island",
+    "jukebox", "kite",    "koi",     "lagoon",  "lake",    "lantern", "laundry", "leaf",    "library", "light",
+    "lily",    "loop",    "lullaby", "market",  "marsh",   "meadow",  "meridian", "mirror", "mixtape", "modem",
+    "moon",    "motel",   "moth",    "mountain", "museum", "nebula",  "nest",    "noodle",  "ocean",   "octave",
+    "orbit",   "orchard", "otter",   "owl",     "path",    "pearl",   "penguin", "petal",   "pier",    "pigeon",
+    "planet",  "plaza",   "pond",    "postcard", "prism",  "pulsar",  "quartz",  "rabbit",  "radio",   "rain",
+    "rainbow", "reef",    "ribbon",  "river",   "road",    "robot",   "rocket",  "rooftop", "rose",    "sail",
+    "shell",   "shore",   "signal",  "sky",     "skyline", "snail",   "snow",    "soda",    "song",    "sparrow",
+    "spiral",  "spring",  "star",    "station", "sticker", "stone",   "storm",   "stream",  "subway",  "summit",
+    "sundae",  "swan",    "sweater", "taxi",    "teacup",  "thread",  "ticket",  "tide",    "tower",   "trail",
+    "train",   "tram",    "tree",    "tundra",  "umbrella", "valley", "village", "volcano", "voyage",  "waltz",
+    "wave",    "whale",   "willow",  "wind",    "window",  "wing",    "wish",    "wolf",    "wren",    "yoyo",
 };
 
 void seed_random(uint64_t entropy, char *out, int size) {

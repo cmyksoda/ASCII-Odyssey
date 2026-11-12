@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-// A friendly two-word seed, like "velvet comet", picked from entropy the platform supplies.
+// A two-word seed, like "violet lagoon", picked from entropy the platform supplies.
 void seed_random(uint64_t entropy, char *out, int size);
 
 #endif
