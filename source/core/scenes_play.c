@@ -8,10 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static void text_at(Grid *g, int col, int row, const char *s, Rgbf color) {
-    for (int k = 0; s[k]; k++) put_cell(g, col + k, row, s[k], color);
-}
-
 /* ---------- Platformer ---------- */
 
 typedef struct {
@@ -61,9 +57,9 @@ void platformer_draw(void *state, const Frame *f) {
         float span = (float)g->cols + 16;
         int x = (int)(mfract(hash01(id) - scroll * 0.25f / span) * span) - 8,
             y = 2 + (int)(hash01(id + 3) * (float)(floor_row / 2));
-        text_at(g, x, y, " .--. ", frame_dim(f, sky, 0.9f));
-        text_at(g, x, y + 1, "(    )", frame_dim(f, sky, 0.9f));
-        text_at(g, x + 1, y + 2, "`--'", frame_dim(f, sky, 0.9f));
+        put_text(g, x, y, " .--. ", frame_dim(f, sky, 0.9f));
+        put_text(g, x, y + 1, "(    )", frame_dim(f, sky, 0.9f));
+        put_text(g, x + 1, y + 2, "`--'", frame_dim(f, sky, 0.9f));
     }
     for (int col = 0; col < g->cols; col++) {
         float wx = (float)col + scroll * 0.5f;
@@ -115,7 +111,7 @@ void platformer_draw(void *state, const Frame *f) {
     }
     char text[32];
     snprintf(text, sizeof text, "WORLD 1-%d   COINS %02d", 1 + (int)(scroll / 400) % 4, coins % 100);
-    text_at(g, 2, 0, text, ink);
+    put_text(g, 2, 0, text, ink);
     f->fx->glow = 0.35f + 0.25f * frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
 }
 
@@ -179,7 +175,7 @@ void race_draw(void *state, const Frame *f) {
         cy = g->rows - 4 - bump;
     static const char *const CAR[3] = {"  ____  ", " /|__|\\ ", "[o]--[o]"};
     Rgbf body = palette_accent(f->palette, 1);
-    for (int line = 0; line < 3; line++) text_at(g, cx, cy + line, CAR[line], body);
+    for (int line = 0; line < 3; line++) put_text(g, cx, cy + line, CAR[line], body);
     f->fx->glow = 0.4f + 0.2f * frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
 }
 
@@ -296,14 +292,14 @@ void tetris_draw(void *state, const Frame *f) {
     int left = g->cols / 2 - WELL_W - 2, top = (g->rows - WELL_H) / 2 - 1;
     Rgbf wall = palette_ramp(f->palette, 0.5f), ink = palette_ramp(f->palette, 0.95f);
     for (int row = 0; row < WELL_H; row++) {
-        text_at(g, left, top + row, "<!", wall);
-        text_at(g, left + 2 + WELL_W * 2, top + row, "!>", wall);
+        put_text(g, left, top + row, "<!", wall);
+        put_text(g, left + 2 + WELL_W * 2, top + row, "!>", wall);
         for (int c = 0; c < WELL_W; c++) {
             int v = w.cell[row][c];
             if (v) {
                 Rgbf color = palette_accent(f->palette, v % 3);
                 if (v % 2) color = rgbf_mix(color, ink, 0.3f);
-                text_at(g, left + 2 + c * 2, top + row, "[]", color);
+                put_text(g, left + 2 + c * 2, top + row, "[]", color);
             } else {
                 put_cell(g, left + 3 + c * 2, top + row, '.', frame_dim(f, wall, 0.5f));
             }
@@ -314,7 +310,7 @@ void tetris_draw(void *state, const Frame *f) {
         uint16_t m = PIECES[piece][rot];
         for (int i = 0; i < 16; i++)
             if ((m & (0x8000 >> i)) && y + i / 4 >= 0)
-                text_at(g, left + 2 + (x + i % 4) * 2, top + y + i / 4, "[]", ink);
+                put_text(g, left + 2 + (x + i % 4) * 2, top + y + i / 4, "[]", ink);
     }
 
     char floor_line[2 * WELL_W + 5];
@@ -322,14 +318,14 @@ void tetris_draw(void *state, const Frame *f) {
     floor_line[0] = '<', floor_line[1] = '!', floor_line[sizeof floor_line - 3] = '!',
     floor_line[sizeof floor_line - 2] = '>';
     floor_line[sizeof floor_line - 1] = 0;
-    text_at(g, left, top + WELL_H, floor_line, wall);
-    for (int c = 0; c < WELL_W; c++) text_at(g, left + 2 + c * 2, top + WELL_H + 1, "\\/", frame_dim(f, wall, 0.7f));
+    put_text(g, left, top + WELL_H, floor_line, wall);
+    for (int c = 0; c < WELL_W; c++) put_text(g, left + 2 + c * 2, top + WELL_H + 1, "\\/", frame_dim(f, wall, 0.7f));
 
     char text[24];
     snprintf(text, sizeof text, "LINES %3d", lines);
-    text_at(g, left + 2 * WELL_W + 6, top + 2, text, ink);
+    put_text(g, left + 2 * WELL_W + 6, top + 2, text, ink);
     snprintf(text, sizeof text, "LEVEL %3d", 1 + lines / 10 + game);
-    text_at(g, left + 2 * WELL_W + 6, top + 4, text, ink);
+    put_text(g, left + 2 * WELL_W + 6, top + 4, text, ink);
 
     // A clear lights the well for a moment, gently when the viewer asked for calm.
     float flash = clear_at > 0 ? mmax(0, 1 - (f->t - clear_at) / 0.4f) * frame_bright(f) : 0;
@@ -408,7 +404,7 @@ void snake_draw(void *state, const Frame *f) {
     }
     char text[48];
     snprintf(text, sizeof text, "SNAKE   SCORE %04d   LENGTH %d", eaten * 10, length);
-    text_at(g, left, top - 2, text, ink);
+    put_text(g, left, top - 2, text, ink);
     f->fx->glow = 0.4f + 0.2f * frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
 }
 
@@ -472,14 +468,14 @@ void overworld_draw(void *state, const Frame *f) {
                 tile = "/\\";
                 color = rock;
             }
-            text_at(g, tx * 2, ty, tile, frame_dim(f, color, 0.65f + 0.35f * hgt));
+            put_text(g, tx * 2, ty, tile, frame_dim(f, color, 0.65f + 0.35f * hgt));
         }
     // A castle by the road every so often.
     for (int k = (int)(cx / 40) - 1; k <= (int)(cx / 40) + 1; k++) {
         float kx = (float)k * 40 + 10 + 8 * hash01(o->salt + (uint32_t)k), ky = overworld_road(o, kx) - 2.5f;
         int col = (int)((kx - cx) + (float)(tiles_w / 2)) * 2, row = (int)((ky - cy) * 2 + (float)(tiles_h / 2));
         static const char *const CASTLE[4] = {"|^| |^|", "|  _  |", "| |#| |", "=======",};
-        for (int line = 0; line < 4; line++) text_at(g, col - 3, row - 3 + line, CASTLE[line], rock);
+        for (int line = 0; line < 4; line++) put_text(g, col - 3, row - 3 + line, CASTLE[line], rock);
     }
     int bob = (int)(f->t * 4) & 1;
     Rgbf hero = palette_ramp(f->palette, 1.0f);
@@ -586,8 +582,8 @@ void asteroids_draw(void *state, const Frame *f) {
     stroke_draw(f->stroker, hull, 4, 1);
     char text[24];
     snprintf(text, sizeof text, "%05d", score);
-    text_at(g, 2, 0, text, palette_ramp(f->palette, 0.9f));
-    text_at(g, g->cols - 8, 0, "A A A", ship);
+    put_text(g, 2, 0, text, palette_ramp(f->palette, 0.9f));
+    put_text(g, g->cols - 8, 0, "A A A", ship);
     f->fx->glow = 0.5f + 0.2f * frame_pulse(f, ROLE_SNARE, 0.12f, 1.0f);
 }
 
@@ -665,7 +661,7 @@ void breakout_draw(void *state, const Frame *f) {
     for (int k = -3; k <= 3; k++) put_cell(g, px + k, paddle_row, k == -3 ? '<' : k == 3 ? '>' : '=', paddle);
     char text[48];
     snprintf(text, sizeof text, "SCORE %04d   LEVEL %d", score, level);
-    text_at(g, 2, 0, text, ink);
+    put_text(g, 2, 0, text, ink);
     f->fx->glow = 0.45f + 0.25f * hit;
 }
 
@@ -712,7 +708,7 @@ void scope_draw(void *state, const Frame *f) {
             cycles = 2 + (float)(last->note > 24 ? last->note - 24 : 0) / 9.0f;
         }
         swell = 0.15f + 0.85f * mmin(1.0f, swell);
-        text_at(g, 1, mid, (chip ? CHIP_NAMES : NAMES)[lane], label);
+        put_text(g, 1, mid, (chip ? CHIP_NAMES : NAMES)[lane], label);
         for (int col = 0; col < g->cols; col++) put_cell(g, col, top + lane_h - 1, '-', frame_dim(f, frame_ink, 0.6f));
         Rgbf wave_ink = palette_accent(f->palette, lane % 3);
         int prev = mid;
@@ -792,8 +788,8 @@ void lighthouse_draw(void *state, const Frame *f) {
                                      : '#',
                      ((y / 2) & 1) ? stripe_a : stripe_b);
     }
-    text_at(g, tower_x, lamp_row - 1, "_/^\\_", stripe_a);
-    text_at(g, tower_x, lamp_row, "|[*]|", beam);
+    put_text(g, tower_x, lamp_row - 1, "_/^\\_", stripe_a);
+    put_text(g, tower_x, lamp_row, "|[*]|", beam);
     for (int x = -6; x <= 10; x++) {
         int h = (int)(1.5f + 1.5f * hash01(l->salt + (uint32_t)(x + 7)));
         for (int y = 0; y < h; y++) put_cell(g, tower_x + x, horizon + y, y == 0 ? '^' : '#', rock);
@@ -829,10 +825,10 @@ void drums_draw(void *state, const Frame *f) {
          led = palette_accent(f->palette, 0);
     char text[40];
     snprintf(text, sizeof text, "DRUM MACHINE   BPM %d", info->bpm);
-    text_at(g, left - 7, top - 3, text, ink);
+    put_text(g, left - 7, top - 3, text, ink);
     for (int r = 0; r < 4; r++) {
         int row = top + r * 2;
-        text_at(g, left - 7, row, LABELS[r], palette_ramp(f->palette, 0.7f));
+        put_text(g, left - 7, row, LABELS[r], palette_ramp(f->palette, 0.7f));
         for (int s = 0; s < steps; s++) {
             float from = bar_start + (float)s * step, to = from + step;
             int hit = f->react > 0 &&
@@ -840,7 +836,7 @@ void drums_draw(void *state, const Frame *f) {
             int here = s == now, col = left + s * cell_w;
             Rgbf color =
                 hit ? (here ? ink : palette_accent(f->palette, r % 3)) : (here ? palette_ramp(f->palette, 0.6f) : dim);
-            text_at(g, col, row, hit ? "[#]" : "[ ]", color);
+            put_text(g, col, row, hit ? "[#]" : "[ ]", color);
         }
     }
     for (int s = 0; s < steps; s++)
@@ -851,10 +847,10 @@ void drums_draw(void *state, const Frame *f) {
     for (int k = 0; k < 3; k++) {
         int col = left + k * 12,
             turn = (int)((d->knob + score_energy(f->score, f->t) * 0.8f + (float)k * 0.3f) * 4) & 3;
-        text_at(g, col, top + 11, "(", dim);
+        put_text(g, col, top + 11, "(", dim);
         put_cell(g, col + 1, top + 11, TURN[turn], led);
-        text_at(g, col + 2, top + 11, ")", dim);
-        text_at(g, col + 4, top + 11, KNOBS[k], palette_ramp(f->palette, 0.6f));
+        put_text(g, col + 2, top + 11, ")", dim);
+        put_text(g, col + 4, top + 11, KNOBS[k], palette_ramp(f->palette, 0.6f));
     }
     f->fx->glow = 0.4f + 0.3f * frame_pulse(f, ROLE_KICK, 0.12f, 1.0f);
 }

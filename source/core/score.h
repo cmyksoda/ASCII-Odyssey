@@ -33,6 +33,8 @@ float score_since(const Score *s, Role role, float t);
 float score_pulse(const Score *s, Role role, float t, float tau);
 const ScoreEvent *score_last(const Score *s, Role role, float t);
 int score_count(const Score *s, Role role, float from, float to);
+// How many of the score's events, of every role, have sounded by t: the index of the first one still to come.
+int score_sounded(const Score *s, float t);
 const Section *score_section(const Score *s, float t);
 const ChordMark *score_chord(const Score *s, float t);
 // Section energy, eased across section boundaries over a beat.

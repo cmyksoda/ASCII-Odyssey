@@ -626,7 +626,7 @@ static void title_frame(App *a, const AppClock *clock, const Input *in, Screen *
     if (chosen == 3 || (in->pressed & INPUT_HOME)) req->quit = 1;
 }
 
-static void end_card(App *a, Piece *p, float time) {
+static void end_card(App *a, Piece *p) {
     Grid *g = &a->ui;
     const SongInfo *info = &p->comp.info;
     const FigletFont *font = figlet_font(FIGLET_SMALL);
@@ -657,22 +657,13 @@ static void end_card(App *a, Piece *p, float time) {
     snprintf(line, sizeof line, "%s  %s %s  %d bpm", mood_names[info->mood], note_names[info->key.tonic],
              scale_names[info->key.scale], info->bpm);
     text_center(a, &p->grid, top + 6, line, NOTE);
-    (void)time;
 }
 
 /* ---------- Overlays: the tracker's view of the song, and what is playing ---------- */
 
 // How hard a channel is sounding: its last note's velocity, fading fast.
 static float channel_level(const Score *s, int channel, float t) {
-    int lo = 0, hi = s->count;
-    while (lo < hi) {
-        int mid = (lo + hi) / 2;
-        if (s->events[mid].time <= t)
-            lo = mid + 1;
-        else
-            hi = mid;
-    }
-    for (int k = lo - 1; k >= 0 && s->events[k].time > t - 0.5f; k--)
+    for (int k = score_sounded(s, t) - 1; k >= 0 && s->events[k].time > t - 0.5f; k--)
         if (s->events[k].channel == channel) return s->events[k].velocity * mexp(-(t - s->events[k].time) / 0.12f);
     return 0;
 }
@@ -824,7 +815,7 @@ static void piece_frame(App *a, const AppClock *clock, const Input *in, Screen *
     }
 
     case STATE_ENDED: {
-        end_card(a, p, (float)clock->wall);
+        end_card(a, p);
         int chosen = menu_input(a, in);
         menu_draw(a, &p->grid, (float)clock->wall);
         if (chosen == 0) {

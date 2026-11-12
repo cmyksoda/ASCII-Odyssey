@@ -85,6 +85,7 @@ float frame_surge(const Frame *f, Role role, float tau, float strength);
 void put_cell(Grid *g, int col, int row, int glyph, Rgbf color);
 // Writes only over blank cells, for things that sit behind the rest of the picture.
 void put_cell_under(Grid *g, int col, int row, int glyph, Rgbf color);
+void put_text(Grid *g, int col, int row, const char *s, Rgbf color);
 int cell_col(const Grid *g, float x);
 int cell_row(const Grid *g, float y);
 // A faint field of far stars drifting sideways.

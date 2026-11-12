@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static void text_at(Grid *g, int col, int row, const char *s, Rgbf color) {
-    for (int k = 0; s[k]; k++) put_cell(g, col + k, row, s[k], color);
-}
-
 /* ---------- Beads ---------- */
 
 #define THREADS 7
@@ -53,19 +49,6 @@ void beads_setup(void *state, Rng *r, const Frame *f) {
     b->salt = rng_u32(r);
 }
 
-// The first of the score's events later than t.
-static int events_after(const Score *s, float t) {
-    int lo = 0, hi = s->count;
-    while (lo < hi) {
-        int mid = (lo + hi) / 2;
-        if (s->events[mid].time <= t)
-            lo = mid + 1;
-        else
-            hi = mid;
-    }
-    return lo;
-}
-
 static int bead_thread(const Beads *b, const ScoreEvent *e) {
     return BEADS[e->role].bead ? b->thread[BEADS[e->role].part] : -1;
 }
@@ -98,7 +81,7 @@ void beads_draw(void *state, const Frame *f) {
     int clasp = g->cols / 3 & ~1;
 
     Plucks plucks = {{0}, {0}};
-    for (int i = events_after(s, f->t) - 1, found = 0; i >= 0 && found < b->count; i--) {
+    for (int i = score_sounded(s, f->t) - 1, found = 0; i >= 0 && found < b->count; i--) {
         const ScoreEvent *e = &s->events[i];
         int k = bead_thread(b, e);
         if (e->time < f->t - 2.0f) break;
@@ -121,7 +104,7 @@ void beads_draw(void *state, const Frame *f) {
     float together[THREADS];
     for (int k = 0; k < THREADS; k++) together[k] = 1e9f;
     Rgbf white = palette_ramp(f->palette, 1.0f);
-    for (int i = events_after(s, f->t + (float)(g->cols - clasp) / speed) - 1; i >= 0 && full < b->count; i--) {
+    for (int i = score_sounded(s, f->t + (float)(g->cols - clasp) / speed) - 1; i >= 0 && full < b->count; i--) {
         const ScoreEvent *e = &s->events[i];
         int k = bead_thread(b, e);
         // Notes struck together on one thread share a bead.
@@ -225,15 +208,15 @@ void crowd_draw(void *state, const Frame *f) {
     snprintf(sign, sizeof sign, "[ %s ]", f->score->info->title);
     for (char *p = sign; *p; p++)
         if (*p >= 'a' && *p <= 'z') *p = (char)(*p - 32);
-    text_at(g, (g->cols - (int)strlen(sign)) / 2, 0, sign, ink);
+    put_text(g, (g->cols - (int)strlen(sign)) / 2, 0, sign, ink);
 
     // The stage: a lip between two speaker stacks that thump with the bass, and the band.
     int lip = floor_row - 2, wing = g->cols / 8;
     const char *speaker = frame_pulse(f, ROLE_BASS, 0.2f, 1.0f) > 0.4f ? "[O]" : "[o]";
     for (int col = wing; col < g->cols - wing; col++) put_cell(g, col, lip, '=', steel);
     for (int row = lip - 3; row < lip; row++) {
-        text_at(g, wing, row, speaker, steel);
-        text_at(g, g->cols - wing - 3, row, speaker, steel);
+        put_text(g, wing, row, speaker, steel);
+        put_text(g, g->cols - wing - 3, row, speaker, steel);
     }
     static const Role BAND[4] = {ROLE_BASS, ROLE_LEAD, ROLE_KICK, ROLE_ARP};
     for (int i = 0; i < 4; i++)
@@ -248,7 +231,7 @@ void crowd_draw(void *state, const Frame *f) {
         float level = 0.3f + 0.7f * mmin(1.0f, frame_pulse(f, LIGHTS[i % 6], 0.2f, 1.0f));
         float lean = c->swing * (float)g->cols * msin(travel * c->sweep + (float)i * 1.9f) / (float)span;
         Rgbf light = palette_accent(f->palette, i);
-        text_at(g, lamp - 1, 1, level > 0.6f ? "(@)" : "(o)", rgbf_mix(steel, light, level));
+        put_text(g, lamp - 1, 1, level > 0.6f ? "(@)" : "(o)", rgbf_mix(steel, light, level));
         // Each beam widens toward the floor, and shows only where nobody stands in front of it.
         for (int row = 2; row < g->rows; row++) {
             float u = (float)(row - 2) / (float)span, center = (float)lamp + lean * (float)(row - 2);
@@ -323,7 +306,7 @@ void chart_draw(void *state, const Frame *f) {
     }
     char name[SEED_MAX + 20];
     snprintf(name, sizeof name, "[ a chart of %s ]", info->title);
-    text_at(g, (g->cols - (int)strlen(name)) / 2, 0, name, ink);
+    put_text(g, (g->cols - (int)strlen(name)) / 2, 0, name, ink);
 
     const Section *here = score_section(f->score, f->t);
     for (int i = 0; i < info->section_count; i++) {
@@ -336,7 +319,7 @@ void chart_draw(void *state, const Frame *f) {
                 if (ISLANDS[sec->kind][line][k] != ' ')
                     put_cell(g, col - 3 + k, row - 1 + line, ISLANDS[sec->kind][line][k], color);
         const char *label = section_names[sec->kind];
-        text_at(g, col - (int)strlen(label) / 2, row + side * 2, label, sec == here ? ink : faint);
+        put_text(g, col - (int)strlen(label) / 2, row + side * 2, label, sec == here ? ink : faint);
     }
 
     // The course: inked in where the ship has been, dotted where it has yet to go, with an X where the song ends.
@@ -380,6 +363,8 @@ void chart_draw(void *state, const Frame *f) {
 
 /* ---------- Life ---------- */
 
+// A row of the board is one uint64_t, a bit to a cell.
+#define LIFE_COLS 64
 #define LIFE_ROWS 48
 
 typedef struct {
@@ -407,7 +392,7 @@ static void life_set(uint64_t *board, int w, int h, int mirror, int x, int y) {
 // One generation on a board that wraps at every edge, a whole row at a time: the neighbors of all its cells are
 // counted at once as bit planes of ones and twos.
 static void life_step(const uint64_t *now, uint64_t *next, int w, int h) {
-    uint64_t mask = w == 64 ? ~0ull : (1ull << w) - 1;
+    uint64_t mask = w == LIFE_COLS ? ~0ull : (1ull << w) - 1;
     for (int y = 0; y < h; y++) {
         uint64_t rows[3] = {now[(y + h - 1) % h], now[y], now[(y + 1) % h]}, ones[3], twos[3];
         for (int k = 0; k < 3; k++) {
@@ -433,18 +418,18 @@ static const int8_t LIFE_SHAPES[2][5][2] = {{{1, 0}, {2, 1}, {0, 2}, {1, 2}, {2,
 void life_draw(void *state, const Frame *f) {
     Life *l = state;
     Grid *g = f->grid;
-    int w = g->cols / 2 < 64 ? g->cols / 2 : 64, h = g->rows - 2 < LIFE_ROWS ? g->rows - 2 : LIFE_ROWS;
+    int w = g->cols / 2 < LIFE_COLS ? g->cols / 2 : LIFE_COLS, h = g->rows - 2 < LIFE_ROWS ? g->rows - 2 : LIFE_ROWS;
     uint64_t boards[3][LIFE_ROWS] = {{0}}, *before = boards[0], *now = boards[1], *next = boards[2];
     for (int y = 0; y < (l->mirror & 2 ? (h + 1) / 2 : h); y++)
         for (int x = 0; x < (l->mirror & 1 ? (w + 1) / 2 : w); x++)
-            if (hash01(l->salt ^ (uint32_t)(y * 64 + x) * 2654435761u) < l->density)
+            if (hash01(l->salt ^ (uint32_t)(y * LIFE_COLS + x) * 2654435761u) < l->density)
                 life_set(now, w, h, l->mirror, x, y);
 
     float tick = f->score->beat / 4;
     // A board turning over is a field of blinking cells, so for calmer pictures it does so at most four times a second.
     while (tick < (f->calm ? 0.25f : 0.1f)) tick *= 2;
     tick /= frame_pace(f);
-    float age = mmin(f->local / tick, 400.0f), start = f->t - f->local;
+    float age = f->local / tick, start = f->t - f->local;
     for (int n = 0; n < (int)age; n++) {
         life_step(now, next, w, h);
         uint64_t *spare = before;
@@ -454,7 +439,7 @@ void life_draw(void *state, const Frame *f) {
         uint32_t id = hash_u32(l->salt + (uint32_t)n * 2654435761u);
         for (int k = 0; k < 5; k++)
             life_set(now, w, h, l->mirror, (int)(id % (uint32_t)w) + LIFE_SHAPES[id >> 31][k][0],
-                     (int)(id / 64 % (uint32_t)h) + LIFE_SHAPES[id >> 31][k][1]);
+                     (int)(id / LIFE_COLS % (uint32_t)h) + LIFE_SHAPES[id >> 31][k][1]);
     }
     life_step(now, next, w, h);
 
@@ -481,6 +466,6 @@ void life_draw(void *state, const Frame *f) {
         }
     char text[48];
     snprintf(text, sizeof text, "LIFE   GEN %04d   CELLS %d", (int)age, cells);
-    text_at(g, left, 0, text, palette_ramp(f->palette, 0.95f));
+    put_text(g, left, 0, text, palette_ramp(f->palette, 0.95f));
     f->fx->glow = 0.4f + 0.2f * frame_pulse(f, ROLE_KICK, 0.15f, 1.0f);
 }

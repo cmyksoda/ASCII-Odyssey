@@ -135,6 +135,18 @@ int score_count(const Score *s, Role role, float from, float to) {
     return last_index(s, role, to) - last_index(s, role, from);
 }
 
+int score_sounded(const Score *s, float t) {
+    int lo = 0, hi = s->count;
+    while (lo < hi) {
+        int mid = (lo + hi) / 2;
+        if (s->events[mid].time <= t)
+            lo = mid + 1;
+        else
+            hi = mid;
+    }
+    return lo;
+}
+
 const Section *score_section(const Score *s, float t) {
     const SongInfo *info = s->info;
     for (int i = info->section_count - 1; i >= 0; i--)

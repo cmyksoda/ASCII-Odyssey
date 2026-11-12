@@ -65,6 +65,10 @@ void put_cell_under(Grid *g, int col, int row, int glyph, Rgbf color) {
     if (c->glyph == ' ') *c = (Cell){(uint8_t)glyph, rgb_from_f(color), 0};
 }
 
+void put_text(Grid *g, int col, int row, const char *s, Rgbf color) {
+    for (int k = 0; s[k]; k++) put_cell(g, col + k, row, s[k], color);
+}
+
 // Scene units to grid cells.
 int cell_col(const Grid *g, float x) {
     return mfloor_i((x + g->aspect) / (2 * g->aspect) * (float)g->cols);
