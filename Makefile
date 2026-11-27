@@ -3,7 +3,7 @@ DEVKITPPC ?= $(DEVKITPRO)/devkitPPC
 export DEVKITPRO DEVKITPPC
 PC_GOALS := pc test render
 ifeq ($(filter $(PC_GOALS),$(MAKECMDGOALS)),)
-include $(DEVKITPPC)/wii_rules
+include $(DEVKITPRO)/libogc2/wii_rules
 endif
 .DEFAULT_GOAL := all
 

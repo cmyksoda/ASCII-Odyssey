@@ -62,7 +62,7 @@ Copy the `apps/asciiodyssey/` folder from the release zip to the root of your SD
 
 ## Building
 
-ASCII Odyssey builds with devkitPPC and devkitPro's libogc (with libfat), plus Python 3 with Pillow for its font generators:
+ASCII Odyssey builds with devkitPPC and libogc2 (with libfat), plus Python 3 with Pillow for its font generators:
 
 ```
 make            # dist/apps/asciiodyssey/boot.dol
