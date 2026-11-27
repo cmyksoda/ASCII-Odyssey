@@ -12,9 +12,7 @@ static int keyboard_ready;
 static unsigned last_held;
 static int repeat_frames;
 
-static void on_reset(u32 irq, void *context) {
-    (void)irq;
-    (void)context;
+static void on_reset(void) {
     reset_pressed = 1;
 }
 
